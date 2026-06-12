@@ -114,32 +114,128 @@ legal-ai-assistant/
 ### 环境要求
 - Node.js 18+
 - JDK 17+
-- MySQL 8.0+ (生产环境)
-- Redis 7.x (生产环境)
+- Maven 3.8+
 
-### 前端启动
+### 方式一：Mock模式（无需外部依赖，推荐演示使用）
 
+Mock模式使用模拟数据，无需配置MySQL、Redis等外部服务。
+
+#### 1. 克隆代码
 ```bash
-cd legal-ai-assistant/frontend
+git clone https://github.com/YUGUO-YU/legal-ai-assistant.git
+cd legal-ai-assistant
+```
+
+#### 2. 启动后端
+```bash
+cd backend
+mvn spring-boot:run
+```
+后端运行在 http://localhost:3001
+
+#### 3. 启动前端
+```bash
+cd frontend
 npm install
 npm run dev
 ```
+前端运行在 http://localhost:5173
 
-访问地址: http://localhost:5173
+#### 4. 访问应用
+打开浏览器访问 http://localhost:5173
 
-### 后端启动
+登录：任意用户名，密码长度>=6位即可
 
+---
+
+### 方式二：生产环境部署
+
+#### 环境要求
+- Node.js 18+
+- JDK 17+
+- MySQL 8.0+
+- Redis 7.x
+
+#### 1. 克隆代码
 ```bash
-cd legal-ai-assistant/backend
-./mvnw spring-boot:run
+git clone https://github.com/YUGUO-YU/legal-ai-assistant.git
+cd legal-ai-assistant
 ```
 
-服务端口: http://localhost:3001
-
-### 数据库初始化
-
+#### 2. 配置数据库
 ```bash
 mysql -u root -p < backend/src/main/resources/schema.sql
+```
+
+#### 3. 修改配置
+编辑 `backend/src/main/resources/application.yml`:
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/legal_ai
+    username: your_username
+    password: your_password
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+mock:
+  enabled: false  # 关闭Mock模式
+```
+
+#### 4. 打包后端
+```bash
+cd backend
+mvn clean package -DskipTests
+```
+
+#### 5. 启动后端
+```bash
+java -jar target/legal-ai-assistant-1.0.0.jar
+```
+
+#### 6. 构建前端
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+#### 7. Nginx配置
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    # 前端静态文件
+    location / {
+        root /path/to/legal-ai-assistant/frontend/dist;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API代理
+    location /api {
+        proxy_pass http://localhost:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+---
+
+### Docker部署（推荐）
+
+```bash
+# 构建并启动
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+
+# 停止
+docker-compose down
 ```
 
 ## 功能详情

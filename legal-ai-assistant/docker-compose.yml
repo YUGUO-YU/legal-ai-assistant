@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - legal-ai-network
+
+  # 后端服务 (Mock模式，无需外部依赖)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    networks:
+      - legal-ai-network
+    restart: unless-stopped
+
+networks:
+  legal-ai-network:
+    driver: bridge
