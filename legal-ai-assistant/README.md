@@ -116,25 +116,81 @@ legal-ai-assistant/
 - JDK 17+
 - Maven 3.8+
 
+### Windows 环境准备
+
+#### 1. 安装 Node.js 18+
+访问 https://nodejs.org/ 下载 Windows 安装包（.msi），建议选择 LTS 版本。
+
+安装完成后验证：
+```powershell
+node -v
+npm -v
+```
+
+#### 2. 安装 JDK 17+
+访问 https://adoptium.net/ 下载 JDK 17 Windows 安装包。
+
+安装完成后配置环境变量：
+```powershell
+# 新增系统环境变量
+JAVA_HOME = C:\Program Files\Eclipse Adoptium\jdk-17.0.x.x
+
+# 在 Path 中添加
+%JAVA_HOME%\bin
+```
+
+验证：
+```powershell
+java -version
+javac -version
+```
+
+#### 3. 安装 Maven 3.8+
+访问 https://maven.apache.org/download.cgi 下载 zip 包。
+
+配置环境变量：
+```powershell
+# 新增系统环境变量
+MAVEN_HOME = C:\apache-maven-3.8.x
+
+# 在 Path 中添加
+%MAVEN_HOME%\bin
+```
+
+验证：
+```powershell
+mvn -version
+```
+
+#### 4. 安装 Git
+访问 https://git-scm.com/download/win 下载安装包。
+
+验证：
+```powershell
+git --version
+```
+
+---
+
 ### 方式一：Mock模式（无需外部依赖，推荐演示使用）
 
 Mock模式使用模拟数据，无需配置MySQL、Redis等外部服务。
 
 #### 1. 克隆代码
-```bash
+```powershell
 git clone https://github.com/YUGUO-YU/legal-ai-assistant.git
 cd legal-ai-assistant
 ```
 
 #### 2. 启动后端
-```bash
+```powershell
 cd backend
 mvn spring-boot:run
 ```
 后端运行在 http://localhost:3001
 
 #### 3. 启动前端
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
@@ -157,18 +213,21 @@ npm run dev
 - Redis 7.x
 
 #### 1. 克隆代码
-```bash
+```powershell
 git clone https://github.com/YUGUO-YU/legal-ai-assistant.git
 cd legal-ai-assistant
 ```
 
-#### 2. 配置数据库
-```bash
-mysql -u root -p < backend/src/main/resources/schema.sql
+#### 2. 安装并配置 MySQL 8.0
+下载 MySQL https://dev.mysql.com/downloads/mysql/
+
+初始化数据库：
+```powershell
+mysql -u root -p < backend\src\main\resources\schema.sql
 ```
 
 #### 3. 修改配置
-编辑 `backend/src/main/resources/application.yml`:
+编辑 `backend\src\main\resources\application.yml`:
 ```yaml
 spring:
   datasource:
@@ -185,24 +244,27 @@ mock:
 ```
 
 #### 4. 打包后端
-```bash
+```powershell
 cd backend
 mvn clean package -DskipTests
 ```
 
 #### 5. 启动后端
-```bash
-java -jar target/legal-ai-assistant-1.0.0.jar
+```powershell
+java -jar target\legal-ai-assistant-1.0.0.jar
 ```
 
 #### 6. 构建前端
-```bash
+```powershell
 cd frontend
 npm install
 npm run build
 ```
 
-#### 7. Nginx配置
+#### 7. Nginx配置（Windows版）
+下载 Nginx for Windows http://nginx.org/en/download.html
+
+配置 `nginx.conf`:
 ```nginx
 server {
     listen 80;
@@ -210,7 +272,7 @@ server {
 
     # 前端静态文件
     location / {
-        root /path/to/legal-ai-assistant/frontend/dist;
+        root C:\path\to\legal-ai-assistant\frontend\dist;
         try_files $uri $uri/ /index.html;
     }
 
@@ -223,11 +285,22 @@ server {
 }
 ```
 
+启动Nginx：
+```powershell
+nginx.exe
+```
+
 ---
 
 ### Docker部署（推荐）
 
-```bash
+#### Windows上使用Docker Desktop
+1. 下载并安装 Docker Desktop https://www.docker.com/products/docker-desktop/
+2. 启动 Docker Desktop
+3. 等待托盘图标显示 Docker 运行中
+
+#### 启动服务
+```powershell
 # 构建并启动
 docker-compose up -d
 
@@ -406,7 +479,48 @@ downloadFile(content, 'filename.txt')
 1. **模拟数据模式**: 当前版本 `mock.enabled=true`，使用模拟数据演示功能
 2. **外部API**: 企查查、天眼查等外部API需配置真实密钥
 3. **基础设施**: 生产环境需部署 MySQL、Redis、Elasticsearch、Milvus
-4. **登录演示**: 用户名任意，密码长度>=6位即可登录
+4. **登录演示**: 用户名任意，密码长度>=6位即可
+
+## Windows 常见问题
+
+### 1. Maven 构建失败
+如果遇到 `mvn` 命令找不到，确保环境变量配置正确：
+```powershell
+# 检查 Maven 是否配置
+echo $env:MAVEN_HOME
+
+# 临时添加（当前命令行窗口有效）
+$env:Path += ";C:\apache-maven-3.8.x\bin"
+```
+
+### 2. 端口被占用
+如果提示端口 3001 或 5173 被占用：
+```powershell
+# 查看端口占用
+netstat -ano | findstr :3001
+
+# 结束进程（替换 PID 为实际进程ID）
+taskkill /PID <PID> /F
+```
+
+### 3. npm install 失败
+清理缓存后重试：
+```powershell
+npm cache clean --force
+rm -rf node_modules
+npm install
+```
+
+### 4. 后端启动失败
+检查 JDK 版本：
+```powershell
+java -version  # 确保是 JDK 17+
+```
+
+### 5. 前端无法连接后端
+如果前端运行在 http://localhost:5173，后端运行在 http://localhost:3001，确保后端配置了 CORS。
+
+检查 `backend/src/main/resources/application.yml` 中的端口配置是否正确。登录
 
 ## 开发说明
 

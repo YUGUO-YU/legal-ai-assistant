@@ -4,18 +4,13 @@ spring:
 
   autoconfigure:
     exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
 
-  datasource:
-    url: jdbc:mysql://localhost:3306/legal_ai?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
-    username: root
-    password: main0126
-    driver-class-name: com.mysql.cj.jdbc.Driver
-
   sql:
     init:
-      mode: always
+      mode: never
 
   elasticsearch:
     uris: http://localhost:9200
@@ -38,6 +33,6 @@ ai:
     model: MiniMax-Text-01
     timeout: 120
 
-# Mock Mode
+# Mock Mode (false = 使用MiniMax AI)
 mock:
   enabled: false
