@@ -3,15 +3,21 @@ package com.legalai.service;
 import com.legalai.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.*;
 
 @Service
 public class DocQaService {
     private static final Logger log = LoggerFactory.getLogger(DocQaService.class);
 
-    private static final Map<String, List<Map<String, String>>> SESSION_HISTORY = new HashMap<>();
+    @Value("${mock.enabled:true}")
+    private boolean mockEnabled;
+
+    private final AIService aiService;
+
     private static final Map<String, List<String>> QUESTION_PATTERNS = new HashMap<>();
 
     static {
@@ -63,8 +69,13 @@ public class DocQaService {
         "DOC-004", "《最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）》"
     );
 
+    public DocQaService(AIService aiService) {
+        this.aiService = aiService;
+    }
+
     public DocQaResponse answerQuestion(DocQaRequest request) {
-        log.info("文档问答请求: question={}, sessionId={}", request.getQuestion(), request.getSessionId());
+        log.info("文档问答请求: question={}, sessionId={}, mockEnabled={}",
+            request.getQuestion(), request.getSessionId(), mockEnabled);
 
         validateRequest(request);
 
@@ -75,7 +86,13 @@ public class DocQaService {
 
         String question = request.getQuestion().trim();
         List<DocQaResponse.Citation> citations = new ArrayList<>();
-        String answer = generateAnswer(question, citations);
+        String answer;
+
+        if (mockEnabled) {
+            answer = generateMockAnswer(question, citations);
+        } else {
+            answer = generateAIAnswer(question, citations);
+        }
 
         DocQaResponse response = new DocQaResponse();
         response.setAnswer(answer);
@@ -94,7 +111,29 @@ public class DocQaService {
         }
     }
 
-    private String generateAnswer(String question, List<DocQaResponse.Citation> citations) {
+    private String generateAIAnswer(String question, List<DocQaResponse.Citation> citations) {
+        String prompt = buildPrompt(question);
+        try {
+            String answer = aiService.chat(prompt);
+            addCitation(citations, question);
+            return answer + "\n\n---\n\n**免责声明**：本回答由AI生成，仅供参考，不构成法律意见。";
+        } catch (IOException e) {
+            log.error("AI服务调用失败: {}", e.getMessage());
+            return generateMockAnswer(question, citations);
+        }
+    }
+
+    private String buildPrompt(String question) {
+        return String.format("""
+            你是一个专业的法律助手，专注于中国法律法规的解读。请回答用户的问题。
+
+            问题：%s
+
+            请根据法律法规给出专业、准确的回答。如果涉及具体法条，请标注来源。
+            """, question);
+    }
+
+    private String generateMockAnswer(String question, List<DocQaResponse.Citation> citations) {
         String q = question.toLowerCase();
 
         for (Map.Entry<String, List<String>> entry : QUESTION_PATTERNS.entrySet()) {

@@ -32,12 +32,12 @@ server:
 
 # AI Configuration
 ai:
-  openclaw:
-    api-url: https://api.openclaw.com
-    api-key: ${OPENCLAW_API_KEY:sk-demo-key}
-    model: MoE-8x22B
+  minimax:
+    api-url: https://api.minimax.chat/v1
+    api-key: sk-cp-ekoYcsSAxZvJrF7fvTa6Ysotr5tUdq0tuDip1T288mxFO2VoH6oguSDnUvHUyyrpY1BzzQeifVkOTrSZMZ_gnr1NrvimwFs7IWccNtjjqMyLq1wOEBuagUs
+    model: MiniMax-Text-01
     timeout: 120
 
 # Mock Mode
 mock:
-  enabled: true
+  enabled: false
