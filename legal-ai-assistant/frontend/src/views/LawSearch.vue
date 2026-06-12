@@ -1,0 +1,378 @@
+<template>
+  <div class="page-card">
+    <div class="page-header">
+      <h2>法规查询</h2>
+      <p>查询法律法规，支持分类浏览和版本追溯</p>
+    </div>
+
+    <el-row :gutter="24">
+      <el-col :span="6">
+        <div class="category-panel">
+          <div class="panel-header">
+            <h3>法规分类</h3>
+            <el-button text size="small" @click="refreshCategories">
+              <el-icon><Refresh /></el-icon>
+            </el-button>
+          </div>
+          <el-tree
+            :data="treeData"
+            :props="treeProps"
+            default-expand-all
+            @node-click="handleNodeClick"
+            node-key="id"
+          >
+            <template #default="{ node, data }">
+              <span class="tree-node">
+                <span>{{ data.label }}</span>
+                <span v-if="data.count" class="node-count">{{ data.count }}</span>
+              </span>
+            </template>
+          </el-tree>
+        </div>
+      </el-col>
+      <el-col :span="18">
+        <div class="filter-row">
+          <el-input
+            v-model="keyword"
+            placeholder="搜索法规名称或关键词"
+            clearable
+            @keyup.enter="handleSearch"
+          >
+            <template #append>
+              <el-button :icon="Search" @click="handleSearch" />
+            </template>
+          </el-input>
+          <el-select v-model="statusFilter" placeholder="法规状态" clearable>
+            <el-option
+              v-for="s in statusOptions"
+              :key="s.value"
+              :label="s.label"
+              :value="s.value"
+            />
+          </el-select>
+        </div>
+
+        <loading v-if="loading" text="正在加载法规..." />
+
+        <div v-else-if="results.length > 0" class="result-list">
+          <div v-for="law in results" :key="law.lawUuid" class="law-item">
+            <div class="law-header">
+              <h4>{{ law.title }}</h4>
+              <el-tag :type="getStatusType(law.status)" size="small">
+                {{ law.statusName }}
+              </el-tag>
+            </div>
+            <div class="law-meta">
+              <span class="short-title" v-if="law.shortTitle">简称：{{ law.shortTitle }}</span>
+              <span>{{ law.categoryL1 }} | {{ law.categoryL2 }}</span>
+              <span>{{ law.issuingAuthority }}</span>
+            </div>
+            <div class="law-info">
+              <span><el-icon><Calendar /></el-icon> 发布日期：{{ law.issueDate }}</span>
+              <span><el-icon><Clock /></el-icon> 生效日期：{{ law.effectiveDate }}</span>
+              <span><el-icon><Document /></el-icon> {{ law.articleCount }} 条条款</span>
+              <span><el-icon><View /></el-icon> {{ law.viewCount }} 次浏览</span>
+            </div>
+            <div class="law-actions">
+              <el-button type="primary" size="small" @click="viewLaw(law)">
+                <el-icon><View /></el-icon> 查看全文
+              </el-button>
+              <el-button size="small" @click="browseArticles(law)">
+                <el-icon><Document /></el-icon> 浏览条款
+              </el-button>
+              <el-button size="small" @click="collectLaw(law)">
+                <el-icon><Star /></el-icon> 收藏
+              </el-button>
+            </div>
+          </div>
+
+          <el-pagination
+            v-model:current-page="page"
+            :page-size="pageSize"
+            :total="total"
+            layout="total, prev, pager, next"
+            @current-change="handleSearch"
+          />
+        </div>
+
+        <empty-state
+          v-else-if="searched"
+          icon="Collection"
+          title="未找到匹配的法规"
+          description="请尝试更换关键词或浏览其他分类"
+        />
+      </el-col>
+    </el-row>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import api from '../api'
+import Loading from '../components/Loading.vue'
+import EmptyState from '../components/EmptyState.vue'
+
+const loading = ref(false)
+const results = ref([])
+const total = ref(0)
+const page = ref(1)
+const pageSize = ref(10)
+const searched = ref(false)
+const keyword = ref('')
+const statusFilter = ref(null)
+
+const treeData = ref([
+  {
+    id: 'law',
+    label: '法律',
+    count: 256,
+    children: [
+      { id: 'civil', label: '民法', count: 45 },
+      { id: 'criminal', label: '刑法', count: 38 },
+      { id: 'admin', label: '行政法', count: 52 },
+      { id: 'commercial', label: '商法', count: 28 }
+    ]
+  },
+  {
+    id: 'admin_regulation',
+    label: '行政法规',
+    count: 189,
+    children: [
+      { id: 'state_council', label: '国务院规章', count: 156 },
+      { id: 'ministry', label: '部委规章', count: 33 }
+    ]
+  },
+  {
+    id: 'local_regulation',
+    label: '地方性法规',
+    count: 1024,
+    children: [
+      { id: 'provincial', label: '省级法规', count: 568 },
+      { id: 'city', label: '市级法规', count: 456 }
+    ]
+  },
+  {
+    id: 'judicial',
+    label: '司法解释',
+    count: 89,
+    children: [
+      { id: 'supreme_court', label: '最高人民法院', count: 67 },
+      { id: 'procuratorate', label: '最高人民检察院', count: 22 }
+    ]
+  }
+])
+
+const treeProps = {
+  label: 'label',
+  children: 'children'
+}
+
+const statusOptions = ref([])
+
+const loadStatusOptions = async () => {
+  try {
+    const res = await api.lawSearch.getCategories()
+    statusOptions.value = res.data?.statusOptions || []
+  } catch (e) {
+    console.error('Failed to load status options:', e)
+    statusOptions.value = [
+      { value: 1, label: '现行有效' },
+      { value: 2, label: '已废止' },
+      { value: 3, label: '修订中' },
+      { value: 4, label: '尚未生效' },
+      { value: 5, label: '部分失效' }
+    ]
+  }
+}
+
+const handleSearch = async () => {
+  loading.value = true
+  searched.value = true
+
+  try {
+    const res = await api.lawSearch.search({
+      keyword: keyword.value,
+      status: statusFilter.value ? [statusFilter.value] : null,
+      page: page.value,
+      pageSize: pageSize.value
+    })
+
+    results.value = res.data.items || []
+    total.value = res.data.total || 0
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('查询失败，请稍后重试')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleNodeClick = (data) => {
+  if (!data.children || data.children.length === 0) {
+    keyword.value = data.label
+    handleSearch()
+  }
+}
+
+const refreshCategories = () => {
+  ElMessage.success('分类已刷新')
+}
+
+const getStatusType = (status) => {
+  const types = { 1: 'success', 2: 'danger', 3: 'warning', 4: 'info', 5: 'warning' }
+  return types[status] || 'info'
+}
+
+const viewLaw = (law) => {
+  ElMessage.info('法规详情页开发中...')
+}
+
+const browseArticles = (law) => {
+  ElMessage.info('条款浏览功能开发中...')
+}
+
+const collectLaw = (law) => {
+  ElMessage.success('已添加到收藏')
+}
+
+onMounted(async () => {
+  await loadCategories()
+  handleSearch()
+})
+
+const loadCategories = async () => {
+  try {
+    const res = await api.lawSearch.getCategories()
+    const categories = res.data?.categoryL1 || []
+    treeData.value = categories.map((cat) => ({
+      id: cat.code,
+      label: cat.name,
+      count: null,
+      children: []
+    }))
+    statusOptions.value = res.data?.statusOptions || [
+      { value: 1, label: '现行有效' },
+      { value: 2, label: '已废止' },
+      { value: 3, label: '修订中' },
+      { value: 4, label: '尚未生效' },
+      { value: 5, label: '部分失效' }
+    ]
+  } catch (e) {
+    console.error('Failed to load categories:', e)
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.category-panel {
+  background: #fafafa;
+  padding: 16px;
+  border-radius: 8px;
+  height: fit-content;
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+  }
+}
+
+.tree-node {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  .node-count {
+    background: #e6f7ff;
+    color: #1890ff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+}
+
+.filter-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+
+  .el-input {
+    flex: 1;
+  }
+}
+
+.loading-state {
+  text-align: center;
+  padding: 48px;
+  color: #999;
+}
+
+.result-list {
+  .law-item {
+    padding: 20px;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    transition: all 0.3s;
+    &:hover {
+      border-color: #1890ff;
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.1);
+    }
+  }
+
+  .law-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    h4 {
+      margin: 0;
+      font-size: 16px;
+    }
+  }
+
+  .law-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+    color: #666;
+    font-size: 14px;
+
+    .short-title {
+      color: #1890ff;
+    }
+  }
+
+  .law-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 16px;
+    color: #999;
+    font-size: 13px;
+
+    span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+
+  .law-actions {
+    display: flex;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #f5f5f5;
+  }
+}
+
+.empty-state {
+  padding: 48px 0;
+}
+</style>

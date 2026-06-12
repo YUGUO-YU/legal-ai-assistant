@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: legal-ai-assistant
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+  sql:
+    init:
+      mode: never
+
+  elasticsearch:
+    uris: http://localhost:9200
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.legalai.model
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+server:
+  port: 3001
+
+# AI Configuration
+ai:
+  openclaw:
+    api-url: https://api.openclaw.com
+    api-key: ${OPENCLAW_API_KEY:sk-demo-key}
+    model: MoE-8x22B
+    timeout: 120
+
+# Mock Mode (for demo without external APIs)
+mock:
+  enabled: true
