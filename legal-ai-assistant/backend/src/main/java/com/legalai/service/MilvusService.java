@@ -1,6 +1,7 @@
 package com.legalai.service;
 
 import com.legalai.config.MilvusConfig;
+import com.legalai.dto.CaseSimilarSearchResponse;
 import com.legalai.dto.LegalSearchResponse;
 import io.milvus.client.MilvusClient;
 import io.milvus.param.dml.QueryParam;
@@ -11,9 +12,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -116,6 +119,51 @@ public class MilvusService {
         } catch (Exception e) {
             log.warn("Milvus health check failed: {}", e.getMessage());
             return false;
+        }
+    }
+
+    public List<CaseSimilarSearchResponse.SimilarCaseItem> searchSimilarCases(String caseDescription, int topK) {
+        if (milvusClient == null || !milvusConfig.isEnabled()) {
+            log.info("Milvus disabled, returning empty results");
+            return new ArrayList<>();
+        }
+
+        try {
+            float[] queryVector = aiService.embedText(caseDescription);
+            List<List<Float>> vectors = Arrays.asList(queryVector);
+
+            SearchParam searchParam = SearchParam.newBuilder()
+                    .withCollectionName(milvusConfig.getCollectionName())
+                    .withVectors(vectors)
+                    .withTopK(topK)
+                    .withVectorFieldName("case_vector")
+                    .withMetricType(MetricType.COSINE)
+                    .build();
+
+            SearchResultsWrapper resultsWrapper = milvusClient.search(searchParam);
+
+            List<CaseSimilarSearchResponse.SimilarCaseItem> items = new ArrayList<>();
+            for (int i = 0; i < resultsWrapper.getRowRecords().size(); i++) {
+                SearchResultsWrapper.RowRecord record = resultsWrapper.getRowRecords().get(i);
+                CaseSimilarSearchResponse.SimilarCaseItem item = new CaseSimilarSearchResponse.SimilarCaseItem();
+                item.setCaseId(Long.valueOf(String.valueOf(record.get("case_id"))));
+                item.setCaseNo((String) record.get("case_no"));
+                item.setCaseName((String) record.get("case_name"));
+                item.setCourtLevel(record.get("court_level") != null ? ((Number) record.get("court_level")).intValue() : 3);
+                item.setCourtName((String) record.get("court_name"));
+                item.setJudgeDate((String) record.get("judge_date"));
+                item.setSimilarityScore(resultsWrapper.getScores().get(i).doubleValue());
+                item.setKeyFacts((String) record.get("key_facts"));
+                item.setJudgmentSummary((String) record.get("judgment_summary"));
+                items.add(item);
+            }
+
+            log.info("Milvus case search returned {} results", items.size());
+            return items;
+
+        } catch (Exception e) {
+            log.error("Milvus case search failed: {}", e.getMessage(), e);
+            return new ArrayList<>();
         }
     }
 }
