@@ -2,7 +2,6 @@ package com.legalai.dto;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 public class CompanyQueryResponse {
     private String companyName;
@@ -14,6 +13,7 @@ public class CompanyQueryResponse {
     private String establishDate;
     private List<ShareholderInfo> shareholders;
     private List<RiskWarning> riskWarnings;
+    private String riskLevel;
     private String dataSource;
     private String queryTime;
 
@@ -35,6 +35,8 @@ public class CompanyQueryResponse {
     public void setShareholders(List<ShareholderInfo> shareholders) { this.shareholders = shareholders; }
     public List<RiskWarning> getRiskWarnings() { return riskWarnings; }
     public void setRiskWarnings(List<RiskWarning> riskWarnings) { this.riskWarnings = riskWarnings; }
+    public String getRiskLevel() { return riskLevel; }
+    public void setRiskLevel(String riskLevel) { this.riskLevel = riskLevel; }
     public String getDataSource() { return dataSource; }
     public void setDataSource(String dataSource) { this.dataSource = dataSource; }
     public String getQueryTime() { return queryTime; }
@@ -44,6 +46,7 @@ public class CompanyQueryResponse {
         private String name;
         private String capitalContribution;
         private String ratio;
+        private String type;
 
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -51,6 +54,8 @@ public class CompanyQueryResponse {
         public void setCapitalContribution(String capitalContribution) { this.capitalContribution = capitalContribution; }
         public String getRatio() { return ratio; }
         public void setRatio(String ratio) { this.ratio = ratio; }
+        public String getType() { return type; }
+        public void setType(String type) { this.type = type; }
     }
 
     public static class RiskWarning {
@@ -58,6 +63,7 @@ public class CompanyQueryResponse {
         private String type;
         private String description;
         private String date;
+        private Integer count;
 
         public String getLevel() { return level; }
         public void setLevel(String level) { this.level = level; }
@@ -67,5 +73,7 @@ public class CompanyQueryResponse {
         public void setDescription(String description) { this.description = description; }
         public String getDate() { return date; }
         public void setDate(String date) { this.date = date; }
+        public Integer getCount() { return count; }
+        public void setCount(Integer count) { this.count = count; }
     }
 }
