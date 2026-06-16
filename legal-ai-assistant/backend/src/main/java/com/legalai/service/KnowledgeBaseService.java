@@ -1,23 +1,45 @@
 package com.legalai.service;
 
+import com.legalai.config.MilvusConfig;
 import com.legalai.dto.KnowledgeBaseListResponse;
+import com.legalai.dto.LegalSearchResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Service
 public class KnowledgeBaseService {
 
     private static final Logger log = LoggerFactory.getLogger(KnowledgeBaseService.class);
+
+    private static final int CHUNK_SIZE = 512;
+    private static final int CHUNK_OVERLAP = 64;
+
+    @Value("${mock.enabled:true}")
+    private boolean mockEnabled;
+
     private final AtomicLong idGenerator = new AtomicLong(5);
+    private final AtomicLong chunkIdGenerator = new AtomicLong(1);
     private final ConcurrentHashMap<Long, KnowledgeBaseListResponse.KnowledgeBase> kbStore = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, List<DocumentChunk>> chunkStore = new ConcurrentHashMap<>();
+
+    @Autowired
+    private MilvusService milvusService;
+
+    @Autowired
+    private MilvusConfig milvusConfig;
+
+    @Autowired
+    private AIService aiService;
 
     public KnowledgeBaseService() {
         initMockData();
@@ -37,7 +59,7 @@ public class KnowledgeBaseService {
     }
 
     private KnowledgeBaseListResponse.KnowledgeBase createKb(Long id, String name, String desc, String type, boolean isPublic,
-                                                           int docCount, int chunkCount, String size, String owner, String updateTime, int parseStatus) {
+                                                               int docCount, int chunkCount, String size, String owner, String updateTime, int parseStatus) {
         KnowledgeBaseListResponse.KnowledgeBase kb = new KnowledgeBaseListResponse.KnowledgeBase();
         kb.setId(id);
         kb.setName(name);
@@ -96,15 +118,17 @@ public class KnowledgeBaseService {
         kb.setIsPublic(isPublic);
 
         addKb(kb);
+        chunkStore.put(id, new ArrayList<>());
         return kb;
     }
 
     public boolean deleteKnowledgeBase(Long id) {
         log.info("Deleting knowledge base: id={}", id);
+        chunkStore.remove(id);
         return kbStore.remove(id) != null;
     }
 
-    public String uploadDocument(Long kbId, String fileName) {
+    public String uploadDocument(Long kbId, String fileName, String content) {
         log.info("Uploading document to kb: kbId={}, fileName={}", kbId, fileName);
 
         KnowledgeBaseListResponse.KnowledgeBase kb = kbStore.get(kbId);
@@ -112,11 +136,122 @@ public class KnowledgeBaseService {
             return "知识库不存在";
         }
 
-        kb.setDocCount(kb.getDocCount() + 1);
-        kb.setChunkCount(kb.getChunkCount() + (int)(Math.random() * 50) + 10);
-        kb.setSize(String.format("%.0fMB", kb.getDocCount() * 2.5));
-        kb.setUpdateTime(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE));
+        List<DocumentChunk> chunks = semanticChunking(content, fileName);
 
-        return "文档上传成功";
+        for (DocumentChunk chunk : chunks) {
+            if (mockEnabled) {
+                chunk.setChunkId(chunkIdGenerator.getAndIncrement());
+            } else {
+                vectorizeChunk(chunk);
+            }
+        }
+
+        List<DocumentChunk> existingChunks = chunkStore.getOrDefault(kbId, new ArrayList<>());
+        existingChunks.addAll(chunks);
+        chunkStore.put(kbId, existingChunks);
+
+        kb.setDocCount(kb.getDocCount() + 1);
+        kb.setChunkCount(existingChunks.size());
+        kb.setSize(String.format("%.0fMB", existingChunks.size() * 0.01));
+        kb.setUpdateTime(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE));
+        kb.setParseStatus(2);
+
+        return String.format("文档上传成功，生成%d个语义块", chunks.size());
+    }
+
+    public List<DocumentChunk> semanticChunking(String content, String fileName) {
+        List<DocumentChunk> chunks = new ArrayList<>();
+
+        String[] paragraphs = content.split("\n\n");
+
+        StringBuilder currentChunk = new StringBuilder();
+        int currentSize = 0;
+
+        for (String paragraph : paragraphs) {
+            if (paragraph.trim().isEmpty()) continue;
+
+            int paragraphSize = paragraph.length();
+
+            if (currentSize + paragraphSize > CHUNK_SIZE && currentSize > 0) {
+                DocumentChunk chunk = new DocumentChunk();
+                chunk.setContent(currentChunk.toString().trim());
+                chunk.setFileName(fileName);
+                chunk.setChunkIndex(chunks.size());
+                chunk.setTokenCount(currentSize);
+                chunks.add(chunk);
+
+                String overlapText = currentChunk.toString();
+                int overlapStart = Math.max(0, overlapText.length() - CHUNK_OVERLAP);
+                currentChunk = new StringBuilder(overlapText.substring(overlapStart));
+                currentSize = currentChunk.length();
+            }
+
+            currentChunk.append(paragraph).append("\n\n");
+            currentSize += paragraphSize + 2;
+        }
+
+        if (currentChunk.length() > 0) {
+            DocumentChunk chunk = new DocumentChunk();
+            chunk.setContent(currentChunk.toString().trim());
+            chunk.setFileName(fileName);
+            chunk.setChunkIndex(chunks.size());
+            chunk.setTokenCount(currentSize);
+            chunks.add(chunk);
+        }
+
+        return chunks;
+    }
+
+    private void vectorizeChunk(DocumentChunk chunk) {
+        try {
+            float[] vector = aiService.embedText(chunk.getContent());
+            chunk.setVectorId("VEC-" + chunkIdGenerator.getAndIncrement());
+            log.debug("向量化语义块: {}", chunk.getVectorId());
+        } catch (Exception e) {
+            log.error("向量化失败: {}", e.getMessage());
+        }
+    }
+
+    public List<LegalSearchResponse.SearchResultItem> searchInKnowledgeBase(Long kbId, String query, int topK) {
+        log.info("知识库内搜索: kbId={}, query={}", kbId, query);
+
+        List<DocumentChunk> chunks = chunkStore.get(kbId);
+        if (chunks == null || chunks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return chunks.stream()
+            .limit(topK)
+            .map(chunk -> {
+                LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
+                item.setArticleId(String.valueOf(chunk.getChunkId()));
+                item.setTitle(chunk.getFileName());
+                item.setContent(chunk.getContent());
+                item.setScore(0.85 + Math.random() * 0.15);
+                return item;
+            })
+            .collect(Collectors.toList());
+    }
+
+    public static class DocumentChunk {
+        private Long chunkId;
+        private String content;
+        private String fileName;
+        private int chunkIndex;
+        private int tokenCount;
+        private String vectorId;
+
+        public Long getChunkId() { return chunkId; }
+        public void setChunkId(Long chunkId) { this.chunkId = chunkId; }
+        public String getContent() { return content; }
+        public void setContent(String content) { this.content = content; }
+        public String getFileName() { return fileName; }
+        public void setFileName(String fileName) { this.fileName = fileName; }
+        public int getChunkIndex() { return chunkIndex; }
+        public void setChunkIndex(int chunkIndex) { this.chunkIndex = chunkIndex; }
+        public int getTokenCount() { return tokenCount; }
+        public void setTokenCount(int tokenCount) { this.tokenCount = tokenCount; }
+        public String getVectorId() { return vectorId; }
+        public void setVectorId(String vectorId) { this.vectorId = vectorId; }
     }
 }
