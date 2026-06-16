@@ -25,11 +25,13 @@ public class CaseSearchResponse {
         private String caseNo;
         private String title;
         private String court;
+        private Integer courtLevel;
         private String caseType;
         private String caseCause;
         private String judgeDate;
         private String trialProcedure;
         private Integer judgmentResult;
+        private Long litigationAmount;
         private String summary;
         private String sourceUrl;
         private String sourceName;
@@ -42,6 +44,8 @@ public class CaseSearchResponse {
         public void setTitle(String title) { this.title = title; }
         public String getCourt() { return court; }
         public void setCourt(String court) { this.court = court; }
+        public Integer getCourtLevel() { return courtLevel; }
+        public void setCourtLevel(Integer courtLevel) { this.courtLevel = courtLevel; }
         public String getCaseType() { return caseType; }
         public void setCaseType(String caseType) { this.caseType = caseType; }
         public String getCaseCause() { return caseCause; }
@@ -52,6 +56,8 @@ public class CaseSearchResponse {
         public void setTrialProcedure(String trialProcedure) { this.trialProcedure = trialProcedure; }
         public Integer getJudgmentResult() { return judgmentResult; }
         public void setJudgmentResult(Integer judgmentResult) { this.judgmentResult = judgmentResult; }
+        public Long getLitigationAmount() { return litigationAmount; }
+        public void setLitigationAmount(Long litigationAmount) { this.litigationAmount = litigationAmount; }
         public String getSummary() { return summary; }
         public void setSummary(String summary) { this.summary = summary; }
         public String getSourceUrl() { return sourceUrl; }

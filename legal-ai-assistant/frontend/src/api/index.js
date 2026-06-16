@@ -74,11 +74,18 @@ export default {
     search: (data) => api.post('/case-similar/search', data)
   },
   caseSearch: {
-    search: (data) => api.post('/case-search/search', data)
+    search: (data) => api.post('/case-search/search', data),
+    getCaseDetail: (uuid) => api.get(`/case-search/cases/${uuid}`)
   },
   lawSearch: {
     search: (data) => api.post('/law-search/search', data),
-    getCategories: () => api.get('/law-search/categories')
+    getCategories: () => api.get('/law-search/categories'),
+    getLawDetail: (uuid) => api.get(`/law-search/laws/${uuid}`)
+  },
+  legalResearch: {
+    createTask: (data) => api.post('/legal-research/tasks', data),
+    getReport: (taskId) => api.get(`/legal-research/tasks/${taskId}/report`),
+    generateReport: (data) => api.post('/legal-research/generate', data)
   },
   document: {
     draft: (data) => api.post('/document/draft', data),
@@ -107,5 +114,12 @@ export default {
     logout: () => api.post('/auth/logout'),
     getUserInfo: () => api.get('/auth/user-info')
   },
-  health: () => api.get('/health')
+  health: () => api.get('/health'),
+  dataImport: {
+    importCivilLaw: () => api.post('/admin/data/import-civil-law'),
+    importLaborLaw: () => api.post('/admin/data/import-labor-law'),
+    importConstructionLaw: () => api.post('/admin/data/import-construction-law'),
+    vectorize: () => api.post('/admin/data/vectorize'),
+    importAll: () => api.post('/admin/data/import-all')
+  }
 }

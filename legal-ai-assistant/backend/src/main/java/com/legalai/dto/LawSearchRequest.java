@@ -4,8 +4,9 @@ import java.util.List;
 
 public class LawSearchRequest {
     private String keyword;
-    private List<String> categoryL1;
-    private List<Integer> status;
+    private String categoryL1;
+    private String categoryL2;
+    private Integer status;
     private String effectiveDateRange;
     private String issuingAuthority;
     private Integer page = 1;
@@ -13,10 +14,12 @@ public class LawSearchRequest {
 
     public String getKeyword() { return keyword; }
     public void setKeyword(String keyword) { this.keyword = keyword; }
-    public List<String> getCategoryL1() { return categoryL1; }
-    public void setCategoryL1(List<String> categoryL1) { this.categoryL1 = categoryL1; }
-    public List<Integer> getStatus() { return status; }
-    public void setStatus(List<Integer> status) { this.status = status; }
+    public String getCategoryL1() { return categoryL1; }
+    public void setCategoryL1(String categoryL1) { this.categoryL1 = categoryL1; }
+    public String getCategoryL2() { return categoryL2; }
+    public void setCategoryL2(String categoryL2) { this.categoryL2 = categoryL2; }
+    public Integer getStatus() { return status; }
+    public void setStatus(Integer status) { this.status = status; }
     public String getEffectiveDateRange() { return effectiveDateRange; }
     public void setEffectiveDateRange(String effectiveDateRange) { this.effectiveDateRange = effectiveDateRange; }
     public String getIssuingAuthority() { return issuingAuthority; }
