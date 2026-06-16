@@ -193,11 +193,12 @@ public class LegalSearchService {
     private Map<String, Object> buildFilters(LegalSearchRequest request) {
         Map<String, Object> filters = new HashMap<>();
         if (request.getFilters() != null) {
-            if (request.getFilters().containsKey("category_l1")) {
-                filters.put("category_l1", request.getFilters().get("category_l1"));
+            LegalSearchRequest.SearchFilters f = request.getFilters();
+            if (f.getCategoryL1() != null && !f.getCategoryL1().isEmpty()) {
+                filters.put("category_l1", f.getCategoryL1().get(0));
             }
-            if (request.getFilters().containsKey("status")) {
-                filters.put("status", request.getFilters().get("status"));
+            if (f.getStatus() != null && !f.getStatus().isEmpty()) {
+                filters.put("status", f.getStatus().get(0));
             }
         }
         return filters;

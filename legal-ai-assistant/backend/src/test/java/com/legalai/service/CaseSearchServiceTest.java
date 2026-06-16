@@ -54,8 +54,8 @@ class CaseSearchServiceTest {
     void testSearch_WithFilters() {
         CaseSearchRequest request = new CaseSearchRequest();
         request.setKeyword("合同");
-        request.setCaseType(java.util.List.of(1));
-        request.setCourtLevel(java.util.List.of(3));
+        request.setCaseType(1);
+        request.setCourtLevel(3);
         request.setPage(1);
         request.setPageSize(10);
 

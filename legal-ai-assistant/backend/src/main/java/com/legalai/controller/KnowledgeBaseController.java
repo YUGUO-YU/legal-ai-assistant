@@ -57,8 +57,9 @@ public class KnowledgeBaseController {
     public ApiResponse<String> upload(@RequestBody Map<String, Object> request) {
         Long kbId = ((Number) request.get("kbId")).longValue();
         String fileName = (String) request.get("fileName");
+        String content = (String) request.getOrDefault("content", "");
 
-        String result = knowledgeBaseService.uploadDocument(kbId, fileName);
+        String result = knowledgeBaseService.uploadDocument(kbId, fileName, content);
         return ApiResponse.success(result);
     }
 }

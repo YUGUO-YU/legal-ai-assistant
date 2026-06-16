@@ -21,22 +21,23 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @Slf4j
 public class ElasticsearchService {
 
-    private final ElasticsearchClient client;
+    private final Optional<ElasticsearchClient> client;
     private final ElasticsearchConfig esConfig;
 
     @Autowired
-    public ElasticsearchService(ElasticsearchClient client, ElasticsearchConfig esConfig) {
+    public ElasticsearchService(Optional<ElasticsearchClient> client, ElasticsearchConfig esConfig) {
         this.client = client;
         this.esConfig = esConfig;
     }
 
     public List<LegalSearchResponse.SearchResultItem> searchByES(String query, int page, int pageSize, Map<String, Object> filters) {
-        if (client == null || !esConfig.isEnabled()) {
+        if (client.orElse(null) == null || !esConfig.isEnabled()) {
             log.info("Elasticsearch disabled, returning empty results");
             return new ArrayList<>();
         }
@@ -93,7 +94,7 @@ public class ElasticsearchService {
                     .highlight(highlight)
             );
 
-            SearchResponse<LawArticleDocument> response = client.search(searchRequest, LawArticleDocument.class);
+            SearchResponse<LawArticleDocument> response = client.get().search(searchRequest, LawArticleDocument.class);
 
             List<LegalSearchResponse.SearchResultItem> items = new ArrayList<>();
             for (Hit<LawArticleDocument> hit : response.hits().hits()) {
@@ -127,7 +128,7 @@ public class ElasticsearchService {
     }
 
     public LegalSearchResponse.SearchResultItem getArticleById(String articleId) {
-        if (client == null || !esConfig.isEnabled()) {
+        if (client.orElse(null) == null || !esConfig.isEnabled()) {
             log.info("Elasticsearch disabled");
             return null;
         }
@@ -139,7 +140,7 @@ public class ElasticsearchService {
                     .size(1)
             );
 
-            SearchResponse<LawArticleDocument> response = client.search(searchRequest, LawArticleDocument.class);
+            SearchResponse<LawArticleDocument> response = client.get().search(searchRequest, LawArticleDocument.class);
 
             if (!response.hits().hits().isEmpty()) {
                 Hit<LawArticleDocument> hit = response.hits().hits().get(0);
@@ -161,12 +162,12 @@ public class ElasticsearchService {
     }
 
     public boolean isAvailable() {
-        if (client == null || !esConfig.isEnabled()) {
+        if (client.orElse(null) == null || !esConfig.isEnabled()) {
             return false;
         }
 
         try {
-            client.info();
+            client.get().info();
             return true;
         } catch (Exception e) {
             log.warn("Elasticsearch health check failed: {}", e.getMessage());

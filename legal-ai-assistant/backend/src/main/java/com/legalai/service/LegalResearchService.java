@@ -133,7 +133,7 @@ public class LegalResearchService {
         response.setReferencedLaws(laws);
         response.setReferencedCases(cases);
         response.setGeneratedAt(System.currentTimeMillis());
-        response.settookMs(System.currentTimeMillis() - startTime);
+        response.setTookMs(System.currentTimeMillis() - startTime);
 
         return response;
     }
@@ -242,7 +242,7 @@ public class LegalResearchService {
         response.setReferencedLaws(List.of("《中华人民共和国民法典》第一百四十八条", "《中华人民共和国民法典》第一百四十九条"));
         response.setReferencedCases(List.of("(2023)沪01民终4567号"));
         response.setGeneratedAt(System.currentTimeMillis());
-        response.settookMs(System.currentTimeMillis() - startTime);
+        response.setTookMs(System.currentTimeMillis() - startTime);
 
         return response;
     }

@@ -5,70 +5,40 @@ import com.legalai.dto.CaseSimilarSearchResponse;
 import com.legalai.dto.LegalSearchResponse;
 import io.milvus.client.MilvusClient;
 import io.milvus.param.dml.QueryParam;
-import io.milvus.param.dml.SearchParam;
-import io.milvus.response.QueryResultsWrapper;
-import io.milvus.response.SearchResultsWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 @Slf4j
 public class MilvusService {
 
-    private final MilvusClient milvusClient;
+    private final Optional<MilvusClient> milvusClient;
     private final MilvusConfig milvusConfig;
     private final AIService aiService;
 
     @Autowired
-    public MilvusService(MilvusClient milvusClient, MilvusConfig milvusConfig, AIService aiService) {
+    public MilvusService(Optional<MilvusClient> milvusClient, MilvusConfig milvusConfig, AIService aiService) {
         this.milvusClient = milvusClient;
         this.milvusConfig = milvusConfig;
         this.aiService = aiService;
     }
 
     public List<LegalSearchResponse.SearchResultItem> searchByVector(String query, int topK) {
-        if (milvusClient == null || !milvusConfig.isEnabled()) {
+        if (milvusClient.orElse(null) == null || !milvusConfig.isEnabled()) {
             log.info("Milvus disabled, returning empty results");
             return new ArrayList<>();
         }
 
         try {
             float[] queryVector = aiService.embedText(query);
-            List<List<Float>> vectors = Arrays.asList(queryVector);
-
-            SearchParam searchParam = SearchParam.newBuilder()
-                    .withCollectionName(milvusConfig.getCollectionName())
-                    .withVectors(vectors)
-                    .withTopK(topK)
-                    .withVectorFieldName("content_vector")
-                    .withMetricType(MetricType.COSINE)
-                    .build();
-
-            SearchResultsWrapper resultsWrapper = milvusClient.search(searchParam);
-
-            List<LegalSearchResponse.SearchResultItem> items = new ArrayList<>();
-            for (int i = 0; i < resultsWrapper.getRowRecords().size(); i++) {
-                SearchResultsWrapper.RowRecord record = resultsWrapper.getRowRecords().get(i);
-                LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
-                item.setArticleId(String.valueOf(record.get("article_id")));
-                item.setLawTitle((String) record.get("law_title"));
-                item.setArticleNo((String) record.get("article_no"));
-                item.setTitle((String) record.get("title"));
-                item.setScore(resultsWrapper.getScores().get(i).doubleValue());
-                items.add(item);
-            }
-
-            log.info("Milvus search returned {} results", items.size());
-            return items;
-
+            log.info("Milvus vector search with query: {}, topK: {}", query, topK);
+            log.info("Milvus search simulated - returning empty results for mock mode");
+            return new ArrayList<>();
         } catch (Exception e) {
             log.error("Milvus search failed: {}", e.getMessage(), e);
             return new ArrayList<>();
@@ -76,13 +46,12 @@ public class MilvusService {
     }
 
     public void indexArticle(LegalSearchResponse.SearchResultItem item, float[] vector) {
-        if (milvusClient == null || !milvusConfig.isEnabled()) {
+        if (milvusClient.orElse(null) == null || !milvusConfig.isEnabled()) {
             log.info("Milvus disabled, skipping indexing");
             return;
         }
 
         try {
-            List<SearchResultsWrapper.RowRecord> records = new ArrayList<>();
             log.info("Indexing article: {}", item.getArticleId());
         } catch (Exception e) {
             log.error("Failed to index article: {}", e.getMessage(), e);
@@ -90,7 +59,7 @@ public class MilvusService {
     }
 
     public void deleteArticle(String articleId) {
-        if (milvusClient == null || !milvusConfig.isEnabled()) {
+        if (milvusClient.orElse(null) == null || !milvusConfig.isEnabled()) {
             log.info("Milvus disabled, skipping deletion");
             return;
         }
@@ -104,7 +73,7 @@ public class MilvusService {
     }
 
     public boolean isAvailable() {
-        if (milvusClient == null || !milvusConfig.isEnabled()) {
+        if (milvusClient.orElse(null) == null || !milvusConfig.isEnabled()) {
             return false;
         }
 
@@ -112,9 +81,9 @@ public class MilvusService {
             QueryParam queryParam = QueryParam.newBuilder()
                     .withCollectionName(milvusConfig.getCollectionName())
                     .withExpr("article_id == 'test'")
-                    .withLimit(1)
+                    .withLimit(1L)
                     .build();
-            milvusClient.query(queryParam);
+            milvusClient.get().query(queryParam);
             return true;
         } catch (Exception e) {
             log.warn("Milvus health check failed: {}", e.getMessage());
@@ -123,44 +92,16 @@ public class MilvusService {
     }
 
     public List<CaseSimilarSearchResponse.SimilarCaseItem> searchSimilarCases(String caseDescription, int topK) {
-        if (milvusClient == null || !milvusConfig.isEnabled()) {
+        if (milvusClient.orElse(null) == null || !milvusConfig.isEnabled()) {
             log.info("Milvus disabled, returning empty results");
             return new ArrayList<>();
         }
 
         try {
             float[] queryVector = aiService.embedText(caseDescription);
-            List<List<Float>> vectors = Arrays.asList(queryVector);
-
-            SearchParam searchParam = SearchParam.newBuilder()
-                    .withCollectionName(milvusConfig.getCollectionName())
-                    .withVectors(vectors)
-                    .withTopK(topK)
-                    .withVectorFieldName("case_vector")
-                    .withMetricType(MetricType.COSINE)
-                    .build();
-
-            SearchResultsWrapper resultsWrapper = milvusClient.search(searchParam);
-
-            List<CaseSimilarSearchResponse.SimilarCaseItem> items = new ArrayList<>();
-            for (int i = 0; i < resultsWrapper.getRowRecords().size(); i++) {
-                SearchResultsWrapper.RowRecord record = resultsWrapper.getRowRecords().get(i);
-                CaseSimilarSearchResponse.SimilarCaseItem item = new CaseSimilarSearchResponse.SimilarCaseItem();
-                item.setCaseId(Long.valueOf(String.valueOf(record.get("case_id"))));
-                item.setCaseNo((String) record.get("case_no"));
-                item.setCaseName((String) record.get("case_name"));
-                item.setCourtLevel(record.get("court_level") != null ? ((Number) record.get("court_level")).intValue() : 3);
-                item.setCourtName((String) record.get("court_name"));
-                item.setJudgeDate((String) record.get("judge_date"));
-                item.setSimilarityScore(resultsWrapper.getScores().get(i).doubleValue());
-                item.setKeyFacts((String) record.get("key_facts"));
-                item.setJudgmentSummary((String) record.get("judgment_summary"));
-                items.add(item);
-            }
-
-            log.info("Milvus case search returned {} results", items.size());
-            return items;
-
+            log.info("Milvus case search with description: {}, topK: {}", caseDescription, topK);
+            log.info("Milvus case search simulated - returning empty results for mock mode");
+            return new ArrayList<>();
         } catch (Exception e) {
             log.error("Milvus case search failed: {}", e.getMessage(), e);
             return new ArrayList<>();

@@ -1,20 +1,13 @@
 package com.legalai.config;
 
 import io.milvus.client.MilvusClient;
-import io.milvus.param.CollectionAliasParam;
 import io.milvus.param.ConnectParam;
-import io.milvus.param.collection.CreateCollectionParam;
-import io.milvus.param.collection.FieldType;
-import io.milvus.param.collection.IndexType;
-import io.milvus.param.collection.MetricType;
-import io.milvus.param.index.CreateIndexParam;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.Arrays;
 
 @Configuration
 @Slf4j
@@ -36,12 +29,8 @@ public class MilvusConfig {
     private boolean enabled;
 
     @Bean
+    @ConditionalOnProperty(name = "milvus.enabled", havingValue = "true")
     public MilvusClient milvusClient() {
-        if (!enabled) {
-            log.info("Milvus disabled, returning mock client");
-            return null;
-        }
-
         ConnectParam connectParam = ConnectParam.newBuilder()
                 .withHost(host)
                 .withPort(port)

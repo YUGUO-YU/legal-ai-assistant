@@ -528,23 +528,18 @@ public class DocumentService {
     }
 
     private String generateTermination(DocumentDraftRequest request) {
-        return """
-            解除劳动合同协议
-
-            甲方（用人单位）：XXX有限公司
-            乙方（劳动者）：XXX
-
-            甲乙双方协商一致，同意于""" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日")) + """解除劳动合同。
-
-            双方确认：
-            1. 甲方支付乙方经济补偿金人民币X万元。
-            2. 甲方为乙方缴纳社会保险至本月底。
-            3. 乙方应在离职前完成工作交接。
-
-            本协议自双方签字或盖章之日起生效。
-
-            甲方：XXX有限公司    乙方：XXX
-            """ + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
+        return "解除劳动合同协议\n\n" +
+            "甲方（用人单位）：XXX有限公司\n" +
+            "乙方（劳动者）：XXX\n\n" +
+            "甲乙双方协商一致，同意于" + date + "解除劳动合同。\n\n" +
+            "双方确认：\n" +
+            "1. 甲方支付乙方经济补偿金人民币X万元。\n" +
+            "2. 甲方为乙方缴纳社会保险至本月底。\n" +
+            "3. 乙方应在离职前完成工作交接。\n\n" +
+            "本协议自双方签字或盖章之日起生效。\n\n" +
+            "甲方：XXX有限公司    乙方：XXX\n" +
+            date;
     }
 
     private String generateArbitration(DocumentDraftRequest request) {
