@@ -4,6 +4,8 @@ import com.legalai.dto.*;
 import com.legalai.service.LawSearchService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/law-search")
 @CrossOrigin
@@ -22,22 +24,17 @@ public class LawSearchController {
     }
 
     @GetMapping("/categories")
-    public ApiResponse<Object> getCategories() {
-        return ApiResponse.success(java.util.Map.of(
-            "categoryL1", java.util.List.of(
-                java.util.Map.of("code", "法律", "name", "法律"),
-                java.util.Map.of("code", "行政法规", "name", "行政法规"),
-                java.util.Map.of("code", "部门规章", "name", "部门规章"),
-                java.util.Map.of("code", "地方性法规", "name", "地方性法规"),
-                java.util.Map.of("code", "司法解释", "name", "司法解释")
-            ),
-            "statusOptions", java.util.List.of(
-                java.util.Map.of("value", 1, "label", "现行有效"),
-                java.util.Map.of("value", 2, "label", "已废止"),
-                java.util.Map.of("value", 3, "label", "修订中"),
-                java.util.Map.of("value", 4, "label", "尚未生效"),
-                java.util.Map.of("value", 5, "label", "部分失效")
-            )
-        ));
+    public ApiResponse<Map<String, Object>> getCategories() {
+        Map<String, Object> categories = lawSearchService.getCategories();
+        return ApiResponse.success(categories);
+    }
+
+    @GetMapping("/laws/{lawUuid}")
+    public ApiResponse<LawSearchResponse.LawSearchItem> getLawDetail(@PathVariable String lawUuid) {
+        LawSearchResponse.LawSearchItem item = lawSearchService.getLawDetail(lawUuid);
+        if (item == null) {
+            return ApiResponse.error(404, "法规不存在");
+        }
+        return ApiResponse.success(item);
     }
 }
