@@ -1,7 +1,5 @@
 package com.legalai.dto;
 
-import java.util.List;
-
 public class LawSearchRequest {
     private String keyword;
     private String categoryL1;
@@ -28,4 +26,16 @@ public class LawSearchRequest {
     public void setPage(Integer page) { this.page = page; }
     public Integer getPageSize() { return pageSize; }
     public void setPageSize(Integer pageSize) { this.pageSize = pageSize; }
+
+    public String getStatusName() {
+        if (status == null) return null;
+        switch (status) {
+            case 1: return "现行有效";
+            case 2: return "已废止";
+            case 3: return "修订中";
+            case 4: return "尚未生效";
+            case 5: return "部分失效";
+            default: return "现行有效";
+        }
+    }
 }

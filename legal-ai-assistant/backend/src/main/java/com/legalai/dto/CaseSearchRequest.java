@@ -40,4 +40,23 @@ public class CaseSearchRequest {
     public void setPage(Integer page) { this.page = page; }
     public Integer getPageSize() { return pageSize; }
     public void setPageSize(Integer pageSize) { this.pageSize = pageSize; }
+
+    public boolean hasCaseTypeFilter() {
+        return caseType != null && caseType > 0;
+    }
+
+    public boolean hasCourtLevelFilter() {
+        return courtLevel != null && courtLevel > 0;
+    }
+
+    public String getCaseTypeName() {
+        if (caseType == null) return null;
+        switch (caseType) {
+            case 1: return "民事";
+            case 2: return "刑事";
+            case 3: return "行政";
+            case 4: return "执行";
+            default: return "民事";
+        }
+    }
 }

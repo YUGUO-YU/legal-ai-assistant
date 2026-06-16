@@ -142,10 +142,10 @@ public class CaseSearchService {
 
         return cases.stream()
             .filter(c -> {
-                if (request.getCaseType() != null && !c.getCaseType().equals(getCaseTypeName(request.getCaseType()))) {
+                if (request.hasCaseTypeFilter() && !c.getCaseType().equals(request.getCaseTypeName())) {
                     return false;
                 }
-                if (request.getCourtLevel() != null && request.getCourtLevel() != c.getCourtLevel()) {
+                if (request.hasCourtLevelFilter() && request.getCourtLevel() != c.getCourtLevel()) {
                     return false;
                 }
                 if (request.getJudgmentResult() != null && !request.getJudgmentResult().equals(c.getJudgmentResult())) {

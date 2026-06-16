@@ -184,6 +184,7 @@ public class LegalSearchService {
         response.setPage(request.getPage());
         response.setPageSize(request.getPageSize());
         response.setTookMs(System.currentTimeMillis() - startTime);
+        response.setSearchLogId(System.currentTimeMillis());
         response.setItems(pagedResults);
         response.setRelatedCases(relatedCases);
 

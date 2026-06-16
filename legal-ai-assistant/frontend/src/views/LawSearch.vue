@@ -193,7 +193,7 @@ const handleSearch = async () => {
   try {
     const res = await api.lawSearch.search({
       keyword: keyword.value,
-      status: statusFilter.value ? [statusFilter.value] : null,
+      status: statusFilter.value,
       page: page.value,
       pageSize: pageSize.value
     })

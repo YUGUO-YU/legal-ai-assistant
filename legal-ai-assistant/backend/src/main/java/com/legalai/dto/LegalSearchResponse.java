@@ -7,6 +7,7 @@ public class LegalSearchResponse {
     private Integer page;
     private Integer pageSize;
     private Long tookMs;
+    private Long searchLogId;
     private List<SearchResultItem> items;
     private List<RelatedCase> relatedCases;
 
@@ -18,6 +19,8 @@ public class LegalSearchResponse {
     public void setPageSize(Integer pageSize) { this.pageSize = pageSize; }
     public Long getTookMs() { return tookMs; }
     public void setTookMs(Long tookMs) { this.tookMs = tookMs; }
+    public Long getSearchLogId() { return searchLogId; }
+    public void setSearchLogId(Long searchLogId) { this.searchLogId = searchLogId; }
     public List<SearchResultItem> getItems() { return items; }
     public void setItems(List<SearchResultItem> items) { this.items = items; }
     public List<RelatedCase> getRelatedCases() { return relatedCases; }
