@@ -1,100 +1,145 @@
 <template>
-  <div class="page-card">
+  <div class="legal-research">
     <div class="page-header">
-      <h2>AI法律研究</h2>
-      <p>对法律问题进行多维度研究，输出结构化分析报告</p>
+      <div class="header-content">
+        <h2>AI法律研究</h2>
+        <p>对法律问题进行多维度研究，输出结构化分析报告</p>
+      </div>
     </div>
 
-    <div class="research-form">
-      <el-input
-        v-model="query"
-        type="textarea"
-        :rows="4"
-        placeholder="请输入需要研究的具体法律问题，如：建设工程合同纠纷中的工期延误索赔问题研究"
-        size="large"
-      />
-      <div class="form-row">
-        <div class="form-item">
-          <label>研究深度：</label>
-          <el-radio-group v-model="depth">
-            <el-radio label="brief">简略</el-radio>
-            <el-radio label="normal">标准</el-radio>
-            <el-radio label="detailed">详细</el-radio>
-          </el-radio-group>
+    <el-card class="research-card">
+      <div class="research-form">
+        <div class="form-section">
+          <div class="section-label">
+            <el-icon><Edit /></el-icon>
+            <span>研究问题</span>
+          </div>
+          <el-input
+            v-model="query"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入需要研究的具体法律问题，如：建设工程合同纠纷中的工期延误索赔问题研究"
+          />
         </div>
-        <div class="form-item">
-          <label>数据来源：</label>
-          <el-checkbox-group v-model="sources">
-            <el-checkbox label="laws">法律法规</el-checkbox>
-            <el-checkbox label="cases">司法案例</el-checkbox>
-            <el-checkbox label="papers">学术论文</el-checkbox>
-          </el-checkbox-group>
+
+        <div class="form-options">
+          <div class="option-group">
+            <label>
+              <el-icon><DataAnalysis /></el-icon>
+              研究深度
+            </label>
+            <el-radio-group v-model="depth">
+              <el-radio-button label="brief">简略</el-radio-button>
+              <el-radio-button label="normal">标准</el-radio-button>
+              <el-radio-button label="detailed">详细</el-radio-button>
+            </el-radio-group>
+          </div>
+          <div class="option-group">
+            <label>
+              <el-icon><Connection /></el-icon>
+              数据来源
+            </label>
+            <el-checkbox-group v-model="sources">
+              <el-checkbox label="laws">法律法规</el-checkbox>
+              <el-checkbox label="cases">司法案例</el-checkbox>
+              <el-checkbox label="papers">学术论文</el-checkbox>
+            </el-checkbox-group>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <el-button type="primary" size="large" @click="handleResearch" :loading="loading">
+            <el-icon><MagicStick /></el-icon>
+            开始研究
+          </el-button>
         </div>
       </div>
-      <el-button type="primary" size="large" @click="handleResearch" :loading="loading">
-        <el-icon><MagicStick /></el-icon>
-        开始研究
-      </el-button>
-    </div>
+    </el-card>
 
     <div v-if="loading" class="progress-panel">
-      <div class="progress-header">
-        <span>正在生成研究报告...</span>
-        <span class="progress-percent">{{ progress }}%</span>
-      </div>
-      <el-progress :percentage="progress" :status="progressStatus" :stroke-width="10" />
-      <div class="progress-phases">
-        <div
-          v-for="phase in phases"
-          :key="phase.name"
-          :class="['phase-item', { active: phase.active, completed: phase.completed }]"
-        >
-          <el-icon v-if="phase.completed"><SuccessFilled /></el-icon>
-          <el-icon v-else-if="phase.active" class="is-loading"><Loading /></el-icon>
-          <el-icon v-else><Document /></el-icon>
-          <span>{{ phase.label }}</span>
+      <el-card class="progress-card">
+        <div class="progress-header">
+          <div class="progress-info">
+            <div class="progress-icon">
+              <el-icon class="is-loading"><Loading /></el-icon>
+            </div>
+            <div class="progress-text">
+              <span class="progress-title">正在生成研究报告</span>
+              <span class="progress-percent">{{ progress }}%</span>
+            </div>
+          </div>
         </div>
-      </div>
-      <p class="progress-message">{{ progressMessage }}</p>
+        <el-progress :percentage="progress" :status="progressStatus" :stroke-width="8" />
+        <div class="progress-phases">
+          <div
+            v-for="phase in phases"
+            :key="phase.name"
+            :class="['phase-item', { active: phase.active, completed: phase.completed }]"
+          >
+            <div class="phase-icon">
+              <el-icon v-if="phase.completed"><SuccessFilled /></el-icon>
+              <el-icon v-else-if="phase.active" class="is-loading"><Loading /></el-icon>
+              <el-icon v-else><Document /></el-icon>
+            </div>
+            <span>{{ phase.label }}</span>
+          </div>
+        </div>
+        <p class="progress-message">{{ progressMessage }}</p>
+      </el-card>
     </div>
 
     <div v-if="report" class="report-content">
-      <div class="report-toolbar">
-        <el-button-group>
-          <el-button @click="exportPdf">
-            <el-icon><Download /></el-icon>导出PDF
-          </el-button>
-          <el-button @click="copyReport">
-            <el-icon><CopyDocument /></el-icon> 复制全文
-          </el-button>
-          <el-button @click="printReport">
-            <el-icon><Printer /></el-icon> 打印
-          </el-button>
-        </el-button-group>
-      </div>
+      <el-card class="report-toolbar-card">
+        <div class="report-toolbar">
+          <div class="toolbar-left">
+            <el-icon><Document /></el-icon>
+            <span>研究报告</span>
+          </div>
+          <div class="toolbar-actions">
+            <el-button @click="exportPdf">
+              <el-icon><Download /></el-icon>
+              导出PDF
+            </el-button>
+            <el-button @click="copyReport">
+              <el-icon><CopyDocument /></el-icon>
+              复制全文
+            </el-button>
+            <el-button @click="printReport">
+              <el-icon><Printer /></el-icon>
+              打印
+            </el-button>
+          </div>
+        </div>
+      </el-card>
 
       <div class="report-container">
-        <div
+        <el-card
           v-for="section in report"
           :key="section.id"
           :id="'section-' + section.id"
           class="report-section"
         >
           <div class="section-header">
-            <h2>{{ section.title }}</h2>
-            <el-button text size="small" @click="copySection(section)">
+            <div class="section-title">
+              <h2>{{ section.title }}</h2>
+            </div>
+            <el-button type="primary" link @click="copySection(section)">
               <el-icon><CopyDocument /></el-icon>
-           </el-button>
+              复制
+            </el-button>
           </div>
           <div class="section-content" v-html="section.content"></div>
           <div class="section-citations" v-if="section.citations?.length">
-            <h4>参考来源</h4>
+            <div class="citations-header">
+              <el-icon><Link /></el-icon>
+              <span>参考来源</span>
+            </div>
             <div v-for="c in section.citations" :key="c.id" class="citation-item">
               <a :href="c.url" target="_blank">{{ c.title }}</a>
-              <span class="citation-source">{{ c.source }}</span>
+              <el-tag size="small" type="info">{{ c.source }}</el-tag>
             </div>
           </div>
-        </div>
+        </el-card>
       </div>
     </div>
   </div>
@@ -103,6 +148,19 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
+import {
+  Edit,
+  DataAnalysis,
+  Connection,
+  MagicStick,
+  Loading,
+  SuccessFilled,
+  Document,
+  Download,
+  CopyDocument,
+  Printer,
+  Link
+} from '@element-plus/icons-vue'
 
 const query = ref('')
 const loading = ref(false)
@@ -114,13 +172,13 @@ const depth = ref('normal')
 const sources = ref(['laws', 'cases'])
 
 const phases = reactive([
-  { name: 'parse', label: '解析研究问题', active: false, completed: false },
-  { name: 'search_laws', label: '检索法律法规', active: false, completed: false },
-  { name: 'search_cases', label: '检索司法案例', active: false, completed: false },
-  { name: 'generate_def', label: '生成问题界定', active: false, completed: false },
-  { name: 'generate_basis', label: '生成法律依据', active: false, completed: false },
-  { name: 'generate_risk', label: '生成风险提示', active: false, completed: false },
-  { name: 'generate_conclusion', label: '生成结论建议', active: false, completed: false }
+  { name: 'parse', label: '解析问题', active: false, completed: false },
+  { name: 'search_laws', label: '检索法规', active: false, completed: false },
+  { name: 'search_cases', label: '检索案例', active: false, completed: false },
+  { name: 'generate_def', label: '问题界定', active: false, completed: false },
+  { name: 'generate_basis', label: '法律依据', active: false, completed: false },
+  { name: 'generate_risk', label: '风险提示', active: false, completed: false },
+  { name: 'generate_conclusion', label: '结论建议', active: false, completed: false }
 ])
 
 const handleResearch = async () => {
@@ -230,7 +288,7 @@ const handleResearch = async () => {
         </ul>
         <p><strong>对发包人的建议：</strong></p>
         <ul>
-          <li>加强项目管理，确保设计变更、材料供应等及时到位。</li>
+          <li>加强项目管理，确保设计变更，材料供应等及时到位。</li>
           <li>建立工期考核机制，定期评估施工进度。</li>
           <li>如遇承包人索赔，及时固定反证材料，准备应诉策略。</li>
         </ul>`,
@@ -266,145 +324,385 @@ const copySection = (section) => {
 </script>
 
 <style lang="scss" scoped>
+.legal-research {
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-header {
+  margin-bottom: 24px;
+
+  .header-content {
+    h2 {
+      margin: 0 0 8px 0;
+      font-size: 26px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+  }
+}
+
+.research-card {
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+
+  :deep(.el-card__body) {
+    padding: 24px;
+  }
+}
+
 .research-form {
-  .form-row {
-    display: flex;
-    gap: 24px;
-    margin: 16px 0;
-    .form-item {
+  .form-section {
+    margin-bottom: 24px;
+
+    .section-label {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-size: 15px;
+      font-weight: 500;
+      color: #1f2937;
+
+      .el-icon {
+        font-size: 18px;
+        color: #667eea;
+      }
+    }
+
+    :deep(.el-textarea__inner) {
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.8;
+      resize: none;
+
+      &::placeholder {
+        color: #9ca3af;
+      }
+    }
+  }
+
+  .form-options {
+    display: flex;
+    gap: 32px;
+    margin-bottom: 24px;
+
+    .option-group {
       label {
-        color: #666;
-        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #4b5563;
+        margin-bottom: 12px;
+
+        .el-icon {
+          color: #667eea;
+        }
+      }
+    }
+  }
+
+  .form-actions {
+    :deep(.el-button) {
+      height: 48px;
+      padding: 0 48px;
+      border-radius: 12px;
+      font-size: 15px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border: none;
+      transition: all 0.3s;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
       }
     }
   }
 }
 
 .progress-panel {
-  margin: 32px 0;
-  padding: 24px;
-  background: #fafafa;
-  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.progress-card {
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+
+  :deep(.el-card__body) {
+    padding: 28px;
+  }
 
   .progress-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    .progress-percent {
-      font-weight: bold;
-      color: #1890ff;
+    margin-bottom: 24px;
+
+    .progress-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+
+      .progress-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .el-icon {
+          font-size: 24px;
+          color: #667eea;
+        }
+      }
+
+      .progress-text {
+        flex: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .progress-title {
+          font-size: 16px;
+          font-weight: 500;
+          color: #1f2937;
+        }
+
+        .progress-percent {
+          font-size: 20px;
+          font-weight: 700;
+          color: #667eea;
+        }
+      }
     }
+  }
+
+  :deep(.el-progress-bar__outer) {
+    background: #f3f4f6;
+    border-radius: 6px;
   }
 
   .progress-phases {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    margin-top: 24px;
+    margin-top: 28px;
+
     .phase-item {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      background: #fff;
-      border-radius: 16px;
+      gap: 8px;
+      padding: 8px 16px;
+      background: #f9fafb;
+      border-radius: 20px;
       font-size: 13px;
-      color: #999;
-      &.active {
-        color: #1890ff;
-        background: #e6f7ff;
+      color: #9ca3af;
+      transition: all 0.3s;
+
+      .phase-icon {
+        font-size: 14px;
       }
+
+      &.active {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        color: #667eea;
+      }
+
       &.completed {
-        color: #52c41a;
-        background: #f6ffed;
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
       }
     }
   }
 
   .progress-message {
     text-align: center;
-    color: #666;
-    margin-top: 16px;
+    color: #6b7280;
+    font-size: 14px;
+    margin: 20px 0 0 0;
   }
 }
 
-.report-content {
-  margin-top: 32px;
+.report-toolbar-card {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  margin-bottom: 24px;
+
+  :deep(.el-card__body) {
+    padding: 16px 20px;
+  }
 }
 
 .report-toolbar {
-  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f2937;
+
+    .el-icon {
+      font-size: 20px;
+      color: #667eea;
+    }
+  }
+
+  .toolbar-actions {
+    display: flex;
+    gap: 10px;
+
+    :deep(.el-button) {
+      border-radius: 8px;
+    }
+  }
 }
 
 .report-container {
-  background: #fff;
-  padding: 48px;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .report-section {
-  margin-bottom: 48px;
-  padding-bottom: 32px;
-  border-bottom: 1px solid #f0f0f0;
-  &:last-child {
-    border-bottom: none;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s;
+
+  &:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  :deep(.el-card__body) {
+    padding: 28px;
   }
 
   .section-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    h2 {
-      margin: 0;
-      font-size: 20px;
-      border-left: 4px solid #1890ff;
-      padding-left: 12px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f3f4f6;
+
+    .section-title {
+      h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: #1f2937;
+        border-left: 4px solid #667eea;
+        padding-left: 16px;
+        line-height: 1.4;
+      }
     }
   }
 
   .section-content {
-    line-height: 1.8;
-    p { margin: 0 0 16px 0; }
+    line-height: 1.9;
+    font-size: 14px;
+    color: #374151;
+
+    p {
+      margin: 0 0 16px 0;
+    }
+
     ul {
       padding-left: 24px;
       margin: 0 0 16px 0;
-      li { margin-bottom: 8px; }
+
+      li {
+        margin-bottom: 8px;
+        line-height: 1.7;
+      }
     }
-    strong { color: #333; }
+
+    strong {
+      color: #1f2937;
+    }
   }
 
   .section-citations {
-    margin-top: 16px;
+    margin-top: 20px;
     padding-top: 16px;
-    border-top: 1px dashed #f0f0f0;
-    h4 {
-      margin: 0 0 12px 0;
+    border-top: 1px dashed #e5e7eb;
+
+    .citations-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
       font-size: 14px;
-      color: #666;
-    }
-    .citation-item {
-      padding: 8px 0;
-      border-bottom: 1px solid #f5f5f5;
-      &:last-child { border-bottom: none; }
-      a {
-        color: #1890ff;
-        margin-right: 12px;
+      font-weight: 500;
+      color: #6b7280;
+
+      .el-icon {
+        color: #667eea;
       }
-      .citation-source {
-        color: #999;
-        font-size: 12px;
+    }
+
+    .citation-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f3f4f6;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      a {
+        color: #667eea;
+        text-decoration: none;
+        font-size: 14px;
+
+        &:hover {
+          text-decoration: underline;
+        }
       }
     }
   }
 }
 
 @media print {
-  .report-toolbar { display: none; }
-  .report-container { padding: 0; border: none; }
+  .report-toolbar-card,
+  .progress-panel {
+    display: none;
+  }
+
+  .report-section {
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+  }
 }
 </style>
