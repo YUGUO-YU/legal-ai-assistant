@@ -30,6 +30,9 @@ public class AIService {
     @Value("${ai.minimax.timeout:120}")
     private int timeout;
 
+    @Value("${ai.minimax.embedding-model:embo-01}")
+    private String embeddingModel;
+
     private final OkHttpClient client;
     private final ObjectMapper objectMapper;
 
@@ -76,6 +79,56 @@ public class AIService {
         } catch (Exception e) {
             log.error("MiniMax API异常: {}", e.getMessage(), e);
             throw new IOException("API调用异常: " + e.getMessage(), e);
+        }
+    }
+
+    public float[] embedText(String text) throws IOException {
+        log.info("调用MiniMax Embedding API: model={}, text长度={}", embeddingModel, text.length());
+
+        Map<String, Object> requestBody = Map.of(
+            "model", embeddingModel,
+            "texts", List.of(text)
+        );
+
+        String json = objectMapper.writeValueAsString(requestBody);
+
+        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+                .url(apiUrl + "/embeddings")
+                .addHeader("Authorization", "Bearer " + apiKey)
+                .addHeader("Content-Type", "application/json")
+                .post(body)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String errorBody = response.body() != null ? response.body().string() : "no body";
+                log.error("MiniMax Embedding API调用失败: code={}, message={}", response.code(), response.message());
+                throw new IOException("Embedding API调用失败: " + response.code());
+            }
+
+            String responseBody = response.body().string();
+            return parseEmbeddingResponse(responseBody);
+        } catch (Exception e) {
+            log.error("MiniMax Embedding API异常: {}", e.getMessage(), e);
+            throw new IOException("Embedding API异常: " + e.getMessage(), e);
+        }
+    }
+
+    private float[] parseEmbeddingResponse(String responseBody) {
+        try {
+            JsonNode json = objectMapper.readTree(responseBody);
+            JsonNode embedding = json.get("data").get(0).get("embedding");
+            float[] result = new float[embedding.size()];
+            for (int i = 0; i < embedding.size(); i++) {
+                result[i] = (float) embedding.get(i).asDouble();
+            }
+            log.info("Embedding解析成功: 向量维度={}", result.length);
+            return result;
+        } catch (Exception e) {
+            log.error("解析Embedding响应失败: {}", e.getMessage(), e);
+            return new float[1536];
         }
     }
 

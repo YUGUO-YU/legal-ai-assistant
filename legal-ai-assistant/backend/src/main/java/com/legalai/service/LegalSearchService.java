@@ -1,12 +1,16 @@
 package com.legalai.service;
 
+import com.legalai.config.ElasticsearchConfig;
+import com.legalai.config.MilvusConfig;
 import com.legalai.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class LegalSearchService {
@@ -15,13 +19,21 @@ public class LegalSearchService {
     @Value("${mock.enabled:true}")
     private boolean mockEnabled;
 
+    private final ElasticsearchService elasticsearchService;
+    private final MilvusService milvusService;
+    private final AIService aiService;
+    private final ElasticsearchConfig esConfig;
+    private final MilvusConfig milvusConfig;
+    private final SourceVerificationService sourceVerificationService;
+    private final CacheService cacheService;
+
     private static final String SYSTEM_PROMPT =
         "你是一个专业的法律助手，专注于中国法律法规的检索与解读。你拥有法学背景，能够准确理解法律条文含义并给出专业解释。\n\n" +
         "核心任务：根据用户输入的法律问题，从检索到的法规条文中提取相关信息，给出准确、专业的回答。\n\n" +
         "约束条件（HARD RULES）：\n" +
         "1. 溯源必须：每个法律结论必须标注来源，格式为：[法规名称] 第X条 | 来源URL\n" +
         "2. 禁止胡编：只陈述检索结果中明确存在的内容，不得编造、推测法条内容\n" +
-        "3. 不确定声明：如检索结果不足以回答，明确说明\"未检索到相关内容\"\n" +
+        "3. 不确定声明：如检索结果不足以回答，明确说明\"未检索到相关法规\"\n" +
         "4. 语言严谨：使用规范法律用语，避免口语化表达\n" +
         "5. 时效性：注意标注法条的时效性，提示可能已修订\n\n" +
         "输出格式：\n" +
@@ -33,80 +45,35 @@ public class LegalSearchService {
         "- 问题1\n" +
         "- 问题2";
 
-    private static final List<Map<String, String>> MOCK_LAWS = List.of(
-        Map.of(
-            "articleId", "ART-2023-001",
-            "lawTitle", "中华人民共和国民法典",
-            "articleNo", "第一百四十八条",
-            "title", "欺诈的认定",
-            "content", "一方以欺诈手段，使对方在违背真实意思的情况下订立的合同，受欺诈方有权请求人民法院或者仲裁机构予以撤销。",
-            "categoryL1", "法律",
-            "categoryL2", "民法"
-        ),
-        Map.of(
-            "articleId", "ART-2023-002",
-            "lawTitle", "中华人民共和国民法典",
-            "articleNo", "第一百四十九条",
-            "title", "第三人欺诈",
-            "content", "第三人实施欺诈行为，使一方陷入错误认识的，适用欺诈规定。",
-            "categoryL1", "法律",
-            "categoryL2", "民法"
-        ),
-        Map.of(
-            "articleId", "ART-2023-003",
-            "lawTitle", "中华人民共和国民法典",
-            "articleNo", "第五百六十三条",
-            "title", "合同解除情形",
-            "content", "有下列情形之一的，当事人可以解除合同：（一）因不可抗力致使不能实现合同目的；（二）履行期限届满前，当事人一方明确表示或者以自己的行为表明不履行主要债务；（三）当事人一方迟延履行主要债务，经催告后在合理期限内仍未履行；（四）当事人一方迟延履行债务或者有其他违约行为致使不能实现合同目的。",
-            "categoryL1", "法律",
-            "categoryL2", "民法"
-        ),
-        Map.of(
-            "articleId", "ART-2023-004",
-            "lawTitle", "中华人民共和国民法典",
-            "articleNo", "第五百七十七条",
-            "title", "违约责任",
-            "content", "当事人一方不履行合同义务或者履行合同义务不符合约定的，应当承担违约责任。",
-            "categoryL1", "法律",
-            "categoryL2", "民法"
-        ),
-        Map.of(
-            "articleId", "ART-2023-005",
-            "lawTitle", "中华人民共和国民法典",
-            "articleNo", "第五百八十四条",
-            "title", "损失赔偿范围",
-            "content", "当事人一方不履行合同义务或者履行合同义务不符合约定的，给对方造成损失的，损失赔偿额应当相当于因违约所造成的损失，包括合同履行后可以获得的利益。",
-            "categoryL1", "法律",
-            "categoryL2", "民法"
-        ),
-        Map.of(
-            "articleId", "ART-2023-006",
-            "lawTitle", "中华人民共和国劳动合同法",
-            "articleNo", "第三十九条",
-            "title", "用人单位单方解除劳动合同",
-            "content", "劳动者有下列情形之一的，用人单位可以解除劳动合同：（一）在试用期间被证明不符合录用条件的；（二）严重违反用人单位的规章制度的；（三）严重失职，营私舞弊，给用人单位造成重大损害的。",
-            "categoryL1", "法律",
-            "categoryL2", "劳动法"
-        ),
-        Map.of(
-            "articleId", "ART-2023-007",
-            "lawTitle", "中华人民共和国劳动合同法",
-            "articleNo", "第四十六条",
-            "title", "经济补偿",
-            "content", "有下列情形之一的，用人单位应当向劳动者支付经济补偿：（一）劳动者依照本法第三十八条规定解除劳动合同的；（二）用人单位依照本法第三十六条规定向劳动者提出解除劳动合同并与劳动者协商一致解除劳动合同的。",
-            "categoryL1", "法律",
-            "categoryL2", "劳动法"
-        ),
-        Map.of(
-            "articleId", "ART-2023-008",
-            "lawTitle", "最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）",
-            "articleNo", "第十条",
-            "title", "工程价款结算",
-            "content", "当事人对建设工程的计价标准或者计价方法有约定的，按照约定结算工程价款。",
-            "categoryL1", "司法解释",
-            "categoryL2", "建设工程"
-        )
+    private static final Map<String, List<String>> SYNONYMS = Map.of(
+        "欺诈", List.of("欺骗", "诈骗", "骗取"),
+        "违约", List.of("违约行为", "违反合同", "不履行"),
+        "解除", List.of("解除合同", "终止合同", "撤销"),
+        "劳动", List.of("劳动合同", "劳动关系", "劳动争议"),
+        "赔偿", List.of("赔偿", "补偿", "损失赔偿"),
+        "借款", List.of("借贷", "贷款", "借钱"),
+        "合同", List.of("合约", "协议", "契约")
     );
+
+    private static final int RRF_K = 60;
+
+    @Autowired
+    public LegalSearchService(
+            ElasticsearchService elasticsearchService,
+            MilvusService milvusService,
+            AIService aiService,
+            ElasticsearchConfig esConfig,
+            MilvusConfig milvusConfig,
+            SourceVerificationService sourceVerificationService,
+            CacheService cacheService) {
+        this.elasticsearchService = elasticsearchService;
+        this.milvusService = milvusService;
+        this.aiService = aiService;
+        this.esConfig = esConfig;
+        this.milvusConfig = milvusConfig;
+        this.sourceVerificationService = sourceVerificationService;
+        this.cacheService = cacheService;
+    }
 
     public LegalSearchResponse search(LegalSearchRequest request) {
         log.info("法律检索请求: query={}, page={}, pageSize={}",
@@ -114,7 +81,24 @@ public class LegalSearchService {
 
         validateRequest(request);
 
-        return mockSearch(request);
+        LegalSearchResponse cached = cacheService.getCachedSearchResults(request.getQuery());
+        if (cached != null && request.getPage() == 1) {
+            log.info("命中缓存，返回缓存结果");
+            return cached;
+        }
+
+        LegalSearchResponse response;
+        if (mockEnabled) {
+            response = mockSearch(request);
+        } else {
+            response = hybridSearch(request);
+        }
+
+        if (request.getPage() == 1) {
+            cacheService.cacheSearchResults(request.getQuery(), response);
+        }
+
+        return response;
     }
 
     private void validateRequest(LegalSearchRequest request) {
@@ -124,25 +108,215 @@ public class LegalSearchService {
         if (request.getQuery().length() > 200) {
             throw new IllegalArgumentException("检索关键词长度不能超过200字");
         }
+        if (sourceVerificationService.isQuerySensitive(request.getQuery())) {
+            throw new IllegalArgumentException("检索内容包含敏感词，请调整后重试");
+        }
+    }
+
+    private LegalSearchResponse hybridSearch(LegalSearchRequest request) {
+        long startTime = System.currentTimeMillis();
+        String query = request.getQuery();
+        int topK = Math.max(request.getPageSize() * 5, 50);
+        int timeoutMs = 2000;
+
+        List<LegalSearchResponse.SearchResultItem> esResults = Collections.emptyList();
+        List<LegalSearchResponse.SearchResultItem> milvusResults = Collections.emptyList();
+
+        if (esConfig.isEnabled() && elasticsearchService.isAvailable()) {
+            try {
+                esResults = elasticsearchService.searchByES(query, 1, topK, buildFilters(request));
+                log.info("ES检索返回 {} 条结果", esResults.size());
+            } catch (Exception e) {
+                log.warn("ES检索超时或失败，降级到Mock: {}", e.getMessage());
+            }
+        }
+
+        if (System.currentTimeMillis() - startTime > timeoutMs) {
+            log.warn("检索超时，降级到ES-only模式");
+            return fallbackToESOnly(request, esResults, startTime);
+        }
+
+        if (milvusConfig.isEnabled() && milvusService.isAvailable()) {
+            try {
+                milvusResults = milvusService.searchByVector(query, topK);
+                log.info("Milvus检索返回 {} 条结果", milvusResults.size());
+            } catch (Exception e) {
+                log.warn("Milvus检索失败，降级到ES-only: {}", e.getMessage());
+            }
+        }
+
+        List<LegalSearchResponse.SearchResultItem> fusedResults;
+        if (!esResults.isEmpty() && !milvusResults.isEmpty()) {
+            fusedResults = rrfFusion(esResults, milvusResults, topK);
+        } else if (!esResults.isEmpty()) {
+            fusedResults = esResults;
+        } else if (!milvusResults.isEmpty()) {
+            fusedResults = milvusResults;
+        } else {
+            log.warn("所有检索引擎均不可用，降级到Mock");
+            fusedResults = mockSearch(request).getItems();
+        }
+
+        return buildResponse(request, fusedResults, startTime);
+    }
+
+    private LegalSearchResponse fallbackToESOnly(LegalSearchRequest request,
+            List<LegalSearchResponse.SearchResultItem> esResults, long startTime) {
+        if (esResults.isEmpty()) {
+            esResults = mockSearch(request).getItems();
+        }
+        return buildResponse(request, esResults, startTime);
+    }
+
+    private LegalSearchResponse buildResponse(LegalSearchRequest request,
+            List<LegalSearchResponse.SearchResultItem> fusedResults, long startTime) {
+        int from = (request.getPage() - 1) * request.getPageSize();
+        int to = Math.min(from + request.getPageSize(), fusedResults.size());
+        List<LegalSearchResponse.SearchResultItem> pagedResults = fusedResults.subList(from, to);
+
+        List<LegalSearchResponse.RelatedCase> relatedCases = new ArrayList<>();
+        if (Boolean.TRUE.equals(request.getIncludeCases()) && !pagedResults.isEmpty()) {
+            relatedCases = generateRelatedCases(pagedResults.get(0).getTitle());
+        }
+
+        LegalSearchResponse response = new LegalSearchResponse();
+        response.setTotal((long) fusedResults.size());
+        response.setPage(request.getPage());
+        response.setPageSize(request.getPageSize());
+        response.setTookMs(System.currentTimeMillis() - startTime);
+        response.setItems(pagedResults);
+        response.setRelatedCases(relatedCases);
+
+        return response;
+    }
+
+    private Map<String, Object> buildFilters(LegalSearchRequest request) {
+        Map<String, Object> filters = new HashMap<>();
+        if (request.getFilters() != null) {
+            if (request.getFilters().containsKey("category_l1")) {
+                filters.put("category_l1", request.getFilters().get("category_l1"));
+            }
+            if (request.getFilters().containsKey("status")) {
+                filters.put("status", request.getFilters().get("status"));
+            }
+        }
+        return filters;
+    }
+
+    private List<LegalSearchResponse.SearchResultItem> rrfFusion(
+            List<LegalSearchResponse.SearchResultItem> esResults,
+            List<LegalSearchResponse.SearchResultItem> milvusResults,
+            int topK) {
+
+        Map<String, Integer> esRank = new HashMap<>();
+        for (int i = 0; i < esResults.size(); i++) {
+            esRank.put(esResults.get(i).getArticleId(), i + 1);
+        }
+
+        Map<String, Integer> milvusRank = new HashMap<>();
+        for (int i = 0; i < milvusResults.size(); i++) {
+            milvusRank.put(milvusResults.get(i).getArticleId(), i + 1);
+        }
+
+        Map<String, Double> rrfScores = new HashMap<>();
+        Set<String> allArticleIds = new HashSet<>();
+        allArticleIds.addAll(esRank.keySet());
+        allArticleIds.addAll(milvusRank.keySet());
+
+        for (String articleId : allArticleIds) {
+            double score = 0.0;
+            if (esRank.containsKey(articleId)) {
+                score += 1.0 / (RRF_K + esRank.get(articleId));
+            }
+            if (milvusRank.containsKey(articleId)) {
+                score += 1.0 / (RRF_K + milvusRank.get(articleId));
+            }
+            rrfScores.put(articleId, score);
+        }
+
+        List<LegalSearchResponse.SearchResultItem> fused = new ArrayList<>();
+        Set<String> added = new HashSet<>();
+
+        for (int i = 0; i < topK; i++) {
+            String bestId = null;
+            double bestScore = -1.0;
+            for (String articleId : allArticleIds) {
+                if (!added.contains(articleId) && rrfScores.get(articleId) > bestScore) {
+                    bestScore = rrfScores.get(articleId);
+                    bestId = articleId;
+                }
+            }
+            if (bestId == null) break;
+
+            LegalSearchResponse.SearchResultItem item = findByArticleId(esResults, milvusResults, bestId);
+            if (item != null) {
+                item.setScore(bestScore);
+                fused.add(item);
+                added.add(bestId);
+            }
+        }
+
+        return fused;
+    }
+
+    private LegalSearchResponse.SearchResultItem findByArticleId(
+            List<LegalSearchResponse.SearchResultItem> esResults,
+            List<LegalSearchResponse.SearchResultItem> milvusResults,
+            String articleId) {
+        for (LegalSearchResponse.SearchResultItem item : esResults) {
+            if (item.getArticleId().equals(articleId)) {
+                return item;
+            }
+        }
+        for (LegalSearchResponse.SearchResultItem item : milvusResults) {
+            if (item.getArticleId().equals(articleId)) {
+                return item;
+            }
+        }
+        return null;
     }
 
     private LegalSearchResponse mockSearch(LegalSearchRequest request) {
         List<LegalSearchResponse.SearchResultItem> items = new ArrayList<>();
         String query = request.getQuery() != null ? request.getQuery().toLowerCase() : "";
 
+        List<Map<String, String>> mockLaws = List.of(
+            Map.of("articleId", "ART-2023-001", "lawTitle", "中华人民共和国民法典", "articleNo", "第一百四十八条",
+                "title", "欺诈的认定", "content", "一方以欺诈手段，使对方在违背真实意思的情况下订立的合同，受欺诈方有权请求人民法院或者仲裁机构予以撤销。",
+                "categoryL1", "法律", "categoryL2", "民法"),
+            Map.of("articleId", "ART-2023-002", "lawTitle", "中华人民共和国民法典", "articleNo", "第一百四十九条",
+                "title", "第三人欺诈", "content", "第三人实施欺诈行为，使一方陷入错误认识的，适用欺诈规定。",
+                "categoryL1", "法律", "categoryL2", "民法"),
+            Map.of("articleId", "ART-2023-003", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百六十三条",
+                "title", "合同解除情形", "content", "有下列情形之一的，当事人可以解除合同：（一）因不可抗力致使不能实现合同目的；（二）履行期限届满前，当事人一方明确表示或者以自己的行为表明不履行主要债务。",
+                "categoryL1", "法律", "categoryL2", "民法"),
+            Map.of("articleId", "ART-2023-004", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百七十七条",
+                "title", "违约责任", "content", "当事人一方不履行合同义务或者履行合同义务不符合约定的，应当承担违约责任。",
+                "categoryL1", "法律", "categoryL2", "民法"),
+            Map.of("articleId", "ART-2023-005", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百八十四条",
+                "title", "损失赔偿范围", "content", "当事人一方不履行合同义务或者履行合同义务不符合约定的，给对方造成损失的，损失赔偿额应当相当于因违约所造成的损失，包括合同履行后可以获得的利益。",
+                "categoryL1", "法律", "categoryL2", "民法"),
+            Map.of("articleId", "ART-2023-006", "lawTitle", "中华人民共和国劳动合同法", "articleNo", "第三十九条",
+                "title", "用人单位单方解除劳动合同", "content", "劳动者有下列情形之一的，用人单位可以解除劳动合同：（一）在试用期间被证明不符合录用条件的；（二）严重违反用人单位的规章制度的。",
+                "categoryL1", "法律", "categoryL2", "劳动法"),
+            Map.of("articleId", "ART-2023-007", "lawTitle", "中华人民共和国劳动合同法", "articleNo", "第四十六条",
+                "title", "经济补偿", "content", "有下列情形之一的，用人单位应当向劳动者支付经济补偿：（一）劳动者依照本法第三十八条规定解除劳动合同的。",
+                "categoryL1", "法律", "categoryL2", "劳动法"),
+            Map.of("articleId", "ART-2023-008", "lawTitle", "最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）", "articleNo", "第十条",
+                "title", "工程价款结算", "content", "当事人对建设工程的计价标准或者计价方法有约定的，按照约定结算工程价款。",
+                "categoryL1", "司法解释", "categoryL2", "建设工程")
+        );
+
         int count = 0;
-        for (Map<String, String> law : MOCK_LAWS) {
+        for (Map<String, String> law : mockLaws) {
             if (count >= request.getPageSize()) break;
 
             String content = law.get("content").toLowerCase();
             String title = law.get("title").toLowerCase();
             String lawTitle = law.get("lawTitle").toLowerCase();
 
-            if (query.isEmpty() ||
-                content.contains(query) ||
-                title.contains(query) ||
-                lawTitle.contains(query) ||
-                matchQueryWithSynonyms(query, content, title, lawTitle)) {
+            if (query.isEmpty() || content.contains(query) || title.contains(query) ||
+                lawTitle.contains(query) || matchQueryWithSynonyms(query, content, title, lawTitle)) {
 
                 LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
                 item.setArticleId(law.get("articleId"));
@@ -156,6 +330,8 @@ public class LegalSearchService {
                 item.setSourceName("国家法律法规信息库");
                 item.setScore(18.56 - count * 2.0);
                 item.setRelatedCasesCount(new Random().nextInt(10));
+                item.setCategoryL1(law.get("categoryL1"));
+                item.setCategoryL2(law.get("categoryL2"));
                 items.add(item);
                 count++;
             }
@@ -177,15 +353,7 @@ public class LegalSearchService {
     }
 
     private boolean matchQueryWithSynonyms(String query, String content, String title, String lawTitle) {
-        Map<String, List<String>> synonyms = Map.of(
-            "欺诈", List.of("欺骗", "诈骗", "骗取"),
-            "违约", List.of("违约行为", "违反合同", "不履行"),
-            "解除", List.of("解除合同", "终止合同", "撤销"),
-            "劳动", List.of("劳动合同", "劳动关系", "劳动争议"),
-            "赔偿", List.of("赔偿", "补偿", "损失赔偿")
-        );
-
-        for (Map.Entry<String, List<String>> entry : synonyms.entrySet()) {
+        for (Map.Entry<String, List<String>> entry : SYNONYMS.entrySet()) {
             if (query.contains(entry.getKey())) {
                 for (String syn : entry.getValue()) {
                     if (content.contains(syn) || title.contains(syn) || lawTitle.contains(syn)) {
@@ -199,7 +367,7 @@ public class LegalSearchService {
 
     private String highlightKeyword(String query) {
         if (query == null || query.isEmpty()) return "法律";
-        String[] words = query.replaceAll("[^\\u4e00-\u9fa5a-zA-Z0-9]", " ").split("\\s+");
+        String[] words = query.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9]", " ").split("\\s+");
         return words.length > 0 ? words[0] : "法律";
     }
 
@@ -272,5 +440,81 @@ public class LegalSearchService {
         }
 
         return suggestions;
+    }
+
+    public LegalSearchResponse.SearchResultItem getArticleDetail(String articleId) {
+        log.info("获取法规详情: articleId={}", articleId);
+
+        if (mockEnabled) {
+            for (Map<String, String> law : getMockLaws()) {
+                if (law.get("articleId").equals(articleId)) {
+                    LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
+                    item.setArticleId(law.get("articleId"));
+                    item.setLawId("LAW-2023-001");
+                    item.setLawTitle(law.get("lawTitle"));
+                    item.setArticleNo(law.get("articleNo"));
+                    item.setTitle(law.get("title"));
+                    item.setContent(law.get("content"));
+                    item.setSourceUrl("https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3YWIzYzIyYzA2M2I=");
+                    item.setSourceName("国家法律法规信息库");
+                    return item;
+                }
+            }
+            return null;
+        }
+
+        if (esConfig.isEnabled() && elasticsearchService.isAvailable()) {
+            return elasticsearchService.getArticleById(articleId);
+        }
+
+        return null;
+    }
+
+    public void submitFeedback(SearchFeedbackRequest request) {
+        log.info("收到搜索反馈: searchLogId={}, articleId={}, isHelpful={}",
+                request.getSearchLogId(), request.getArticleId(), request.getIsHelpful());
+
+        if (request.getArticleId() == null) {
+            throw new IllegalArgumentException("articleId不能为空");
+        }
+
+        log.info("反馈已记录: isHelpful={}, comment={}",
+                request.getIsHelpful() == 1 ? "有用" : "无用",
+                request.getUserComment());
+    }
+
+    private List<Map<String, String>> getMockLaws() {
+        return List.of(
+            Map.of("articleId", "ART-2023-001", "lawTitle", "中华人民共和国民法典", "articleNo", "第一百四十八条",
+                "title", "欺诈的认定", "content", "一方以欺诈手段，使对方在违背真实意思的情况下订立的合同，受欺诈方有权请求人民法院或者仲裁机构予以撤销。"),
+            Map.of("articleId", "ART-2023-002", "lawTitle", "中华人民共和国民法典", "articleNo", "第一百四十九条",
+                "title", "第三人欺诈", "content", "第三人实施欺诈行为，使一方陷入错误认识的，适用欺诈规定。"),
+            Map.of("articleId", "ART-2023-003", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百六十三条",
+                "title", "合同解除情形", "content", "有下列情形之一的，当事人可以解除合同。"),
+            Map.of("articleId", "ART-2023-004", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百七十七条",
+                "title", "违约责任", "content", "当事人一方不履行合同义务或者履行合同义务不符合约定的，应当承担违约责任。"),
+            Map.of("articleId", "ART-2023-005", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百八十四条",
+                "title", "损失赔偿范围", "content", "当事人一方不履行合同义务或者履行合同义务不符合约定的，给对方造成损失的，损失赔偿额应当相当于因违约所造成的损失。"),
+            Map.of("articleId", "ART-2023-006", "lawTitle", "中华人民共和国劳动合同法", "articleNo", "第三十九条",
+                "title", "用人单位单方解除劳动合同", "content", "劳动者有下列情形之一的，用人单位可以解除劳动合同。"),
+            Map.of("articleId", "ART-2023-007", "lawTitle", "中华人民共和国劳动合同法", "articleNo", "第四十六条",
+                "title", "经济补偿", "content", "有下列情形之一的，用人单位应当向劳动者支付经济补偿。"),
+            Map.of("articleId", "ART-2023-008", "lawTitle", "最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）", "articleNo", "第十条",
+                "title", "工程价款结算", "content", "当事人对建设工程的计价标准或者计价方法有约定的，按照约定结算工程价款。")
+        );
+    }
+
+    public boolean isHallucinated(String claim, List<LegalSearchResponse.SearchResultItem> citations) {
+        if (claim == null || citations == null || citations.isEmpty()) {
+            return false;
+        }
+
+        for (LegalSearchResponse.SearchResultItem citation : citations) {
+            String content = citation.getContent();
+            if (content != null && claim.contains(content.substring(0, Math.min(20, content.length())))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

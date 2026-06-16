@@ -67,7 +67,8 @@ export default {
   legalSearch: {
     search: (data) => api.post('/legal-search/search', data),
     getArticle: (id) => api.get(`/legal-search/articles/${id}`),
-    feedback: (data) => api.post('/legal-search/feedback', data)
+    feedback: (data) => api.post('/legal-search/feedback', data),
+    getSuggestedQueries: (query) => api.get('/legal-search/suggested-queries', { params: { query } })
   },
   caseSimilar: {
     search: (data) => api.post('/case-similar/search', data)

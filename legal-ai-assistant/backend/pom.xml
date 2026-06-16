@@ -79,6 +79,13 @@
             <version>4.12.0</version>
         </dependency>
 
+        <!-- Milvus Vector Database -->
+        <dependency>
+            <groupId>io.milvus</groupId>
+            <artifactId>milvus-sdk-java</artifactId>
+            <version>2.3.4</version>
+        </dependency>
+
         <!-- Utils -->
         <dependency>
             <groupId>org.apache.commons</groupId>

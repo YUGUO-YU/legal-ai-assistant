@@ -43,6 +43,7 @@
           <div class="tag-group">
             <el-tag type="success" size="small">{{ item.lawTitle }}</el-tag>
             <el-tag size="small">{{ item.articleNo }}</el-tag>
+            <el-tag v-if="item.categoryL1" size="small">{{ item.categoryL1 }}</el-tag>
             <el-tag v-if="item.relatedCasesCount > 0" type="warning" size="small">
               相关案例 {{ item.relatedCasesCount }} 个
             </el-tag>
@@ -57,9 +58,22 @@
           <div class="result-source">
             来源：<a :href="item.sourceUrl" target="_blank">{{ item.sourceName }}</a>
             <span class="score">匹配度：{{ item.score?.toFixed(2) || '0.00' }}</span>
+            <el-tag v-if="item.sourceUrl" size="small" type="info" class="source-tag">已溯源</el-tag>
           </div>
           <el-button text size="small" @click.stop="copyContent(item)">复制</el-button>
         </div>
+      </div>
+
+      <div v-if="suggestedQueries.length > 0" class="suggested-queries">
+        <span class="suggestion-label">您可能想问：</span>
+        <el-tag
+          v-for="s in suggestedQueries"
+          :key="s"
+          class="suggestion-tag"
+          @click="query = s; handleSearch()"
+        >
+          {{ s }}
+        </el-tag>
       </div>
 
       <el-pagination
@@ -118,6 +132,8 @@ const pageSize = ref(10)
 const searched = ref(false)
 const expanded = reactive({})
 const rating = ref(0)
+const suggestedQueries = ref([])
+const searchLogId = ref(null)
 
 const suggestions = [
   '合同欺诈如何认定？',
@@ -144,11 +160,25 @@ const handleSearch = async () => {
     relatedCases.value = res.data.relatedCases || []
     total.value = res.data.total || 0
     tookMs.value = res.data.tookMs || 0
+    searchLogId.value = res.data.searchLogId
+
+    if (page.value === 1 && res.data.items?.length > 0) {
+      loadSuggestedQueries()
+    }
   } catch (e) {
     console.error(e)
     ElMessage.error('检索失败，请稍后重试')
   } finally {
     loading.value = false
+  }
+}
+
+const loadSuggestedQueries = async () => {
+  try {
+    const res = await api.legalSearch.getSuggestedQueries(query.value)
+    suggestedQueries.value = res.data || []
+  } catch (e) {
+    console.error(e)
   }
 }
 
@@ -164,6 +194,21 @@ const copyContent = (item) => {
 
 const viewCase = (c) => {
   ElMessage.info('跳转到案例详情页（待实现）')
+}
+
+const handleRate = async (item, value) => {
+  item.rating = value
+  try {
+    await api.legalSearch.feedback({
+      searchLogId: searchLogId.value,
+      articleId: item.articleId,
+      isHelpful: value > 0 ? 1 : 0,
+      userComment: value > 0 ? '有用' : '无用'
+    })
+    ElMessage.success('感谢您的反馈')
+  } catch (e) {
+    console.error(e)
+  }
 }
 </script>
 
@@ -250,6 +295,9 @@ const viewCase = (c) => {
   }
   .score {
     margin-left: 16px;
+  }
+  .source-tag {
+    margin-left: 8px;
   }
 }
 

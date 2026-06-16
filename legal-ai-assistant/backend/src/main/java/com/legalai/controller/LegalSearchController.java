@@ -22,17 +22,23 @@ public class LegalSearchController {
     }
 
     @GetMapping("/articles/{articleId}")
-    public ApiResponse<LegalSearchResponse> getArticle(@PathVariable String articleId) {
-        LegalSearchRequest request = new LegalSearchRequest();
-        request.setQuery(articleId);
-        request.setPage(1);
-        request.setPageSize(1);
-        LegalSearchResponse response = legalSearchService.search(request);
-        return ApiResponse.success(response);
+    public ApiResponse<LegalSearchResponse.SearchResultItem> getArticle(@PathVariable String articleId) {
+        LegalSearchResponse.SearchResultItem item = legalSearchService.getArticleDetail(articleId);
+        if (item == null) {
+            return ApiResponse.error(404, "Article not found");
+        }
+        return ApiResponse.success(item);
     }
 
     @PostMapping("/feedback")
-    public ApiResponse<Void> feedback(@RequestBody Object feedbackRequest) {
+    public ApiResponse<Void> feedback(@RequestBody SearchFeedbackRequest feedbackRequest) {
+        legalSearchService.submitFeedback(feedbackRequest);
         return ApiResponse.success(null);
+    }
+
+    @GetMapping("/suggested-queries")
+    public ApiResponse<java.util.List<String>> getSuggestedQueries(@RequestParam String query) {
+        java.util.List<String> suggestions = legalSearchService.generateSuggestedQueries(query);
+        return ApiResponse.success(suggestions);
     }
 }

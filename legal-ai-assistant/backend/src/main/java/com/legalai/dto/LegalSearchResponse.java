@@ -35,6 +35,8 @@ public class LegalSearchResponse {
         private String sourceName;
         private Double score;
         private Integer relatedCasesCount;
+        private String categoryL1;
+        private String categoryL2;
 
         public String getArticleId() { return articleId; }
         public void setArticleId(String articleId) { this.articleId = articleId; }
@@ -58,6 +60,10 @@ public class LegalSearchResponse {
         public void setScore(Double score) { this.score = score; }
         public Integer getRelatedCasesCount() { return relatedCasesCount; }
         public void setRelatedCasesCount(Integer relatedCasesCount) { this.relatedCasesCount = relatedCasesCount; }
+        public String getCategoryL1() { return categoryL1; }
+        public void setCategoryL1(String categoryL1) { this.categoryL1 = categoryL1; }
+        public String getCategoryL2() { return categoryL2; }
+        public void setCategoryL2(String categoryL2) { this.categoryL2 = categoryL2; }
     }
 
     public static class RelatedCase {

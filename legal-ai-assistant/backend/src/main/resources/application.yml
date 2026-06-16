@@ -36,3 +36,18 @@ ai:
 # Mock Mode (false = 使用MiniMax AI)
 mock:
   enabled: false
+
+# Milvus Configuration
+milvus:
+  host: localhost
+  port: 19530
+  collection-name: legal_law_articles
+  dimension: 1536
+  enabled: false
+
+# Elasticsearch Configuration
+elasticsearch:
+  host: localhost
+  port: 9200
+  index-name: legal_law_articles
+  enabled: false
