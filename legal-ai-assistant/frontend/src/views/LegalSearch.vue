@@ -1,88 +1,145 @@
 <template>
-  <div class="page-card">
+  <div class="legal-search">
     <div class="page-header">
-      <h2>AI搜法</h2>
-      <p>输入法律问题，快速检索相关法规条文及解释</p>
+      <div class="header-content">
+        <h2>AI搜法</h2>
+        <p>输入法律问题，AI智能检索相关法规条文及解释</p>
+      </div>
     </div>
 
-    <div class="search-box">
-      <el-input
-        v-model="query"
-        placeholder="请输入法律问题，如：合同欺诈如何认定？"
-        size="large"
-        clearable
-        @keyup.enter="handleSearch"
-      >
-        <template #append>
-          <el-button :icon="Search" @click="handleSearch" :loading="loading">搜索</el-button>
-        </template>
-      </el-input>
-    </div>
+    <div class="search-container">
+      <div class="search-box">
+        <div class="search-input-wrapper">
+          <el-icon class="search-icon"><Search /></el-icon>
+          <el-input
+            v-model="query"
+            placeholder="请输入法律问题，如：合同欺诈如何认定？"
+            size="large"
+            clearable
+            @keyup.enter="handleSearch"
+          />
+          <el-button type="primary" class="search-btn" :loading="loading" @click="handleSearch">
+            <template v-if="!loading">
+              <el-icon><Search /></el-icon>
+              <span>搜索</span>
+            </template>
+          </el-button>
+        </div>
 
-    <div class="suggested-queries" v-if="!searched && suggestions.length > 0">
-      <span class="suggestion-label">试试这样问：</span>
-      <el-tag
-        v-for="s in suggestions"
-        :key="s"
-        class="suggestion-tag"
-        @click="query = s; handleSearch()"
-      >
-        {{ s }}
-      </el-tag>
+        <div class="search-tips" v-if="!searched">
+          <span class="tip-label">试试这样问：</span>
+          <div class="tip-tags">
+            <el-tag
+              v-for="s in suggestions"
+              :key="s"
+              class="suggestion-tag"
+              @click="query = s; handleSearch()"
+            >
+              {{ s }}
+              <el-icon class="tag-arrow"><Right /></el-icon>
+            </el-tag>
+          </div>
+        </div>
+      </div>
     </div>
 
     <loading v-if="loading" text="正在检索相关法规..." />
 
-    <div v-else-if="results.length > 0">
-      <div class="result-stats">
-        找到 {{ total }} 条相关法规，耗时 {{ tookMs }}ms
-      </div>
-
-      <div v-for="(item, index) in results" :key="item.articleId" class="result-item" @click="toggleExpand(index)">
-        <div class="result-header">
-          <div class="tag-group">
-            <el-tag type="success" size="small">{{ item.lawTitle }}</el-tag>
-            <el-tag size="small">{{ item.articleNo }}</el-tag>
-            <el-tag v-if="item.categoryL1" size="small">{{ item.categoryL1 }}</el-tag>
-            <el-tag v-if="item.relatedCasesCount > 0" type="warning" size="small">
-              相关案例 {{ item.relatedCasesCount }} 个
-            </el-tag>
-          </div>
-          <el-rate v-model="item.rating" :max="3" size="small" @click.stop />
-        </div>
-        <h4 class="result-title">{{ item.title }}</h4>
-        <p class="result-content" :class="{ collapsed: !expanded[index] }">
-          {{ item.content }}
-        </p>
-        <div class="result-footer">
-          <div class="result-source">
-            来源：<a :href="item.sourceUrl" target="_blank">{{ item.sourceName }}</a>
-            <span class="score">匹配度：{{ item.score?.toFixed(2) || '0.00' }}</span>
-            <el-tag v-if="item.sourceUrl" size="small" type="info" class="source-tag">已溯源</el-tag>
-          </div>
-          <el-button text size="small" @click.stop="copyContent(item)">复制</el-button>
+    <div v-else-if="results.length > 0" class="results-container">
+      <div class="result-header">
+        <div class="result-stats">
+          <span class="stats-icon"><el-icon><Document /></el-icon></span>
+          <span>找到 <strong>{{ total }}</strong> 条相关法规</span>
+          <span class="divider">|</span>
+          <span class="time-cost">耗时 {{ tookMs }}ms</span>
         </div>
       </div>
 
-      <div v-if="suggestedQueries.length > 0" class="suggested-queries">
-        <span class="suggestion-label">您可能想问：</span>
-        <el-tag
-          v-for="s in suggestedQueries"
-          :key="s"
-          class="suggestion-tag"
-          @click="query = s; handleSearch()"
+      <div class="result-list">
+        <el-card
+          v-for="(item, index) in results"
+          :key="item.articleId"
+          class="result-item"
+          :class="{ expanded: expanded[index] }"
+          @click="toggleExpand(index)"
         >
-          {{ s }}
-        </el-tag>
+          <div class="result-main">
+            <div class="result-meta">
+              <div class="tag-group">
+                <el-tag type="success" size="small" effect="dark" round>
+                  {{ item.lawTitle }}
+                </el-tag>
+                <el-tag size="small" effect="plain" round>{{ item.articleNo }}</el-tag>
+                <el-tag v-if="item.categoryL1" size="small" type="info" effect="plain">
+                  {{ item.categoryL1 }}
+                </el-tag>
+              </div>
+              <div class="result-actions">
+                <el-rate v-model="item.rating" :max="3" size="small" @click.stop />
+                <el-button type="primary" link size="small" @click.stop="copyContent(item)">
+                  <el-icon><CopyDocument /></el-icon>
+                  复制
+                </el-button>
+              </div>
+            </div>
+
+            <h3 class="result-title">{{ item.title }}</h3>
+
+            <div class="result-content" :class="{ collapsed: !expanded[index] }">
+              <div class="content-text">{{ item.content }}</div>
+            </div>
+
+            <div class="result-footer">
+              <div class="result-source">
+                <el-icon><Link /></el-icon>
+                <span>来源：</span>
+                <a :href="item.sourceUrl" target="_blank" class="source-link">{{ item.sourceName }}</a>
+                <span class="source-tag" v-if="item.sourceUrl">
+                  <el-icon><CircleCheck /></el-icon>
+                  已溯源
+                </span>
+              </div>
+              <div class="result-score">
+                <el-progress
+                  type="circle"
+                  :percentage="((item.score || 0) * 100)"
+                  :width="32"
+                  :stroke-width="3"
+                  :show-text="false"
+                />
+                <span class="score-text">匹配度 {{ ((item.score || 0) * 100).toFixed(0) }}%</span>
+              </div>
+            </div>
+          </div>
+        </el-card>
       </div>
 
-      <el-pagination
-        v-model:current-page="page"
-        :page-size="pageSize"
-        :total="total"
-        layout="prev, pager, next, total"
-        @current-change="handleSearch"
-      />
+      <div v-if="suggestedQueries.length > 0" class="suggested-section">
+        <div class="suggested-header">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>您可能想问</span>
+        </div>
+        <div class="suggested-tags">
+          <el-tag
+            v-for="s in suggestedQueries"
+            :key="s"
+            class="suggestion-tag"
+            @click="query = s; handleSearch()"
+          >
+            {{ s }}
+          </el-tag>
+        </div>
+      </div>
+
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="page"
+          :page-size="pageSize"
+          :total="total"
+          layout="prev, pager, next, total"
+          @current-change="handleSearch"
+        />
+      </div>
     </div>
 
     <empty-state
@@ -95,21 +152,33 @@
     />
 
     <div v-if="relatedCases.length > 0" class="related-cases">
-      <h3>相关判例推荐</h3>
-      <div v-for="c in relatedCases" :key="c.caseUuid" class="case-item">
-        <div class="case-header">
-          <h4>{{ c.title }}</h4>
-          <el-tag size="small" type="info">{{ c.caseNo }}</el-tag>
-        </div>
-        <p class="case-info">
-          <el-icon><OfficeBuilding /></el-icon> {{ c.court }}
-        </p>
-        <p class="case-summary">{{ c.summary }}</p>
-        <div class="case-footer">
-          <span class="source">来源：{{ c.sourceName }}</span>
-          <el-button text size="small" @click="viewCase(c)">查看详情</el-button>
-        </div>
+      <div class="section-header">
+        <el-icon><Connection /></el-icon>
+        <h3>相关判例推荐</h3>
+        <el-tag type="warning" size="small" effect="plain">{{ relatedCases.length }} 个</el-tag>
       </div>
+      <el-row :gutter="16">
+        <el-col :span="12" v-for="c in relatedCases" :key="c.caseUuid">
+          <el-card class="case-card" @click="viewCase(c)">
+            <div class="case-header">
+              <h4>{{ c.title }}</h4>
+              <el-tag size="small" type="info" effect="plain">{{ c.caseNo }}</el-tag>
+            </div>
+            <div class="case-info">
+              <el-icon><OfficeBuilding /></el-icon>
+              <span>{{ c.court }}</span>
+            </div>
+            <p class="case-summary">{{ c.summary }}</p>
+            <div class="case-footer">
+              <span class="source">来源：{{ c.sourceName }}</span>
+              <el-button type="primary" link size="small">
+                查看详情
+                <el-icon><Right /></el-icon>
+              </el-button>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
     </div>
   </div>
 </template>
@@ -117,6 +186,17 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
+import {
+  Search,
+  Right,
+  Document,
+  CopyDocument,
+  Link,
+  CircleCheck,
+  ChatDotRound,
+  Connection,
+  OfficeBuilding
+} from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -131,7 +211,6 @@ const page = ref(1)
 const pageSize = ref(10)
 const searched = ref(false)
 const expanded = reactive({})
-const rating = ref(0)
 const suggestedQueries = ref([])
 const searchLogId = ref(null)
 
@@ -195,157 +274,473 @@ const copyContent = (item) => {
 const viewCase = (c) => {
   ElMessage.info('跳转到案例详情页（待实现）')
 }
-
-const handleRate = async (item, value) => {
-  item.rating = value
-  try {
-    await api.legalSearch.feedback({
-      searchLogId: searchLogId.value,
-      articleId: item.articleId,
-      isHelpful: value > 0 ? 1 : 0,
-      userComment: value > 0 ? '有用' : '无用'
-    })
-    ElMessage.success('感谢您的反馈')
-  } catch (e) {
-    console.error(e)
-  }
-}
 </script>
 
 <style lang="scss" scoped>
-.suggested-queries {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 24px;
-  .suggestion-label {
-    color: #999;
-    font-size: 14px;
+.legal-search {
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  .suggestion-tag {
-    cursor: pointer;
-    &:hover {
-      color: #1890ff;
-      border-color: #1890ff;
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-header {
+  margin-bottom: 32px;
+
+  .header-content {
+    h2 {
+      margin: 0 0 8px 0;
+      font-size: 26px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 14px;
     }
   }
 }
 
-.result-stats {
-  color: #999;
-  font-size: 14px;
-  margin-bottom: 16px;
+.search-container {
+  margin-bottom: 32px;
 }
 
-.result-item {
-  padding: 16px;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  margin-bottom: 16px;
+.search-box {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f9fafb;
+  border-radius: 14px;
+  padding: 6px 6px 6px 20px;
+  border: 2px solid transparent;
   transition: all 0.3s;
-  cursor: pointer;
-  &:hover {
-    border-color: #1890ff;
-    box-shadow: 0 2px 12px rgba(24,144,255,0.1);
+
+  &:focus-within {
+    border-color: #667eea;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
   }
+
+  .search-icon {
+    font-size: 20px;
+    color: #667eea;
+  }
+
+  :deep(.el-input__wrapper) {
+    flex: 1;
+    background: transparent;
+    box-shadow: none;
+
+    .el-input__inner {
+      font-size: 16px;
+    }
+  }
+
+  .search-btn {
+    height: 44px;
+    padding: 0 28px;
+    border-radius: 10px;
+    font-size: 15px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+  }
+}
+
+.search-tips {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  .tip-label {
+    color: #6b7280;
+    font-size: 13px;
+  }
+
+  .tip-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .suggestion-tag {
+    cursor: pointer;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+    color: #4b5563;
+
+    &:hover {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+      border-color: #667eea;
+      color: #667eea;
+
+      .tag-arrow {
+        transform: translateX(2px);
+      }
+    }
+
+    .tag-arrow {
+      transition: transform 0.3s;
+    }
+  }
+}
+
+.results-container {
+  margin-top: 24px;
 }
 
 .result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
+  margin-bottom: 20px;
 
-.tag-group {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+  .result-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #6b7280;
+    font-size: 14px;
 
-.result-title {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-}
+    .stats-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #667eea;
+    }
 
-.result-content {
-  margin: 0 0 12px 0;
-  color: #333;
-  line-height: 1.6;
-  &.collapsed {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    strong {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .divider {
+      color: #d1d5db;
+    }
+
+    .time-cost {
+      color: #9ca3af;
+    }
   }
 }
 
-.result-footer {
+.result-list {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.result-source {
-  font-size: 13px;
-  color: #999;
-  a {
-    color: #1890ff;
+.result-item {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s;
+  cursor: pointer;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
   }
-  .score {
-    margin-left: 16px;
+
+  &.expanded {
+    .result-content {
+      max-height: none;
+    }
   }
-  .source-tag {
-    margin-left: 8px;
+
+  :deep(.el-card__body) {
+    padding: 20px;
+  }
+
+  .result-main {
+    .result-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+
+      .tag-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .result-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+    }
+
+    .result-title {
+      margin: 0 0 12px 0;
+      font-size: 17px;
+      font-weight: 600;
+      color: #1f2937;
+      line-height: 1.5;
+    }
+
+    .result-content {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      max-height: 120px;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+
+      &.collapsed {
+        max-height: 120px;
+      }
+
+      .content-text {
+        color: #4b5563;
+        font-size: 14px;
+        line-height: 1.8;
+      }
+    }
+
+    .result-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .result-source {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: #6b7280;
+
+        .el-icon {
+          color: #9ca3af;
+        }
+
+        .source-link {
+          color: #667eea;
+          text-decoration: none;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+
+        .source-tag {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          color: #10b981;
+          font-size: 12px;
+        }
+      }
+
+      .result-score {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        :deep(.el-progress__text) {
+          display: none;
+        }
+
+        .score-text {
+          font-size: 12px;
+          color: #6b7280;
+        }
+      }
+    }
+  }
+}
+
+.suggested-section {
+  margin-top: 32px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+  border-radius: 16px;
+  border: 1px dashed rgba(102, 126, 234, 0.2);
+
+  .suggested-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #667eea;
+
+    .el-icon {
+      font-size: 18px;
+    }
+  }
+
+  .suggested-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    .suggestion-tag {
+      cursor: pointer;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      background: #fff;
+      border-color: #e5e7eb;
+      color: #4b5563;
+      transition: all 0.3s;
+
+      &:hover {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-color: transparent;
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      }
+    }
+  }
+}
+
+.pagination-wrapper {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+
+  :deep(.el-pagination) {
+    .el-pager li {
+      border-radius: 8px;
+      &.is-active {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+      }
+    }
   }
 }
 
 .related-cases {
-  margin-top: 32px;
-  h3 {
-    font-size: 16px;
-    margin-bottom: 16px;
-  }
-}
+  margin-top: 48px;
 
-.case-item {
-  padding: 16px;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  &:hover {
-    border-color: #1890ff;
-  }
-  .case-header {
+  .section-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    h4 {
+    gap: 12px;
+    margin-bottom: 20px;
+
+    .el-icon {
+      font-size: 22px;
+      color: #667eea;
+    }
+
+    h3 {
       margin: 0;
-      font-size: 15px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
     }
   }
-  .case-info {
-    color: #666;
-    font-size: 14px;
-    margin: 8px 0;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .case-summary {
-    margin: 0 0 12px 0;
-    color: #333;
-    line-height: 1.5;
-  }
-  .case-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    .source {
-      color: #999;
+
+  .case-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s;
+    cursor: pointer;
+    margin-bottom: 16px;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+
+    .case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+
+      h4 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #1f2937;
+        flex: 1;
+        margin-right: 12px;
+      }
+    }
+
+    .case-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #6b7280;
       font-size: 13px;
+      margin-bottom: 12px;
+
+      .el-icon {
+        color: #9ca3af;
+      }
+    }
+
+    .case-summary {
+      margin: 0 0 16px 0;
+      color: #4b5563;
+      font-size: 14px;
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .case-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .source {
+        color: #9ca3af;
+        font-size: 12px;
+      }
     }
   }
 }
