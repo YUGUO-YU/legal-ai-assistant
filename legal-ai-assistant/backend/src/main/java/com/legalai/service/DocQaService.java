@@ -3,11 +3,14 @@ package com.legalai.service;
 import com.legalai.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class DocQaService {
@@ -16,7 +19,17 @@ public class DocQaService {
     @Value("${mock.enabled:true}")
     private boolean mockEnabled;
 
-    private final AIService aiService;
+    @Autowired
+    private AIService aiService;
+
+    @Autowired
+    private KnowledgeBaseService knowledgeBaseService;
+
+    private final Map<String, List<ChatMessage>> sessionHistory = new ConcurrentHashMap<>();
+
+    private static final int RRF_K = 60;
+    private static final int KB_WEIGHT = 70;
+    private static final int WEB_WEIGHT = 30;
 
     private static final Map<String, List<String>> QUESTION_PATTERNS = new HashMap<>();
 
@@ -74,8 +87,8 @@ public class DocQaService {
     }
 
     public DocQaResponse answerQuestion(DocQaRequest request) {
-        log.info("文档问答请求: question={}, sessionId={}, mockEnabled={}",
-            request.getQuestion(), request.getSessionId(), mockEnabled);
+        log.info("文档问答请求: question={}, sessionId={}, kbId={}",
+            request.getQuestion(), request.getSessionId(), request.getKbId());
 
         validateRequest(request);
 
@@ -84,15 +97,23 @@ public class DocQaService {
             sessionId = UUID.randomUUID().toString();
         }
 
-        String question = request.getQuestion().trim();
-        List<DocQaResponse.Citation> citations = new ArrayList<>();
-        String answer;
+        addToHistory(sessionId, "user", request.getQuestion());
 
-        if (mockEnabled) {
-            answer = generateMockAnswer(question, citations);
-        } else {
-            answer = generateAIAnswer(question, citations);
+        List<DocQaResponse.Citation> citations = new ArrayList<>();
+        List<String> contextChunks = new ArrayList<>();
+
+        if (request.getKbId() != null) {
+            contextChunks = retrieveFromKnowledgeBase(request);
         }
+
+        String answer;
+        if (mockEnabled) {
+            answer = generateMockAnswer(request.getQuestion(), citations, contextChunks);
+        } else {
+            answer = generateAIAnswer(request.getQuestion(), citations, contextChunks);
+        }
+
+        addToHistory(sessionId, "assistant", answer);
 
         DocQaResponse response = new DocQaResponse();
         response.setAnswer(answer);
@@ -111,29 +132,51 @@ public class DocQaService {
         }
     }
 
-    private String generateAIAnswer(String question, List<DocQaResponse.Citation> citations) {
-        String prompt = buildPrompt(question);
+    private List<String> retrieveFromKnowledgeBase(DocQaRequest request) {
+        List<LegalSearchResponse.SearchResultItem> chunks = knowledgeBaseService.searchInKnowledgeBase(
+            request.getKbId(),
+            request.getQuestion(),
+            request.getTopK() != null ? request.getTopK() : 5
+        );
+
+        return chunks.stream()
+            .map(LegalSearchResponse.SearchResultItem::getContent)
+            .collect(Collectors.toList());
+    }
+
+    private String generateAIAnswer(String question, List<DocQaResponse.Citation> citations, List<String> contextChunks) {
+        String prompt = buildPrompt(question, contextChunks);
         try {
             String answer = aiService.chat(prompt);
-            addCitation(citations, question);
+            addCitationsFromChunks(citations, contextChunks);
             return answer + "\n\n---\n\n**免责声明**：本回答由AI生成，仅供参考，不构成法律意见。";
         } catch (IOException e) {
             log.error("AI服务调用失败: {}", e.getMessage());
-            return generateMockAnswer(question, citations);
+            return generateMockAnswer(question, citations, contextChunks);
         }
     }
 
-    private String buildPrompt(String question) {
-        return String.format("""
-            你是一个专业的法律助手，专注于中国法律法规的解读。请回答用户的问题。
+    private String buildPrompt(String question, List<String> contextChunks) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是一个专业的法律助手，专注于中国法律法规的解读。请根据提供的上下文信息回答用户的问题。\n\n");
 
-            问题：%s
+        if (!contextChunks.isEmpty()) {
+            sb.append("【参考上下文】\n");
+            for (int i = 0; i < contextChunks.size(); i++) {
+                sb.append(String.format("[%d] %s\n\n", i + 1, contextChunks.get(i)));
+            }
+            sb.append("---\n\n");
+        }
 
-            请根据法律法规给出专业、准确的回答。如果涉及具体法条，请标注来源。
-            """, question);
+        sb.append("【用户问题】\n");
+        sb.append(question).append("\n\n");
+
+        sb.append("请根据上述上下文给出专业、准确的回答。如果涉及具体法条，请标注来源。");
+
+        return sb.toString();
     }
 
-    private String generateMockAnswer(String question, List<DocQaResponse.Citation> citations) {
+    private String generateMockAnswer(String question, List<DocQaResponse.Citation> citations, List<String> contextChunks) {
         String q = question.toLowerCase();
 
         for (Map.Entry<String, List<String>> entry : QUESTION_PATTERNS.entrySet()) {
@@ -146,7 +189,7 @@ public class DocQaService {
                     sb.append(answers.get(i)).append("\n\n");
                 }
 
-                addCitation(citations, entry.getKey());
+                addCitationsFromPatterns(citations, entry.getKey());
 
                 sb.append("---\n\n");
                 sb.append("**免责声明**：本回答基于检索到的法律法规生成，仅供参考，不构成法律意见。\n");
@@ -156,10 +199,22 @@ public class DocQaService {
             }
         }
 
-        return generateDefaultAnswer(question, citations);
+        return generateDefaultAnswer(question, citations, contextChunks);
     }
 
-    private void addCitation(List<DocQaResponse.Citation> citations, String keyword) {
+    private void addCitationsFromChunks(List<DocQaResponse.Citation> citations, List<String> chunks) {
+        for (int i = 0; i < chunks.size(); i++) {
+            DocQaResponse.Citation citation = new DocQaResponse.Citation();
+            citation.setDocumentId("DOC-KB-" + (i + 1));
+            citation.setChunkId("CHUNK-" + System.currentTimeMillis() + "-" + i);
+            citation.setContent(chunks.get(i).length() > 200 ? chunks.get(i).substring(0, 200) + "..." : chunks.get(i));
+            citation.setSourceUrl("https://flk.npc.gov.cn/");
+            citation.setScore(0.85 + (0.1 * (chunks.size() - i - 1) / chunks.size()));
+            citations.add(citation);
+        }
+    }
+
+    private void addCitationsFromPatterns(List<DocQaResponse.Citation> citations, String keyword) {
         String docId = switch (keyword) {
             case "劳动" -> "DOC-002";
             case "建设工程" -> "DOC-004";
@@ -175,11 +230,16 @@ public class DocQaService {
         citations.add(citation);
     }
 
-    private String generateDefaultAnswer(String question, List<DocQaResponse.Citation> citations) {
+    private String generateDefaultAnswer(String question, List<DocQaResponse.Citation> citations, List<String> contextChunks) {
         StringBuilder sb = new StringBuilder();
         sb.append("关于您提出的问题，我检索到以下相关法律信息：\n\n");
 
         sb.append("您的问题是：").append(question).append("\n\n");
+
+        if (!contextChunks.isEmpty()) {
+            sb.append("【相关法条】\n");
+            sb.append(contextChunks.get(0)).append("\n\n");
+        }
 
         sb.append("针对这个问题，我提供以下分析和建议：\n\n");
 
@@ -205,5 +265,33 @@ public class DocQaService {
         sb.append("不同地区、不同案件情况的具体法律适用可能有所不同，请以专业律师的意见为准。");
 
         return sb.toString();
+    }
+
+    private void addToHistory(String sessionId, String role, String content) {
+        sessionHistory.computeIfAbsent(sessionId, k -> new ArrayList<>());
+        sessionHistory.get(sessionId).add(new ChatMessage(role, content));
+    }
+
+    public List<ChatMessage> getSessionHistory(String sessionId) {
+        return sessionHistory.getOrDefault(sessionId, Collections.emptyList());
+    }
+
+    public void clearSessionHistory(String sessionId) {
+        sessionHistory.remove(sessionId);
+    }
+
+    public static class ChatMessage {
+        private String role;
+        private String content;
+
+        public ChatMessage(String role, String content) {
+            this.role = role;
+            this.content = content;
+        }
+
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
+        public String getContent() { return content; }
+        public void setContent(String content) { this.content = content; }
     }
 }
