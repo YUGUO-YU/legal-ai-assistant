@@ -20,4 +20,13 @@ public class CaseSearchController {
         CaseSearchResponse response = caseSearchService.searchCases(request);
         return ApiResponse.success(response);
     }
+
+    @GetMapping("/cases/{caseUuid}")
+    public ApiResponse<CaseSearchResponse.CaseSearchItem> getCaseDetail(@PathVariable String caseUuid) {
+        CaseSearchResponse.CaseSearchItem item = caseSearchService.getCaseDetail(caseUuid);
+        if (item == null) {
+            return ApiResponse.error(404, "案例不存在");
+        }
+        return ApiResponse.success(item);
+    }
 }
