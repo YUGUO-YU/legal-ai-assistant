@@ -2,9 +2,14 @@ spring:
   application:
     name: legal-ai-assistant
 
+  datasource:
+    url: jdbc:mysql://localhost:3306/legal_ai?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: main0126
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
   autoconfigure:
     exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
 
