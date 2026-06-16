@@ -2,6 +2,9 @@ package com.legalai.controller;
 
 import com.legalai.dto.*;
 import com.legalai.service.ContractService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -9,6 +12,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/contract")
 @CrossOrigin
+@Tag(name = "合同审查", description = "AI合同审查相关接口")
 public class ContractReviewController {
 
     private final ContractService contractService;
@@ -18,14 +22,18 @@ public class ContractReviewController {
     }
 
     @PostMapping("/review")
-    public ApiResponse<ContractReviewResponse> review(@RequestBody ContractReviewRequest request) {
+    @Operation(summary = "合同审查", description = "对合同文本进行多维度风险审查，输出风险点和修改建议")
+    @ApiResponse(responseCode = "200", description = "审查成功")
+    public com.legalai.dto.ApiResponse<ContractReviewResponse> review(@RequestBody ContractReviewRequest request) {
         ContractReviewResponse response = contractService.reviewContract(request);
-        return ApiResponse.success(response);
+        return com.legalai.dto.ApiResponse.success(response);
     }
 
     @GetMapping("/dimensions")
-    public ApiResponse<List<DimensionInfo>> getDimensions() {
-        return ApiResponse.success(List.of(
+    @Operation(summary = "获取审查维度", description = "获取合同审查的风险维度及其权重")
+    @ApiResponse(responseCode = "200", description = "获取成功")
+    public com.legalai.dto.ApiResponse<List<DimensionInfo>> getDimensions() {
+        return com.legalai.dto.ApiResponse.success(List.of(
             createDimension("SUBJECT_QUALIFICATION", "主体资格", 15),
             createDimension("CONTRACT_VALIDITY", "合同效力", 20),
             createDimension("RIGHTS_OBLIGATIONS", "权利义务", 15),
