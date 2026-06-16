@@ -1,50 +1,87 @@
 <template>
-  <div class="page-card">
+  <div class="doc-qa">
     <div class="page-header">
-      <h2>AI文件问答</h2>
-      <p>基于上传的文档进行智能问答，支持多轮对话</p>
+      <div class="header-content">
+        <h2>AI文件问答</h2>
+        <p>基于上传的文档进行智能问答，支持多轮对话</p>
+      </div>
     </div>
 
-    <el-row :gutter="24">
+    <el-row :gutter="24" class="main-content">
       <el-col :span="16">
-        <div class="chat-container">
+        <el-card class="chat-card">
           <div class="chat-header">
-            <span>当前会话：{{ sessionTitle }}</span>
-            <el-button text size="small" @click="clearHistory">清空对话</el-button>
+            <div class="header-left">
+              <div class="ai-avatar">
+                <el-icon :size="20"><MagicStick /></el-icon>
+              </div>
+              <div class="header-info">
+                <span class="ai-name">法律AI助手</span>
+                <span class="ai-model">MiniMax M3</span>
+              </div>
+            </div>
+            <el-button type="primary" link @click="clearHistory">
+              <el-icon><Delete /></el-icon>
+              清空对话
+            </el-button>
           </div>
 
           <div class="chat-messages" ref="chatContainer">
-            <div v-if="messages.length === 0" class="empty-chat">
-              <el-empty description="开始对话吧，向我提问关于文档的问题">
-                <template #image>
-                  <el-icon :size="60"><ChatDotRound /></el-icon>
-                </template>
-              </el-empty>
+            <div v-if="messages.length === 0" class="empty-state">
+              <div class="empty-icon">
+                <el-icon><ChatDotRound /></el-icon>
+              </div>
+              <h3>开始对话吧</h3>
+              <p>向我提问关于文档的问题，我会基于已上传的文档给出准确答案</p>
+              <div class="empty-suggestions">
+                <el-tag
+                  v-for="q in quickQuestions"
+                  :key="q"
+                  class="suggestion-tag"
+                  @click="question = q; handleAsk()"
+                >
+                  {{ q }}
+                </el-tag>
+              </div>
             </div>
 
-            <div v-else>
+            <div v-else class="messages-list">
               <div
                 v-for="(msg, index) in messages"
                 :key="index"
                 :class="['message', msg.role]"
               >
                 <div class="message-avatar">
-                  <el-avatar :size="32" :icon="msg.role === 'user' ? User : Robot" />
+                  <el-avatar v-if="msg.role === 'user'" :size="36" class="user-avatar">
+                    <el-icon><UserFilled /></el-icon>
+                  </el-avatar>
+                  <el-avatar v-else :size="36" class="ai-avatar">
+                    <el-icon><MagicStick /></el-icon>
+                  </el-avatar>
                 </div>
                 <div class="message-content">
-                  <div class="message-bubble" v-html="formatContent(msg.content)"></div>
-                  <div v-if="msg.citations?.length" class="message-citations">
-                    <div class="citation-header">
-                      <el-icon><Document /></el-icon> 参考来源
-                    </div>
-                    <div
-                      v-for="(c, ci) in msg.citations"
-                      :key="ci"
-                      class="citation-item"
-                      @click="scrollToCitation(c)"
-                    >
-                      <span class="citation-score">{{ (c.score * 100).toFixed(0) }}%</span>
-                      <span class="citation-text">{{ c.content?.substring(0, 80) }}...</span>
+                  <div class="message-bubble">
+                    <div class="message-text" v-html="formatContent(msg.content)"></div>
+                    <div v-if="msg.citations?.length" class="message-citations">
+                      <div class="citation-header">
+                        <el-icon><Document /></el-icon>
+                        <span>参考来源</span>
+                      </div>
+                      <div
+                        v-for="(c, ci) in msg.citations"
+                        :key="ci"
+                        class="citation-item"
+                        @click="scrollToCitation(c)"
+                      >
+                        <el-progress
+                          type="circle"
+                          :percentage="(c.score * 100)"
+                          :width="28"
+                          :stroke-width="3"
+                          :show-text="false"
+                        />
+                        <span class="citation-text">{{ c.content?.substring(0, 60) }}...</span>
+                      </div>
                     </div>
                   </div>
                   <div class="message-time">{{ msg.time }}</div>
@@ -54,11 +91,17 @@
 
             <div v-if="loading" class="message assistant">
               <div class="message-avatar">
-                <el-avatar :size="32" :icon="Robot" />
+                <el-avatar :size="36" class="ai-avatar">
+                  <el-icon><MagicStick /></el-icon>
+                </el-avatar>
               </div>
               <div class="message-content">
                 <div class="message-bubble loading">
-                  <el-icon class="is-loading"><Loading /></el-icon>
+                  <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
                   <span>正在思考...</span>
                 </div>
               </div>
@@ -66,45 +109,56 @@
           </div>
 
           <div class="chat-input">
-            <el-input
-              v-model="question"
-              placeholder="请输入问题，按Enter发送"
-              :disabled="loading"
-              @keyup.enter="handleAsk"
-            >
-              <template #suffix>
-                <el-button
-                  :icon="Promotion"
-                  @click="handleAsk"
-                  :disabled="!question.trim() || loading"
-                />
-              </template>
-            </el-input>
+            <div class="input-wrapper">
+              <el-input
+                v-model="question"
+                placeholder="输入问题，按Enter发送"
+                :disabled="loading"
+                @keyup.enter="handleAsk"
+              />
+              <el-button
+                type="primary"
+                class="send-btn"
+                :disabled="!question.trim() || loading"
+                @click="handleAsk"
+              >
+                <el-icon><Promotion /></el-icon>
+              </el-button>
+            </div>
             <div class="input-hints">
+              <el-icon><InfoFilled /></el-icon>
               <span>支持追问和上下文理解</span>
             </div>
           </div>
-        </div>
+        </el-card>
       </el-col>
+
       <el-col :span="8">
-        <div class="context-panel">
+        <el-card class="context-card">
           <div class="panel-section">
-            <h3>
+            <div class="section-header">
               <el-icon><Collection /></el-icon>
-              当前知识库
-            </h3>
-            <div class="current-kb">
-              <el-tag v-if="currentKb">{{ currentKb }}</el-tag>
-              <el-tag v-else type="info">暂未选择知识库</el-tag>
+              <h3>当前知识库</h3>
             </div>
-            <el-button size="small" @click="showKbSelector = true">切换知识库</el-button>
+            <div class="current-kb">
+              <el-tag v-if="currentKb" type="success" effect="dark" round>
+                {{ currentKb }}
+              </el-tag>
+              <el-tag v-else type="info" round>暂未选择</el-tag>
+            </div>
+            <el-button class="switch-btn" @click="showKbSelector = true">
+              <el-icon><Switch /></el-icon>
+              切换知识库
+            </el-button>
           </div>
 
+          <el-divider />
+
           <div class="panel-section">
-            <h3>
-              <el-icon><ChatDotSquare /></el-icon>
-              会话历史
-            </h3>
+            <div class="section-header">
+              <el-icon><ChatLineSquare /></el-icon>
+              <h3>会话历史</h3>
+            </div>
             <div class="session-list">
               <div
                 v-for="s in sessions"
@@ -112,17 +166,25 @@
                 :class="['session-item', { active: s.id === currentSession }]"
                 @click="switchSession(s.id)"
               >
-                <span class="session-title">{{ s.title }}</span>
-                <span class="session-date">{{ s.date }}</span>
+                <div class="session-icon">
+                  <el-icon><ChatDotRound /></el-icon>
+                </div>
+                <div class="session-info">
+                  <span class="session-title">{{ s.title }}</span>
+                  <span class="session-date">{{ s.date }}</span>
+                </div>
+                <el-icon class="session-arrow"><Right /></el-icon>
               </div>
             </div>
           </div>
 
+          <el-divider />
+
           <div class="panel-section">
-            <h3>
+            <div class="section-header">
               <el-icon><QuestionFilled /></el-icon>
-              快捷问题
-            </h3>
+              <h3>快捷问题</h3>
+            </div>
             <div class="quick-questions">
               <div
                 v-for="q in quickQuestions"
@@ -130,15 +192,16 @@
                 class="quick-question"
                 @click="question = q; handleAsk()"
               >
-                {{ q }}
+                <el-icon><Key /></el-icon>
+                <span>{{ q }}</span>
               </div>
             </div>
           </div>
-        </div>
+        </el-card>
       </el-col>
     </el-row>
 
-    <el-dialog v-model="showKbSelector" title="选择知识库" width="500px">
+    <el-dialog v-model="showKbSelector" title="选择知识库" width="480px" class="kb-dialog">
       <el-select v-model="selectedKb" placeholder="请选择知识库" style="width: 100%">
         <el-option label="劳动法法规库" value="KB-001" />
         <el-option label="合同纠纷案例" value="KB-002" />
@@ -156,8 +219,22 @@
 import { ref, nextTick, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import {
+  ChatDotRound,
+  UserFilled,
+  MagicStick,
+  Promotion,
+  Delete,
+  Document,
+  Collection,
+  ChatLineSquare,
+  Right,
+  QuestionFilled,
+  InfoFilled,
+  Switch,
+  Key
+} from '@element-plus/icons-vue'
 import api from '../api'
-import Loading from '../components/Loading.vue'
 
 const route = useRoute()
 const question = ref('')
@@ -165,21 +242,20 @@ const messages = ref([])
 const chatContainer = ref(null)
 const currentSession = ref(null)
 const sessionId = ref(null)
-const sessionTitle = ref('新会话')
 const currentKb = ref('劳动法法规库')
 const showKbSelector = ref(false)
 const selectedKb = ref('KB-001')
 const loading = ref(false)
 
 const sessions = ref([
-  { id: 1, title: '劳动合同解除问题', date: '2024-06-10' },
-  { id: 2, title: '竞业限制纠纷', date: '2024-06-08' },
-  { id: 3, title: '合同欺诈认定', date: '2024-06-05' }
+  { id: 1, title: '劳动合同解除问题', date: '今天 10:30' },
+  { id: 2, title: '竞业限制纠纷', date: '昨天 15:20' },
+  { id: 3, title: '合同欺诈认定', date: '6月10日' }
 ])
 
 const quickQuestions = [
   '合同欺诈的构成要件是什么？',
-  '用人单位可以单方解除劳动合同的情形有哪些？',
+  '用人单位可以单方解除劳动合同的情形？',
   '建设工程合同纠纷的管辖法院如何确定？',
   '借款合同利息的法律保护上限是多少？'
 ]
@@ -198,7 +274,7 @@ const handleAsk = async () => {
     id: Date.now(),
     role: 'user',
     content: question.value,
-    time: new Date().toLocaleTimeString()
+    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   }
   messages.value.push(userMsg)
   const q = question.value
@@ -221,7 +297,7 @@ const handleAsk = async () => {
       role: 'assistant',
       content: res.data.answer,
       citations: res.data.citations,
-      time: new Date().toLocaleTimeString()
+      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
     }
     messages.value.push(aiMsg)
   } catch (e) {
@@ -265,203 +341,584 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.chat-container {
-  background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  height: 650px;
+.doc-qa {
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-header {
+  margin-bottom: 24px;
+
+  .header-content {
+    h2 {
+      margin: 0 0 8px 0;
+      font-size: 26px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+  }
+}
+
+.chat-card {
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+
+  :deep(.el-card__body) {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: 680px;
+  }
 }
 
 .chat-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f3f4f6;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fafafa;
-  border-radius: 8px 8px 0 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    .ai-avatar {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    .header-info {
+      display: flex;
+      flex-direction: column;
+
+      .ai-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1f2937;
+      }
+
+      .ai-model {
+        font-size: 12px;
+        color: #10b981;
+      }
+    }
+  }
 }
 
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 24px;
+  background: #fafbfc;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 3px;
+  }
 }
 
-.empty-chat {
+.empty-state {
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  text-align: center;
+  padding: 40px;
+
+  .empty-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+
+    .el-icon {
+      font-size: 36px;
+      color: #667eea;
+    }
+  }
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  p {
+    margin: 0 0 24px 0;
+    color: #6b7280;
+    font-size: 14px;
+    max-width: 360px;
+  }
+
+  .empty-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+
+    .suggestion-tag {
+      cursor: pointer;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      color: #4b5563;
+      transition: all 0.3s;
+
+      &:hover {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-color: transparent;
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      }
+    }
+  }
+}
+
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .message {
-  margin-bottom: 16px;
   display: flex;
-  gap: 12px;
+  gap: 14px;
+  animation: slideIn 0.3s ease;
 
   &.user {
     flex-direction: row-reverse;
+
     .message-bubble {
-      background: #1890ff;
+      background: linear-gradient(135deg, #667eea, #764ba2);
       color: #fff;
-      border-radius: 16px 16px 0 16px;
+      border-radius: 20px 20px 4px 20px;
+
+      .message-text {
+        color: #fff;
+      }
+
+      .message-citations {
+        background: rgba(255, 255, 255, 0.15);
+
+        .citation-header {
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .citation-text {
+          color: rgba(255, 255, 255, 0.9);
+        }
+      }
+
+      .message-time {
+        color: rgba(255, 255, 255, 0.6);
+      }
     }
   }
 
   &.assistant {
     .message-bubble {
-      background: #f5f5f5;
-      color: #333;
-      border-radius: 16px 16px 16px 0;
+      background: #fff;
+      border-radius: 20px 20px 20px 4px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
     }
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 .message-avatar {
   flex-shrink: 0;
+
+  .user-avatar {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+  }
+
+  .ai-avatar {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+  }
 }
 
 .message-content {
-  max-width: 75%;
+  max-width: 70%;
 }
 
 .message-bubble {
-  padding: 12px 16px;
-  line-height: 1.6;
-  white-space: pre-wrap;
+  padding: 16px 20px;
+  line-height: 1.7;
+
+  .message-text {
+    color: #1f2937;
+    font-size: 14px;
+    white-space: pre-wrap;
+  }
+
+  .message-citations {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 12px;
+
+    .citation-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #6b7280;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .citation-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      cursor: pointer;
+      transition: all 0.3s;
+
+      &:hover {
+        color: #667eea;
+      }
+
+      .citation-text {
+        color: #4b5563;
+        font-size: 12px;
+      }
+    }
+  }
+
+  .message-time {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 6px;
+  }
 
   &.loading {
     display: flex;
     align-items: center;
-    gap: 8px;
-  }
-}
+    gap: 12px;
 
-.message-citations {
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: #f0f5ff;
-  border-radius: 8px;
-  font-size: 12px;
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
 
-  .citation-header {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: #666;
-    margin-bottom: 4px;
-  }
+      span {
+        width: 8px;
+        height: 8px;
+        background: #667eea;
+        border-radius: 50%;
+        animation: bounce 1.4s infinite ease-in-out both;
 
-  .citation-item {
-    padding: 4px 0;
-    cursor: pointer;
-    &:hover {
-      color: #1890ff;
-    }
-    .citation-score {
-      color: #1890ff;
-      margin-right: 8px;
-    }
-    .citation-text {
-      color: #666;
+        &:nth-child(1) {
+          animation-delay: -0.32s;
+        }
+
+        &:nth-child(2) {
+          animation-delay: -0.16s;
+        }
+      }
     }
   }
 }
 
-.message-time {
-  font-size: 11px;
-  color: #999;
-  margin-top: 4px;
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
 }
 
 .chat-input {
-  padding: 16px;
-  border-top: 1px solid #f0f0f0;
+  padding: 20px 24px;
+  border-top: 1px solid #f3f4f6;
+  background: #fff;
+
+  .input-wrapper {
+    display: flex;
+    gap: 12px;
+    background: #f9fafb;
+    border-radius: 16px;
+    padding: 6px 6px 6px 20px;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+
+    &:focus-within {
+      border-color: #667eea;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    :deep(.el-input__wrapper) {
+      background: transparent;
+      box-shadow: none;
+      padding: 0;
+
+      .el-input__inner {
+        font-size: 15px;
+      }
+    }
+
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border: none;
+      color: #fff;
+      transition: all 0.3s;
+
+      &:hover:not(:disabled) {
+        transform: scale(1.05);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+      }
+    }
+  }
 
   .input-hints {
-    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
     font-size: 12px;
-    color: #999;
-  }
-}
+    color: #9ca3af;
 
-.context-panel {
-  background: #fafafa;
-  padding: 16px;
-  border-radius: 8px;
-  height: 650px;
-  overflow-y: auto;
-
-  .panel-section {
-    margin-bottom: 24px;
-
-    h3 {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0 0 12px 0;
+    .el-icon {
       font-size: 14px;
-      color: #666;
     }
   }
 }
 
-.current-kb {
-  margin-bottom: 12px;
+.context-card {
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+
+  :deep(.el-card__body) {
+    padding: 24px;
+  }
+
+  .panel-section {
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+
+      .el-icon {
+        font-size: 18px;
+        color: #667eea;
+      }
+
+      h3 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        color: #1f2937;
+      }
+    }
+  }
+
+  .current-kb {
+    margin-bottom: 12px;
+  }
+
+  .switch-btn {
+    width: 100%;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border: none;
+    color: #667eea;
+    transition: all 0.3s;
+
+    &:hover {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+    }
+  }
 }
 
 .session-list {
   .session-item {
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    cursor: pointer;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    background: #fff;
-    border: 1px solid #f0f0f0;
+    gap: 12px;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
 
     &:hover {
-      border-color: #1890ff;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+      transform: translateX(4px);
+
+      .session-arrow {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
 
     &.active {
-      border-color: #1890ff;
-      background: #e6f7ff;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+
+      .session-icon,
+      .session-title,
+      .session-date,
+      .session-arrow {
+        color: #fff;
+      }
     }
 
-    .session-title {
-      font-size: 14px;
+    .session-icon {
+      width: 36px;
+      height: 36px;
+      background: #fff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #667eea;
     }
 
-    .session-date {
-      font-size: 12px;
-      color: #999;
+    .session-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+
+      .session-title {
+        font-size: 14px;
+        font-weight: 500;
+        color: #1f2937;
+      }
+
+      .session-date {
+        font-size: 12px;
+        color: #9ca3af;
+      }
+    }
+
+    .session-arrow {
+      color: #9ca3af;
+      opacity: 0;
+      transform: translateX(-10px);
+      transition: all 0.3s;
     }
   }
 }
 
 .quick-questions {
   .quick-question {
-    padding: 10px 12px;
-    background: #fff;
-    border: 1px solid #f0f0f0;
-    border-radius: 8px;
-    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 12px;
+    margin-bottom: 10px;
     cursor: pointer;
-    font-size: 13px;
-    color: #333;
     transition: all 0.3s;
 
-    &:hover {
-      border-color: #1890ff;
-      color: #1890ff;
-      background: #e6f7ff;
+    .el-icon {
+      color: #667eea;
+      font-size: 16px;
     }
+
+    span {
+      font-size: 13px;
+      color: #4b5563;
+      flex: 1;
+    }
+
+    &:hover {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+
+      span {
+        color: #667eea;
+      }
+    }
+  }
+}
+
+:deep(.el-divider) {
+  margin: 20px 0;
+}
+
+:deep(.kb-dialog) {
+  .el-dialog {
+    border-radius: 16px;
+  }
+
+  .el-dialog__header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .el-dialog__body {
+    padding: 24px;
+  }
+
+  .el-dialog__footer {
+    padding: 16px 24px;
+    border-top: 1px solid #f3f4f6;
   }
 }
 </style>
