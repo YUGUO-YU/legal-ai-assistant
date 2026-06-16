@@ -18,13 +18,13 @@ public class AIService {
 
     private static final Logger log = LoggerFactory.getLogger(AIService.class);
 
-    @Value("${ai.minimax.api-url}")
-    private String apiUrl;
+    @Value("${ai.openclaw.url:http://localhost:19001}")
+    private String openClawUrl;
 
-    @Value("${ai.minimax.api-key}")
-    private String apiKey;
+    @Value("${ai.openclaw.token:my-secret-token}")
+    private String openClawToken;
 
-    @Value("${ai.minimax.model}")
+    @Value("${ai.minimax.model:openclaw}")
     private String model;
 
     @Value("${ai.minimax.timeout:120}")
@@ -46,7 +46,7 @@ public class AIService {
     }
 
     public String chat(String prompt) throws IOException {
-        log.info("调用MiniMax API: model={}, prompt长度={}", model, prompt.length());
+        log.info("调用OpenClaw网关: model={}, prompt长度={}", model, prompt.length());
 
         Map<String, Object> requestBody = Map.of(
             "model", model,
@@ -59,8 +59,8 @@ public class AIService {
         RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
-                .url(apiUrl + "/text/chatcompletion_v2")
-                .addHeader("Authorization", "Bearer " + apiKey)
+                .url(openClawUrl + "/v1/chat/completions")
+                .addHeader("Authorization", "Bearer " + openClawToken)
                 .addHeader("Content-Type", "application/json")
                 .post(body)
                 .build();
@@ -68,26 +68,26 @@ public class AIService {
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 String errorBody = response.body() != null ? response.body().string() : "no body";
-                log.error("MiniMax API调用失败: code={}, message={}, body={}", response.code(), response.message(), errorBody);
+                log.error("OpenClaw API调用失败: code={}, message={}, body={}", response.code(), response.message(), errorBody);
                 throw new IOException("API调用失败: " + response.code());
             }
 
             String responseBody = response.body().string();
-            log.info("MiniMax API响应长度: {}", responseBody.length());
+            log.info("OpenClaw API响应长度: {}", responseBody.length());
 
             return parseResponse(responseBody);
         } catch (Exception e) {
-            log.error("MiniMax API异常: {}", e.getMessage(), e);
+            log.error("OpenClaw API异常: {}", e.getMessage(), e);
             throw new IOException("API调用异常: " + e.getMessage(), e);
         }
     }
 
     public float[] embedText(String text) throws IOException {
-        log.info("调用MiniMax Embedding API: model={}, text长度={}", embeddingModel, text.length());
+        log.info("调用OpenClaw Embedding API: text长度={}", text.length());
 
         Map<String, Object> requestBody = Map.of(
-            "model", embeddingModel,
-            "texts", List.of(text)
+            "model", "minimax/" + embeddingModel,
+            "input", text
         );
 
         String json = objectMapper.writeValueAsString(requestBody);
@@ -95,8 +95,8 @@ public class AIService {
         RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
-                .url(apiUrl + "/embeddings")
-                .addHeader("Authorization", "Bearer " + apiKey)
+                .url(openClawUrl + "/v1/embeddings")
+                .addHeader("Authorization", "Bearer " + openClawToken)
                 .addHeader("Content-Type", "application/json")
                 .post(body)
                 .build();
@@ -104,14 +104,14 @@ public class AIService {
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 String errorBody = response.body() != null ? response.body().string() : "no body";
-                log.error("MiniMax Embedding API调用失败: code={}, message={}", response.code(), response.message());
+                log.error("OpenClaw Embedding API调用失败: code={}, message={}, body={}", response.code(), response.message(), errorBody);
                 throw new IOException("Embedding API调用失败: " + response.code());
             }
 
             String responseBody = response.body().string();
             return parseEmbeddingResponse(responseBody);
         } catch (Exception e) {
-            log.error("MiniMax Embedding API异常: {}", e.getMessage(), e);
+            log.error("OpenClaw Embedding API异常: {}", e.getMessage(), e);
             throw new IOException("Embedding API异常: " + e.getMessage(), e);
         }
     }

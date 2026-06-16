@@ -30,12 +30,13 @@ mybatis-plus:
 server:
   port: 3001
 
-# AI Configuration
+# AI Configuration - OpenClaw Gateway
 ai:
+  openclaw:
+    url: http://localhost:19001
+    token: my-secret-token
   minimax:
-    api-url: https://api.minimax.chat/v1
-    api-key: sk-cp-ekoYcsSAxZvJrF7fvTa6Ysotr5tUdq0tuDip1T288mxFO2VoH6oguSDnUvHUyyrpY1BzzQeifVkOTrSZMZ_gnr1NrvimwFs7IWccNtjjqMyLq1wOEBuagUs
-    model: MiniMax-Text-01
+    model: openclaw
     timeout: 120
 
 # Mock Mode (false = 使用MiniMax AI)
