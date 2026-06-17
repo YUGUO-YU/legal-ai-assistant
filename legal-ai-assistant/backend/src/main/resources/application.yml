@@ -49,7 +49,7 @@ ai:
 
 # Mock Mode (false = 使用MiniMax AI)
 mock:
-  enabled: true
+  enabled: false
 
 # Milvus Configuration
 milvus:
