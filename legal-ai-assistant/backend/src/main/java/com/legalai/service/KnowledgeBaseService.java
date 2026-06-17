@@ -221,21 +221,70 @@ public class KnowledgeBaseService {
             return Collections.emptyList();
         }
 
-        if (mockEnabled) {
-            return chunks.stream()
-                .limit(topK)
-                .map(chunk -> {
-                    LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
-                    item.setArticleId(String.valueOf(chunk.getChunkId()));
-                    item.setTitle(chunk.getFileName());
-                    item.setContent(chunk.getContent());
-                    item.setScore(0.85 + Math.random() * 0.15);
-                    return item;
-                })
-                .collect(Collectors.toList());
+        return textSearchChunks(chunks, query, topK);
+    }
+
+    public List<LegalSearchResponse.SearchResultItem> searchInKnowledgeBase(String kbId, String query, int topK) {
+        log.info("知识库内搜索: kbId={}, query={}", kbId, query);
+
+        Long numericKbId = parseKbId(kbId);
+        if (numericKbId == null) {
+            log.warn("无效的知识库ID: {}", kbId);
+            return Collections.emptyList();
         }
 
-        return semanticSearch(chunks, query, topK);
+        return searchInKnowledgeBase(numericKbId, query, topK);
+    }
+
+    private Long parseKbId(String kbId) {
+        if (kbId == null || kbId.isBlank()) {
+            return null;
+        }
+        if (kbId.matches("\\d+")) {
+            return Long.parseLong(kbId);
+        }
+        if (kbId.matches("KB-\\d+")) {
+            return Long.parseLong(kbId.substring(3));
+        }
+        for (Map.Entry<Long, KnowledgeBaseListResponse.KnowledgeBase> entry : kbStore.entrySet()) {
+            if (entry.getValue().getName().contains(kbId) || entry.getValue().getName().equals(kbId)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    private List<LegalSearchResponse.SearchResultItem> textSearchChunks(List<DocumentChunk> chunks, String query, int topK) {
+        String lowerQuery = query.toLowerCase();
+
+        List<ScoredChunk> scoredChunks = new ArrayList<>();
+        for (DocumentChunk chunk : chunks) {
+            String content = chunk.getContent().toLowerCase();
+            int matchCount = 0;
+            for (String word : lowerQuery.split("\\s+")) {
+                if (word.length() > 1 && content.contains(word)) {
+                    matchCount++;
+                }
+            }
+            float score = matchCount > 0 ? (float) matchCount / lowerQuery.split("\\s+").length : 0f;
+            if (score > 0) {
+                scoredChunks.add(new ScoredChunk(chunk, score));
+            }
+        }
+
+        scoredChunks.sort((a, b) -> Float.compare(b.score, a.score));
+
+        return scoredChunks.stream()
+            .limit(topK)
+            .map(sc -> {
+                LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
+                item.setArticleId(String.valueOf(sc.chunk.getChunkId()));
+                item.setTitle(sc.chunk.getFileName());
+                item.setContent(sc.chunk.getContent());
+                item.setScore(Math.min(0.99, 0.7 + sc.score * 0.25));
+                return item;
+            })
+            .collect(Collectors.toList());
     }
 
     private List<LegalSearchResponse.SearchResultItem> semanticSearch(List<DocumentChunk> chunks, String query, int topK) {

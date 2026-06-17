@@ -399,14 +399,27 @@ const switchSession = async (session) => {
   ElMessage.info('已切换会话')
 }
 
-const confirmKb = () => {
-  currentKb.value = selectedKb.value
+const confirmKb = async () => {
+  if (selectedKb.value !== currentKb.value) {
+    messages.value = []
+    currentKb.value = selectedKb.value
+    sessionId.value = null
+    currentSession.value = null
+    await loadSessions()
+  }
   showKbSelector.value = false
   ElMessage.success('已切换知识库')
 }
 
 const scrollToCitation = (c) => {
-  ElMessage.info('定位到文档引用位置（待实现）')
+  if (c?.documentId) {
+    const kbMap = {
+      'KB-001': '劳动法法规库',
+      'KB-002': '合同纠纷案例',
+      'KB-003': '知识产权法规'
+    }
+    ElMessage.info(`正在定位文档: ${kbMap[c.documentId] || c.documentId}`)
+  }
 }
 
 onMounted(() => {

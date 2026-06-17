@@ -207,8 +207,13 @@ public class DocQaService {
     }
 
     private List<String> retrieveFromKnowledgeBase(DocQaRequest request) {
+        String kbId = request.getKbId() != null ? request.getKbId().toString() : request.getKnowledgeBaseId();
+        if (kbId == null || kbId.isBlank()) {
+            return Collections.emptyList();
+        }
+
         List<LegalSearchResponse.SearchResultItem> chunks = knowledgeBaseService.searchInKnowledgeBase(
-            request.getKbId(),
+            kbId,
             request.getQuestion(),
             request.getTopK() != null ? request.getTopK() : 5
         );

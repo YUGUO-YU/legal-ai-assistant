@@ -223,24 +223,6 @@ const handleResearch = async () => {
     let buffer = ''
     let fullReportContent = ''
 
-    phases[0].completed = true
-    phases[0].active = false
-    phases[1].active = true
-    progress.value = 30
-    progressMessage.value = '检索法律法规...'
-
-    phases[1].completed = true
-    phases[1].active = false
-    phases[2].active = true
-    progress.value = 50
-    progressMessage.value = '检索司法案例...'
-
-    phases[2].completed = true
-    phases[2].active = false
-    phases[3].active = true
-    progress.value = 70
-    progressMessage.value = '正在生成研究报告...'
-
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
@@ -263,8 +245,12 @@ const handleResearch = async () => {
 
               const phaseMap = {
                 'parse': 0,
-                'search': 1,
-                'generate': 3,
+                'search_laws': 1,
+                'search_cases': 2,
+                'generate_def': 3,
+                'generate_basis': 4,
+                'generate_risk': 5,
+                'generate_conclusion': 6,
                 'complete': 6
               }
               const phaseIndex = phaseMap[event.phase]
