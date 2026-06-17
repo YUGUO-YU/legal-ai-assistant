@@ -19,6 +19,13 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(400, e.getMessage());
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> handleIllegalState(IllegalStateException e) {
+        log.warn("状态错误: {}", e.getMessage());
+        return ApiResponse.error(400, e.getMessage());
+    }
+
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<Void> handleRuntimeException(RuntimeException e) {

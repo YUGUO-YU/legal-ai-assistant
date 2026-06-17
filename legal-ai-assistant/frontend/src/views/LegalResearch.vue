@@ -13,11 +13,14 @@
           <div class="section-label">
             <el-icon><Edit /></el-icon>
             <span>研究问题</span>
+            <span class="char-count">{{ query.length }}/500</span>
           </div>
           <el-input
             v-model="query"
             type="textarea"
             :rows="4"
+            maxlength="500"
+            show-word-limit
             placeholder="请输入需要研究的具体法律问题，如：建设工程合同纠纷中的工期延误索赔问题研究"
           />
         </div>

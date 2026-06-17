@@ -329,6 +329,16 @@ const handleAsk = async () => {
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
+    let pendingUpdate = false
+
+    const flushUpdate = async () => {
+      if (pendingUpdate) {
+        pendingUpdate = false
+        messages.value[messages.value.length - 1] = { ...aiMsg }
+        await nextTick()
+        chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+      }
+    }
 
     while (true) {
       const { done, value } = await reader.read()
@@ -344,17 +354,18 @@ const handleAsk = async () => {
           if (data === '[DONE]') continue
 
           aiMsg.content += data
-          messages.value[messages.value.length - 1] = { ...aiMsg }
 
-          await nextTick()
-          chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+          if (!pendingUpdate) {
+            pendingUpdate = true
+            requestAnimationFrame(flushUpdate)
+          }
         }
       }
     }
 
+    await flushUpdate()
     await loadSessions()
   } catch (e) {
-    console.error(e)
     aiMsg.content = '回答生成失败，请稍后重试'
     ElMessage.error('回答生成失败，请稍后重试')
   } finally {

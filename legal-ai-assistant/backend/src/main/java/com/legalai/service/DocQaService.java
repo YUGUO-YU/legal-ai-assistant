@@ -13,6 +13,7 @@ import reactor.core.publisher.Flux;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -153,7 +154,24 @@ public class DocQaService {
             String mockAnswer = generateMockAnswer(request.getQuestion(), citations, contextChunks, conversationContext);
             persistMessage(finalSessionId, "assistant", mockAnswer, historySize);
 
-            return Flux.just(mockAnswer);
+            return Flux.create(emitter -> {
+                String[] chars = mockAnswer.split("");
+                AtomicInteger index = new AtomicInteger(0);
+
+                emitter.onRequest(req -> {
+                    while (index.get() < chars.length && emitter.isCancelled()) {
+                        String chunk = chars[index.getAndIncrement()];
+                        emitter.next("data: " + chunk + "\n\n");
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                    }
+                    emitter.complete();
+                });
+            });
         } else {
             return Flux.create(emitter -> {
                 try {
@@ -175,7 +193,7 @@ public class DocQaService {
                     log.error("流式AI服务调用失败: {}", e.getMessage());
                     String fallbackAnswer = generateMockAnswer(request.getQuestion(), citations, finalContextChunks, conversationContext);
                     persistMessage(finalSessionId, "assistant", fallbackAnswer, historySize);
-                    emitter.next(fallbackAnswer);
+                    emitter.next("data: " + fallbackAnswer + "\n\n");
                     emitter.complete();
                 }
             });
