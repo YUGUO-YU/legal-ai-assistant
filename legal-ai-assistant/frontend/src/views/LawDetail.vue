@@ -81,6 +81,25 @@
           </div>
         </div>
 
+        <div class="law-section" v-if="lawArticles.length > 0">
+          <h3>法规条款</h3>
+          <div class="articles-list">
+            <div
+              v-for="article in lawArticles"
+              :key="article.articleUuid"
+              class="article-item"
+            >
+              <div class="article-header">
+                <span class="article-no">{{ article.articleNo }}</span>
+                <span class="article-title" v-if="article.title">{{ article.title }}</span>
+              </div>
+              <div class="article-content">
+                {{ article.content }}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="law-section source-section">
           <h3>数据来源</h3>
           <div class="source-info">
@@ -124,7 +143,8 @@ import {
   OfficeBuilding,
   CopyDocument,
   Link,
-  DataAnalysis
+  DataAnalysis,
+  Document
 } from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
@@ -135,6 +155,7 @@ const router = useRouter()
 
 const loading = ref(true)
 const lawData = ref(null)
+const lawArticles = ref([])
 
 const loadLawDetail = async () => {
   const lawUuid = route.params.lawUuid
@@ -146,11 +167,19 @@ const loadLawDetail = async () => {
 
   loading.value = true
   try {
-    const res = await api.lawSearch.getLawDetail(lawUuid)
-    if (res.data) {
-      lawData.value = res.data
+    const [detailRes, articlesRes] = await Promise.all([
+      api.lawSearch.getLawDetail(lawUuid),
+      api.lawSearch.getLawArticles(lawUuid)
+    ])
+
+    if (detailRes.data) {
+      lawData.value = detailRes.data
     } else {
       ElMessage.error('法规不存在')
+    }
+
+    if (articlesRes.data) {
+      lawArticles.value = articlesRes.data
     }
   } catch (e) {
     console.error('Failed to load law detail:', e)
@@ -174,9 +203,18 @@ const generateAnalysis = () => {
 }
 
 const copyContent = () => {
+  let contentToCopy = ''
   if (lawData.value?.content) {
-    navigator.clipboard.writeText(lawData.value.content)
-    ElMessage.success('法规全文已复制')
+    contentToCopy = lawData.value.content
+  } else if (lawArticles.value.length > 0) {
+    contentToCopy = lawArticles.value
+      .map(a => `${a.articleNo}${a.title ? ' ' + a.title : ''}\n${a.content}`)
+      .join('\n\n')
+  }
+
+  if (contentToCopy) {
+    navigator.clipboard.writeText(contentToCopy)
+    ElMessage.success('内容已复制')
   } else if (lawData.value?.title) {
     navigator.clipboard.writeText(lawData.value.title)
     ElMessage.success('法规名称已复制')
@@ -418,6 +456,47 @@ onMounted(() => {
       :deep(.el-button) {
         width: 100%;
       }
+    }
+  }
+}
+
+.articles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .article-item {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 16px 20px;
+    border-left: 4px solid #667eea;
+
+    .article-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+
+      .article-no {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: #fff;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .article-title {
+        font-weight: 600;
+        color: #1f2937;
+        font-size: 15px;
+      }
+    }
+
+    .article-content {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #4b5563;
     }
   }
 }

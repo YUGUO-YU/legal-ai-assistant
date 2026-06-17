@@ -33,6 +33,9 @@ public class CaseSearchResponse {
         private Integer judgmentResult;
         private Long litigationAmount;
         private String summary;
+        private String keyFacts;
+        private String judgmentSummary;
+        private String legalBasis;
         private String sourceUrl;
         private String sourceName;
 
@@ -60,6 +63,12 @@ public class CaseSearchResponse {
         public void setLitigationAmount(Long litigationAmount) { this.litigationAmount = litigationAmount; }
         public String getSummary() { return summary; }
         public void setSummary(String summary) { this.summary = summary; }
+        public String getKeyFacts() { return keyFacts; }
+        public void setKeyFacts(String keyFacts) { this.keyFacts = keyFacts; }
+        public String getJudgmentSummary() { return judgmentSummary; }
+        public void setJudgmentSummary(String judgmentSummary) { this.judgmentSummary = judgmentSummary; }
+        public String getLegalBasis() { return legalBasis; }
+        public void setLegalBasis(String legalBasis) { this.legalBasis = legalBasis; }
         public String getSourceUrl() { return sourceUrl; }
         public void setSourceUrl(String sourceUrl) { this.sourceUrl = sourceUrl; }
         public String getSourceName() { return sourceName; }

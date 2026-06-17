@@ -69,6 +69,22 @@ public class AIService {
         return executeChatRequest(requestBody);
     }
 
+    public String chatWithTools(String prompt, List<Map<String, Object>> tools) throws IOException {
+        log.info("调用OpenClaw网关(带工具): model={}, prompt长度={}, tools数量={}", model, prompt.length(), tools != null ? tools.size() : 0);
+
+        List<Map<String, String>> messages = List.of(Map.of("role", "user", "content", prompt));
+
+        Map<String, Object> requestBody = new java.util.HashMap<>();
+        requestBody.put("model", model);
+        requestBody.put("messages", messages);
+        requestBody.put("stream", false);
+        if (tools != null && !tools.isEmpty()) {
+            requestBody.put("tools", tools);
+        }
+
+        return executeChatRequest(requestBody);
+    }
+
     public String chatStream(String prompt, java.util.function.Consumer<String> onChunk, java.util.function.Supplier<Boolean> isCancelled) throws IOException {
         log.info("调用OpenClaw流式网关: model={}, prompt长度={}", model, prompt.length());
 

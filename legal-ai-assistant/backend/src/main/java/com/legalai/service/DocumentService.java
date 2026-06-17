@@ -5,8 +5,10 @@ import com.legalai.util.IdGenerator;
 import com.legalai.util.ValidationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -15,6 +17,9 @@ import java.util.*;
 @Service
 public class DocumentService {
     private static final Logger log = LoggerFactory.getLogger(DocumentService.class);
+
+    @Autowired
+    private AIService aiService;
 
     private static final Map<String, DocumentTemplate> TEMPLATES = new HashMap<>();
 
@@ -228,6 +233,114 @@ public class DocumentService {
         return infos;
     }
 
+    public ExtractedInfo extractInfoFromText(String text, String templateCode) {
+        log.info("从文本提取信息: text长度={}, templateCode={}", text.length(), templateCode);
+
+        String prompt = buildExtractionPrompt(text, templateCode);
+
+        try {
+            String aiResponse = aiService.chat(prompt);
+            return parseExtractedInfo(aiResponse);
+        } catch (IOException e) {
+            log.error("AI信息提取失败: {}", e.getMessage());
+            ExtractedInfo fallback = new ExtractedInfo();
+            fallback.setSuccess(false);
+            fallback.setErrorMessage("信息提取失败: " + e.getMessage());
+            return fallback;
+        }
+    }
+
+    private String buildExtractionPrompt(String text, String templateCode) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是一个专业的法律文书信息提取助手。请从用户提供的文本中提取关键信息。\n\n");
+        sb.append("【待提取文本】\n").append(text).append("\n\n");
+        sb.append("【文书模板类型】").append(templateCode).append("\n\n");
+
+        sb.append("请提取以下信息，返回JSON格式：\n\n");
+
+        if (templateCode.startsWith("civil_") || templateCode.equals("civil_petition")) {
+            sb.append("{\n");
+            sb.append("  \"plaintiffName\": \"原告姓名\",\n");
+            sb.append("  \"plaintiffAddress\": \"原告地址\",\n");
+            sb.append("  \"defendantName\": \"被告姓名\",\n");
+            sb.append("  \"defendantAddress\": \"被告地址\",\n");
+            sb.append("  \"claimAmount\": 金额数字(单位元，纯数字),\n");
+            sb.append("  \"claimDescription\": \"诉讼请求描述\",\n");
+            sb.append("  \"facts\": \"案件事实描述\",\n");
+            sb.append("  \"courtName\": \"管辖法院名称\"\n");
+            sb.append("}\n");
+        } else if (templateCode.startsWith("labor_")) {
+            sb.append("{\n");
+            sb.append("  \"employerName\": \"用人单位名称\",\n");
+            sb.append("  \"employeeName\": \"劳动者姓名\",\n");
+            sb.append("  \"workContent\": \"工作内容\",\n");
+            sb.append("  \"salary\": \"工资待遇\",\n");
+            sb.append("  \"startDate\": \"入职日期\",\n");
+            sb.append("  \"claimAmount\": 金额数字(单位元，纯数字),\n");
+            sb.append("  \"disputeType\": \"争议类型\"\n");
+            sb.append("}\n");
+        } else {
+            sb.append("{\n");
+            sb.append("  \"partyName\": \"当事人名称\",\n");
+            sb.append("  \"otherPartyName\": \"对方当事人名称\",\n");
+            sb.append("  \"claimAmount\": 金额数字(单位元，纯数字),\n");
+            sb.append("  \"description\": \"关键描述\",\n");
+            sb.append("  \"courtName\": \"管辖法院名称\"\n");
+            sb.append("}\n");
+        }
+
+        sb.append("\n只返回JSON，不要有其他解释性文字。如果某个字段无法提取，设置为空字符串或null。");
+        return sb.toString();
+    }
+
+    private ExtractedInfo parseExtractedInfo(String aiResponse) {
+        ExtractedInfo info = new ExtractedInfo();
+        info.setSuccess(true);
+
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(aiResponse);
+
+            info.setPlaintiffName(getJsonText(node, "plaintiffName"));
+            info.setPlaintiffAddress(getJsonText(node, "plaintiffAddress"));
+            info.setDefendantName(getJsonText(node, "defendantName"));
+            info.setDefendantAddress(getJsonText(node, "defendantAddress"));
+
+            if (node.has("claimAmount")) {
+                if (node.get("claimAmount").isNumber()) {
+                    info.setClaimAmount(node.get("claimAmount").decimalValue());
+                } else {
+                    String amountStr = node.get("claimAmount").asText().replaceAll("[^0-9.]", "");
+                    if (!amountStr.isEmpty()) {
+                        info.setClaimAmount(new BigDecimal(amountStr));
+                    }
+                }
+            }
+
+            info.setClaimDescription(getJsonText(node, "claimDescription"));
+            info.setFacts(getJsonText(node, "facts"));
+            info.setCourtName(getJsonText(node, "courtName"));
+            info.setEmployerName(getJsonText(node, "employerName"));
+            info.setEmployeeName(getJsonText(node, "employeeName"));
+            info.setWorkContent(getJsonText(node, "workContent"));
+            info.setSalary(getJsonText(node, "salary"));
+            info.setStartDate(getJsonText(node, "startDate"));
+            info.setDisputeType(getJsonText(node, "disputeType"));
+
+            log.info("信息提取成功");
+        } catch (Exception e) {
+            log.error("解析提取结果失败: {}", e.getMessage());
+            info.setSuccess(false);
+            info.setErrorMessage("解析失败: " + e.getMessage());
+        }
+
+        return info;
+    }
+
+    private String getJsonText(com.fasterxml.jackson.databind.JsonNode node, String field) {
+        return node.has(field) && !node.get(field).isNull() ? node.get(field).asText() : "";
+    }
+
     private void validateRequest(DocumentDraftRequest request) {
         if (request.getTemplateCode() == null || request.getTemplateCode().isEmpty()) {
             throw new IllegalArgumentException("模板代码不能为空");
@@ -267,42 +380,31 @@ public class DocumentService {
         DocumentDraftRequest.DocumentData data = request.getCaseData();
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
 
-        return String.format("""
-            民事起诉状
+        String plaintiffName = data != null && data.getPlaintiffName() != null ? data.getPlaintiffName() : "【请填写原告姓名】";
+        String plaintiffAddress = data != null && data.getPlaintiffAddress() != null ? data.getPlaintiffAddress() : "【请填写原告地址】";
+        String defendantName = data != null && data.getDefendantName() != null ? data.getDefendantName() : "【请填写被告姓名】";
+        String defendantAddress = data != null && data.getDefendantAddress() != null ? data.getDefendantAddress() : "【请填写被告地址】";
+        String claimAmount = data != null && data.getClaimAmount() != null ? String.valueOf(data.getClaimAmount()) : "【请填写诉讼金额】";
+        String claimDescription = data != null && data.getClaimDescription() != null ? data.getClaimDescription() : "【请填写诉讼请求描述】";
+        String facts = data != null && data.getFacts() != null ? String.join("\n", data.getFacts()) : "【请填写案件事实】";
+        String courtName = data != null && data.getCourtName() != null ? data.getCourtName() : "【请填写管辖法院】";
 
-            原告：%s，住%s。
+        StringBuilder sb = new StringBuilder();
+        sb.append("民事起诉状\n\n");
+        sb.append("原告：").append(plaintiffName).append("，住").append(plaintiffAddress).append("。\n\n");
+        sb.append("被告：").append(defendantName).append("，住").append(defendantAddress).append("。\n\n");
+        sb.append("诉讼请求：\n");
+        sb.append("1. ").append(claimDescription).append("\n");
+        sb.append("2. 判令被告支付利息（按实际计算）；\n");
+        sb.append("3. 判令被告承担本案诉讼费用。\n\n");
+        sb.append("事实与理由：\n");
+        sb.append(facts).append("\n\n");
+        sb.append("此致\n");
+        sb.append(courtName).append("\n\n");
+        sb.append("具状人：").append(plaintiffName).append("\n");
+        sb.append(date);
 
-            被告：%s，住%s。
-
-            诉讼请求：
-            1. 判令被告支付欠款人民币%s元；
-            2. 判令被告支付利息人民币%s元；
-            3. 判令被告承担本案诉讼费用。
-
-            事实与理由：
-            被告因%s，于%s向原告借款人民币%s元，约定于三个月内归还。
-            借款到期后，被告未按约定归还欠款，经原告多次催要，被告仍拒不归还。
-            为维护原告合法权益，特向贵院提起诉讼，请求依法支持原告的诉讼请求。
-
-            此致
-            %s人民法院
-
-            具状人：%s
-            %s
-            """,
-            data != null && data.getPlaintiffName() != null ? data.getPlaintiffName() : "李四",
-            data != null && data.getPlaintiffAddress() != null ? data.getPlaintiffAddress() : "北京市朝阳区",
-            data != null && data.getDefendantName() != null ? data.getDefendantName() : "王五",
-            data != null && data.getDefendantAddress() != null ? data.getDefendantAddress() : "上海市浦东新区",
-            data != null && data.getClaimAmount() != null ? data.getClaimAmount() : "100000",
-            "按实际计算",
-            data != null && data.getClaimDescription() != null ? data.getClaimDescription() : "借款合同纠纷",
-            date,
-            data != null && data.getClaimAmount() != null ? data.getClaimAmount() : "100000",
-            data != null && data.getCourtName() != null ? data.getCourtName() : "北京市朝阳区",
-            data != null && data.getPlaintiffName() != null ? data.getPlaintiffName() : "李四",
-            date
-        );
+        return sb.toString();
     }
 
     private String generateCivilDefense(DocumentDraftRequest request) {

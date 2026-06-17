@@ -1,9 +1,11 @@
 package com.legalai.controller;
 
 import com.legalai.dto.*;
+import com.legalai.model.LawArticle;
 import com.legalai.service.LawSearchService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -36,5 +38,11 @@ public class LawSearchController {
             return ApiResponse.error(404, "法规不存在");
         }
         return ApiResponse.success(item);
+    }
+
+    @GetMapping("/laws/{lawUuid}/articles")
+    public ApiResponse<List<LawArticle>> getLawArticles(@PathVariable String lawUuid) {
+        List<LawArticle> articles = lawSearchService.getLawArticles(lawUuid);
+        return ApiResponse.success(articles);
     }
 }

@@ -124,9 +124,21 @@
               </el-input>
             </el-form-item>
 
+            <el-form-item label="原告地址" prop="plaintiffAddress">
+              <el-input v-model="formData.plaintiffAddress" placeholder="请输入原告地址">
+                <template #prefix><el-icon><OfficeBuilding /></el-icon></template>
+              </el-input>
+            </el-form-item>
+
             <el-form-item label="被告/被申请人" prop="defendantName">
               <el-input v-model="formData.defendantName" placeholder="请输入被告或被申请人姓名">
                 <template #prefix><el-icon><User /></el-icon></template>
+              </el-input>
+            </el-form-item>
+
+            <el-form-item label="被告地址" prop="defendantAddress">
+              <el-input v-model="formData.defendantAddress" placeholder="请输入被告地址">
+                <template #prefix><el-icon><OfficeBuilding /></el-icon></template>
               </el-input>
             </el-form-item>
 
@@ -154,6 +166,10 @@
               <el-button type="primary" @click="handleDraft" :loading="loading" :disabled="!selectedTemplate">
                 <el-icon v-if="!loading"><Document /></el-icon>
                 生成文书
+              </el-button>
+              <el-button type="success" @click="showPasteDialog" :disabled="!selectedTemplate">
+                <el-icon><DocumentCopy /></el-icon>
+                一键粘贴识别
               </el-button>
               <el-button @click="resetForm">
                 <el-icon><Refresh /></el-icon>
@@ -207,6 +223,37 @@
         </div>
       </div>
     </el-drawer>
+
+    <el-dialog v-model="showPasteDialogVisible" title="一键粘贴识别" width="600px" :close-on-click-modal="false">
+      <div class="paste-dialog-content">
+        <el-alert type="info" :closable="false" show-icon>
+          <template #title>
+            请粘贴案件相关信息，AI将自动识别并填入表单
+          </template>
+          <template #description>
+            支持粘贴起诉书、仲裁申请书、合同等法律文本中的当事人信息、金额、事实描述等
+          </template>
+        </el-alert>
+        <el-input
+          v-model="pasteText"
+          type="textarea"
+          :rows="10"
+          placeholder="请在此粘贴案件相关信息，例如：&#10;原告：李某，住北京市朝阳区&#10;被告：王某，住上海市浦东新区&#10;诉讼请求：要求被告支付欠款10万元及利息..."
+          class="paste-textarea"
+        />
+        <div class="paste-tips">
+          <el-tag type="warning" size="small">提示</el-tag>
+          <span>粘贴内容越完整，识别越准确。支持识别：当事人姓名/名称、地址、金额、事实描述、法院名称等。</span>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showPasteDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleExtractInfo" :loading="extracting">
+          <el-icon v-if="!extracting"><DocumentCopy /></el-icon>
+          识别并填充
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -223,7 +270,8 @@ import {
   CopyDocument,
   Download,
   Printer,
-  Search
+  Search,
+  DocumentCopy
 } from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
@@ -236,15 +284,26 @@ const selectedTemplate = ref('')
 const activeCategory = ref('民事诉讼')
 const templateSearch = ref('')
 const showResult = ref(false)
+const showPasteDialogVisible = ref(false)
+const pasteText = ref('')
+const extracting = ref(false)
 
 const formData = reactive({
   plaintiffName: '',
+  plaintiffAddress: '',
   defendantName: '',
+  defendantAddress: '',
   caseType: 'contract',
   claimAmount: 0,
   claimDescription: '',
   facts: '',
-  courtName: ''
+  courtName: '',
+  employerName: '',
+  employeeName: '',
+  workContent: '',
+  salary: '',
+  startDate: '',
+  disputeType: ''
 })
 
 const formRules = {
@@ -296,7 +355,9 @@ const handleDraft = async () => {
         caseType: formData.caseType,
         caseData: {
           plaintiffName: formData.plaintiffName,
+          plaintiffAddress: formData.plaintiffAddress,
           defendantName: formData.defendantName,
+          defendantAddress: formData.defendantAddress,
           claimAmount: formData.claimAmount,
           claimDescription: formData.claimDescription,
           facts: formData.facts,
@@ -351,6 +412,54 @@ const downloadDocument = () => {
 
 const printDocument = () => {
   window.print()
+}
+
+const showPasteDialog = () => {
+  pasteText.value = ''
+  showPasteDialogVisible.value = true
+}
+
+const handleExtractInfo = async () => {
+  if (!pasteText.value.trim()) {
+    ElMessage.warning('请先粘贴案件信息')
+    return
+  }
+  if (!selectedTemplate.value) {
+    ElMessage.warning('请先选择文书模板')
+    return
+  }
+
+  extracting.value = true
+  try {
+    const res = await api.document.extractInfo(pasteText.value, selectedTemplate.value)
+    if (res.code === 200 && res.data) {
+      const info = res.data
+      if (info.plaintiffName) formData.plaintiffName = info.plaintiffName
+      if (info.plaintiffAddress) formData.plaintiffAddress = info.plaintiffAddress
+      if (info.defendantName) formData.defendantName = info.defendantName
+      if (info.defendantAddress) formData.defendantAddress = info.defendantAddress
+      if (info.claimAmount) formData.claimAmount = info.claimAmount
+      if (info.claimDescription) formData.claimDescription = info.claimDescription
+      if (info.facts) formData.facts = info.facts
+      if (info.courtName) formData.courtName = info.courtName
+      if (info.employerName) formData.employerName = info.employerName
+      if (info.employeeName) formData.employeeName = info.employeeName
+      if (info.workContent) formData.workContent = info.workContent
+      if (info.salary) formData.salary = info.salary
+      if (info.startDate) formData.startDate = info.startDate
+      if (info.disputeType) formData.disputeType = info.disputeType
+
+      ElMessage.success('信息提取成功，已自动填充表单')
+      showPasteDialogVisible.value = false
+    } else {
+      ElMessage.error(res.message || '信息提取失败')
+    }
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('信息提取失败: ' + (e.message || '未知错误'))
+  } finally {
+    extracting.value = false
+  }
 }
 
 const loadTemplates = async () => {
@@ -595,6 +704,21 @@ onMounted(() => {
       border-radius: 10px;
       padding: 10px 20px;
     }
+  }
+}
+
+.paste-dialog-content {
+  .paste-textarea {
+    margin-top: 16px;
+  }
+
+  .paste-tips {
+    margin-top: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: #909399;
   }
 }
 </style>

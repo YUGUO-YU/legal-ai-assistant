@@ -126,7 +126,8 @@ export default {
   lawSearch: {
     search: (data) => withRetry(() => api.post('/law-search/search', data)),
     getCategories: () => withRetry(() => api.get('/law-search/categories')),
-    getLawDetail: (uuid) => withRetry(() => api.get(`/law-search/laws/${uuid}`))
+    getLawDetail: (uuid) => withRetry(() => api.get(`/law-search/laws/${uuid}`)),
+    getLawArticles: (uuid) => withRetry(() => api.get(`/law-search/laws/${uuid}/articles`))
   },
   legalResearch: {
     createTask: (data) => withRetry(() => api.post('/legal-research/tasks', data)),
@@ -136,7 +137,8 @@ export default {
   document: {
     draft: (data) => withRetry(() => api.post('/document/draft', data)),
     getTemplates: () => withRetry(() => api.get('/document/templates')),
-    getTemplate: (code) => withRetry(() => api.get(`/document/templates/${code}`))
+    getTemplate: (code) => withRetry(() => api.get(`/document/templates/${code}`)),
+    extractInfo: (text, templateCode) => withRetry(() => api.post(`/document/extract-info?text=${encodeURIComponent(text)}&templateCode=${templateCode}`))
   },
   company: {
     query: (data) => withRetry(() => api.post('/company/query', data)),
