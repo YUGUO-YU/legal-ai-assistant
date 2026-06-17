@@ -29,12 +29,18 @@ public class DocQaService {
     @Autowired
     private KnowledgeBaseService knowledgeBaseService;
 
-    @Autowired
+    @Autowired(required = false)
     private ChatMessageMapper chatMessageMapper;
+
+    private boolean chatPersistenceEnabled = false;
 
     private static final Map<String, List<String>> QUESTION_PATTERNS = new HashMap<>();
 
     static {
+        initializeQuestionPatterns();
+    }
+
+    private static void initializeQuestionPatterns() {
         QUESTION_PATTERNS.put("欺诈", List.of(
             "《民法典》第一百四十八条：一方以欺诈手段，使对方在违背真实意思的情况下订立的合同，受欺诈方有权请求人民法院或者仲裁机构予以撤销。",
             "欺诈的构成要件包括：欺诈故意、欺诈行为、错误认识、意思表示。"
@@ -404,6 +410,10 @@ public class DocQaService {
     }
 
     private void persistMessage(String sessionId, String role, String content, int order) {
+        if (chatMessageMapper == null) {
+            log.debug("ChatMessageMapper not available, skipping persistence");
+            return;
+        }
         try {
             ChatMessage message = new ChatMessage();
             message.setSessionUuid(sessionId);
@@ -419,6 +429,9 @@ public class DocQaService {
     }
 
     public List<ChatMessage> getSessionHistory(String sessionId) {
+        if (chatMessageMapper == null) {
+            return Collections.emptyList();
+        }
         try {
             return chatMessageMapper.findBySessionUuid(sessionId);
         } catch (Exception e) {
@@ -428,6 +441,9 @@ public class DocQaService {
     }
 
     public void clearSessionHistory(String sessionId) {
+        if (chatMessageMapper == null) {
+            return;
+        }
         try {
             chatMessageMapper.deleteBySessionUuid(sessionId);
             log.info("会话历史已清除: sessionId={}", sessionId);
@@ -437,6 +453,9 @@ public class DocQaService {
     }
 
     public List<Map<String, Object>> getSessionList(String userId) {
+        if (chatMessageMapper == null) {
+            return Collections.emptyList();
+        }
         try {
             List<Map<String, Object>> sessions = chatMessageMapper.findSessionsByUserId(userId);
 

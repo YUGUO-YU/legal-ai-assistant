@@ -139,11 +139,31 @@ public class LegalResearchService {
     }
 
     private Flux<Map<String, Object>> mockGenerateReportStream(LegalResearchRequest request) {
+        String depth = request.getDepth() != null ? request.getDepth() : "normal";
+        List<String> sources = request.getSources() != null ? request.getSources() : List.of("laws", "cases");
+
+        StringBuilder phaseMessages = new StringBuilder();
+        if (sources.contains("laws")) {
+            phaseMessages.append("法律法规、");
+        }
+        if (sources.contains("cases")) {
+            phaseMessages.append("司法案例、");
+        }
+        if (sources.contains("papers")) {
+            phaseMessages.append("学术论文、");
+        }
+        if (phaseMessages.length() > 0) {
+            phaseMessages.setLength(phaseMessages.length() - 1);
+        }
+
         List<Map<String, Object>> phases = List.of(
             Map.of("type", "progress", "phase", "parse", "progress", 10, "message", "正在解析研究问题..."),
-            Map.of("type", "progress", "phase", "search", "progress", 30, "message", "检索法律法规..."),
-            Map.of("type", "progress", "phase", "search", "progress", 50, "message", "检索司法判例..."),
-            Map.of("type", "progress", "phase", "generate", "progress", 70, "message", "正在生成研究报告..."),
+            Map.of("type", "progress", "phase", "search_laws", "progress", 30, "message", "检索" + phaseMessages + "..."),
+            Map.of("type", "progress", "phase", "search_cases", "progress", 50, "message", "分析检索结果..."),
+            Map.of("type", "progress", "phase", "generate_def", "progress", 60, "message", "生成问题界定..."),
+            Map.of("type", "progress", "phase", "generate_basis", "progress", 70, "message", "生成法律依据..."),
+            Map.of("type", "progress", "phase", "generate_risk", "progress", 85, "message", "生成风险提示..."),
+            Map.of("type", "progress", "phase", "generate_conclusion", "progress", 95, "message", "生成结论建议..."),
             Map.of("type", "progress", "phase", "complete", "progress", 100, "message", "研究完成")
         );
 
@@ -151,15 +171,17 @@ public class LegalResearchService {
 
         return Flux.concat(
             Flux.fromIterable(phases)
-                .delayElements(java.time.Duration.ofMillis(300)),
+                .delayElements(java.time.Duration.ofMillis(200)),
             Flux.just(Map.of("type", "report", "content", content))
         );
     }
 
     private Flux<Map<String, Object>> aiGenerateReportStream(LegalResearchRequest request) {
         String question = request.getQuestion();
-        List<String> laws = searchRelevantLaws(question);
-        List<String> cases = searchRelevantCases(question);
+        List<String> sources = request.getSources() != null ? request.getSources() : List.of("laws", "cases");
+
+        List<String> laws = sources.contains("laws") ? searchRelevantLaws(question) : List.of();
+        List<String> cases = sources.contains("cases") ? searchRelevantCases(question) : List.of();
 
         String prompt = buildPrompt(question, laws, cases);
         StringBuilder fullContent = new StringBuilder();
@@ -167,9 +189,12 @@ public class LegalResearchService {
         try {
             return Flux.concat(
                 Flux.just(Map.of("type", "progress", "phase", "parse", "progress", 10, "message", "正在解析研究问题...")),
-                Flux.just(Map.of("type", "progress", "phase", "search", "progress", 30, "message", "检索法律法规，找到" + laws.size() + "条相关法规")),
-                Flux.just(Map.of("type", "progress", "phase", "search", "progress", 50, "message", "检索司法判例，找到" + cases.size() + "个相关判例")),
-                Flux.just(Map.of("type", "progress", "phase", "generate", "progress", 70, "message", "正在生成研究报告...")),
+                Flux.just(Map.of("type", "progress", "phase", "search_laws", "progress", 30, "message", "检索法律法规，找到" + laws.size() + "条相关法规")),
+                Flux.just(Map.of("type", "progress", "phase", "search_cases", "progress", 50, "message", "检索司法判例，找到" + cases.size() + "个相关判例")),
+                Flux.just(Map.of("type", "progress", "phase", "generate_def", "progress", 60, "message", "生成问题界定...")),
+                Flux.just(Map.of("type", "progress", "phase", "generate_basis", "progress", 70, "message", "生成法律依据...")),
+                Flux.just(Map.of("type", "progress", "phase", "generate_risk", "progress", 85, "message", "生成风险提示...")),
+                Flux.just(Map.of("type", "progress", "phase", "generate_conclusion", "progress", 95, "message", "生成结论建议...")),
                 Flux.defer(() -> {
                     try {
                         String result = aiService.chat(prompt);
