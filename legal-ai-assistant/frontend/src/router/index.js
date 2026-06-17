@@ -16,6 +16,10 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/legal-search',
+    redirect: '/'
+  },
+  {
     path: '/case-similar',
     component: () => import('../views/CaseSimilar.vue'),
     meta: { requiresAuth: true }

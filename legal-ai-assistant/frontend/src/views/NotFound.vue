@@ -18,7 +18,7 @@
         <h3>您可以：</h3>
         <ul>
           <li><router-link to="/">返回首页</router-link></li>
-          <li><router-link to="/legal-search">使用AI搜法查找法律信息</router-link></li>
+          <li><router-link to="/">使用AI搜法查找法律信息</router-link></li>
           <li><router-link to="/doc-qa">尝试AI文件问答</router-link></li>
         </ul>
       </div>
