@@ -108,11 +108,13 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 
+const router = useRouter()
 const loading = ref(false)
 const results = ref([])
 const total = ref(0)
@@ -225,7 +227,7 @@ const getStatusType = (status) => {
 }
 
 const viewLaw = (law) => {
-  ElMessage.info('法规详情页开发中...')
+  router.push(`/law-detail/${law.lawUuid}`)
 }
 
 const browseArticles = (law) => {

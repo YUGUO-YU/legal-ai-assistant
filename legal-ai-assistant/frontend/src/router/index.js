@@ -55,6 +55,11 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/law-detail/:lawUuid',
+    component: () => import('../views/LawDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/contract-review',
     component: () => import('../views/ContractReview.vue'),
     meta: { requiresAuth: true }
