@@ -330,7 +330,23 @@ const copyDocument = () => {
 }
 
 const downloadDocument = () => {
-  ElMessage.info('下载功能开发中...')
+  if (!draftResult.value?.documentContent) {
+    ElMessage.warning('请先生成文书')
+    return
+  }
+
+  const content = draftResult.value.documentContent
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `法律文书_${Date.now()}.txt`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+
+  ElMessage.success('文档已下载')
 }
 
 const printDocument = () => {

@@ -369,7 +369,169 @@ const getScoreColor = (score) => {
 }
 
 const exportReport = () => {
-  ElMessage.info('导出功能开发中...')
+  if (!reviewResult.value) {
+    ElMessage.warning('请先进行合同审查')
+    return
+  }
+
+  const result = reviewResult.value
+  const report = generateReportHtml(result)
+
+  const blob = new Blob([report], { type: 'text/html;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `合同审查报告_${Date.now()}.html`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+
+  ElMessage.success('报告已导出')
+}
+
+const generateReportHtml = (result) => {
+  const riskLevelName = { LOW: '低风险', MEDIUM: '中等风险', HIGH: '高风险' }
+  const riskClass = { LOW: 'low', MEDIUM: 'medium', HIGH: 'high' }
+
+  let dimensionsHtml = ''
+  if (result.dimensions && result.dimensions.length) {
+    dimensionsHtml = result.dimensions.map(dim => `
+      <tr>
+        <td>${dim.dimensionName}</td>
+        <td><span class="score">${dim.score}</span></td>
+        <td>${dim.comment || '-'}</td>
+      </tr>
+    `).join('')
+  }
+
+  const riskLevelClass = riskClass[result.riskLevel] || 'medium'
+  const riskLevelLabel = riskLevelName[result.riskLevel] || '未知'
+
+  let highRiskHtml = ''
+  if (result.highRiskItems && result.highRiskItems.length) {
+    highRiskHtml = `
+      <div class="risk-section high">
+        <h4>高风险问题</h4>
+        ${result.highRiskItems.map(item => `
+          <div class="risk-item">
+            <div class="risk-title">${item.title}</div>
+            <div class="risk-desc">${item.description || ''}</div>
+            <div class="risk-suggestion">建议：${item.suggestion || '-'}</div>
+          </div>
+        `).join('')}
+      </div>
+    `
+  }
+
+  let mediumRiskHtml = ''
+  if (result.mediumRiskItems && result.mediumRiskItems.length) {
+    mediumRiskHtml = `
+      <div class="risk-section medium">
+        <h4>中风险问题</h4>
+        ${result.mediumRiskItems.map(item => `
+          <div class="risk-item">
+            <div class="risk-title">${item.title}</div>
+            <div class="risk-desc">${item.description || ''}</div>
+            <div class="risk-suggestion">建议：${item.suggestion || '-'}</div>
+          </div>
+        `).join('')}
+      </div>
+    `
+  }
+
+  let lowRiskHtml = ''
+  if (result.lowRiskItems && result.lowRiskItems.length) {
+    lowRiskHtml = `
+      <div class="risk-section low">
+        <h4>低风险问题</h4>
+        ${result.lowRiskItems.map(item => `
+          <div class="risk-item">
+            <div class="risk-title">${item.title}</div>
+            <div class="risk-desc">${item.description || ''}</div>
+            <div class="risk-suggestion">建议：${item.suggestion || '-'}</div>
+          </div>
+        `).join('')}
+      </div>
+    `
+  }
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>合同审查报告</title>
+  <style>
+    body { font-family: 'Microsoft YaHei', Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; color: #333; }
+    h1 { color: #667eea; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+    h2 { color: #444; margin-top: 30px; }
+    h4 { color: #555; margin: 15px 0 10px; }
+    .header { display: flex; justify-content: space-between; align-items: center; }
+    .date { color: #888; font-size: 14px; }
+    .summary { background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1)); padding: 20px; border-radius: 12px; margin: 20px 0; }
+    .score-circle { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 100px; height: 100px; border-radius: 50%; color: white; font-weight: bold; }
+    .score-circle.low { background: linear-gradient(135deg, #10b981, #059669); }
+    .score-circle.medium { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .score-circle.high { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #f9fafb; font-weight: 600; }
+    .score { font-weight: bold; color: #667eea; }
+    .risk-section { margin: 20px 0; padding: 15px; border-radius: 8px; }
+    .risk-section.high { background: rgba(239,68,68,0.1); border-left: 4px solid #ef4444; }
+    .risk-section.medium { background: rgba(245,158,11,0.1); border-left: 4px solid #f59e0b; }
+    .risk-section.low { background: rgba(16,185,129,0.1); border-left: 4px solid #10b981; }
+    .risk-item { margin-bottom: 15px; }
+    .risk-title { font-weight: 600; color: #333; }
+    .risk-desc { color: #666; margin: 5px 0; }
+    .risk-suggestion { color: #667eea; font-size: 14px; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #888; font-size: 12px; }
+    .disclaimer { background: #f9fafb; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 13px; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>合同审查报告</h1>
+  <div class="date">生成时间：${new Date().toLocaleString('zh-CN')}</div>
+
+  <div class="summary">
+    <div class="header">
+      <div>
+        <h2 style="margin: 0;">综合评分：<span class="score">${result.totalScore}</span> 分</h2>
+        <p style="margin: 5px 0 0;">风险等级：<span class="risk-badge ${riskLevelClass}">${riskLevelLabel}</span></p>
+      </div>
+    </div>
+    <p style="margin-top: 15px;">${result.overallComment || ''}</p>
+  </div>
+
+  <h2>维度评分</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>维度</th>
+        <th>评分</th>
+        <th>评价</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${dimensionsHtml}
+    </tbody>
+  </table>
+
+  ${highRiskHtml}
+  ${mediumRiskHtml}
+  ${lowRiskHtml}
+
+  <div class="disclaimer">
+    <strong>免责声明：</strong>本报告由AI辅助生成，仅供参考。报告内容不构成正式法律意见，如需针对具体合同的法律建议，请咨询具有执业资格的专业律师。
+  </div>
+
+  <div class="footer">
+    <p>本报告由法律AI助手自动生成</p>
+  </div>
+</body>
+</html>
+  `
 }
 
 const saveDraft = () => {
