@@ -138,7 +138,7 @@ export default {
     draft: (data) => withRetry(() => api.post('/document/draft', data)),
     getTemplates: () => withRetry(() => api.get('/document/templates')),
     getTemplate: (code) => withRetry(() => api.get(`/document/templates/${code}`)),
-    extractInfo: (text, templateCode) => withRetry(() => api.post(`/document/extract-info?text=${encodeURIComponent(text)}&templateCode=${templateCode}`))
+    extractInfo: (text, templateCode) => withRetry(() => api.post('/document/extract-info', { text, templateCode }))
   },
   company: {
     query: (data) => withRetry(() => api.post('/company/query', data)),

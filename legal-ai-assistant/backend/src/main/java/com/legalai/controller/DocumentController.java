@@ -51,11 +51,9 @@ public class DocumentController {
     }
 
     @PostMapping("/extract-info")
-    public ApiResponse<ExtractedInfo> extractInfo(
-            @RequestParam String text,
-            @RequestParam String templateCode) {
+    public ApiResponse<ExtractedInfo> extractInfo(@RequestBody ExtractInfoRequest request) {
         try {
-            ExtractedInfo info = documentService.extractInfoFromText(text, templateCode);
+            ExtractedInfo info = documentService.extractInfoFromText(request.getText(), request.getTemplateCode());
             if (info.isSuccess()) {
                 return ApiResponse.success(info);
             } else {

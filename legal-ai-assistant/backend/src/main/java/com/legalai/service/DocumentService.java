@@ -297,9 +297,17 @@ public class DocumentService {
         ExtractedInfo info = new ExtractedInfo();
         info.setSuccess(true);
 
+        String jsonContent = extractJsonFromResponse(aiResponse);
+        if (jsonContent == null || jsonContent.isEmpty()) {
+            log.error("无法从AI响应中提取JSON内容");
+            info.setSuccess(false);
+            info.setErrorMessage("无法从AI响应中提取信息");
+            return info;
+        }
+
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(aiResponse);
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(jsonContent);
 
             info.setPlaintiffName(getJsonText(node, "plaintiffName"));
             info.setPlaintiffAddress(getJsonText(node, "plaintiffAddress"));
@@ -339,6 +347,29 @@ public class DocumentService {
 
     private String getJsonText(com.fasterxml.jackson.databind.JsonNode node, String field) {
         return node.has(field) && !node.get(field).isNull() ? node.get(field).asText() : "";
+    }
+
+    private String extractJsonFromResponse(String response) {
+        if (response == null || response.isEmpty()) {
+            return null;
+        }
+
+        String trimmed = response.trim();
+
+        int jsonStart = trimmed.indexOf("[");
+        int jsonEnd = trimmed.lastIndexOf("]");
+        if (jsonStart == -1 || jsonEnd == -1 || jsonStart > jsonEnd) {
+            jsonStart = trimmed.indexOf("{");
+            jsonEnd = trimmed.lastIndexOf("}");
+        }
+
+        if (jsonStart != -1 && jsonEnd != -1 && jsonStart < jsonEnd) {
+            String json = trimmed.substring(jsonStart, jsonEnd + 1);
+            json = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");
+            return json;
+        }
+
+        return trimmed;
     }
 
     private void validateRequest(DocumentDraftRequest request) {
