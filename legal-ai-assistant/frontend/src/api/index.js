@@ -159,6 +159,16 @@ export default {
     delete: (id) => withRetry(() => api.delete(`/knowledge-base/${id}`)),
     upload: (data) => withRetry(() => api.post('/knowledge-base/upload', data))
   },
+  ppt: {
+    generate: (data) => withRetry(() => api.post('/ppt/generate', data)),
+    getById: (id) => withRetry(() => api.get(`/ppt/${id}`)),
+    getByUuid: (id, uuid) => withRetry(() => api.get(`/ppt/${id}/uuid/${uuid}`)),
+    update: (id, data) => withRetry(() => api.put(`/ppt/${id}`, data)),
+    delete: (id) => withRetry(() => api.delete(`/ppt/${id}`)),
+    list: (userId) => withRetry(() => api.get('/ppt/list', { params: { userId } })),
+    getTemplates: () => withRetry(() => api.get('/ppt/templates')),
+    recommendTemplates: (scenario) => withRetry(() => api.post('/ppt/templates/recommend', { scenario }))
+  },
   auth: {
     login: (data) => api.post('/auth/login', data),
     logout: () => api.post('/auth/logout'),

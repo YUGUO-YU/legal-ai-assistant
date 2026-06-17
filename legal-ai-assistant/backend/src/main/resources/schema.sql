@@ -219,3 +219,21 @@ INSERT INTO kb_knowledge_base (kb_uuid, name, description, owner_id, is_public, 
 ('KB-2024-001', '劳动法法规库', '劳动法律法规及相关案例汇总', 'system', 1, 156),
 ('KB-2024-002', '合同纠纷案例', '各类合同纠纷案例集', 'system', 1, 89),
 ('KB-2024-003', '知识产权法规', '知识产权相关法律法规', 'system', 1, 234);
+
+-- PPT文档表
+CREATE TABLE IF NOT EXISTS ppt_document (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    ppt_uuid        VARCHAR(64) NOT NULL UNIQUE COMMENT 'PPT文档UUID',
+    title           VARCHAR(500) NOT NULL COMMENT 'PPT标题',
+    slides_json     TEXT NOT NULL COMMENT '幻灯片JSON数据',
+    template_id     VARCHAR(50) DEFAULT 'legal-blue' COMMENT '模板ID',
+    user_id         VARCHAR(64) NOT NULL DEFAULT 'default' COMMENT '用户ID',
+    file_path       VARCHAR(500) COMMENT 'PPTX文件存储路径',
+    file_size       BIGINT COMMENT '文件大小',
+    status          TINYINT DEFAULT 0 COMMENT '状态：0编辑中 1已生成 2已下载',
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user (user_id),
+    INDEX idx_status (status),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='PPT文档表';

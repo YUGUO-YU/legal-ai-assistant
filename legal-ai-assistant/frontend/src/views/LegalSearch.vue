@@ -53,6 +53,10 @@
           <span class="divider">|</span>
           <span class="time-cost">耗时 {{ tookMs }}ms</span>
         </div>
+        <el-button type="primary" @click="generatePpt" class="generate-ppt-btn" :loading="generatingPpt">
+          <el-icon><OfficeDocument /></el-icon>
+          生成PPT
+        </el-button>
       </div>
 
       <div class="result-list">
@@ -185,22 +189,13 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import {
-  Search,
-  Right,
-  Document,
-  CopyDocument,
-  Link,
-  CircleCheck,
-  ChatDotRound,
-  Connection,
-  OfficeBuilding
-} from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 
+const router = useRouter()
 const query = ref('')
 const loading = ref(false)
 const results = ref([])
@@ -213,6 +208,7 @@ const searched = ref(false)
 const expanded = reactive({})
 const suggestedQueries = ref([])
 const searchLogId = ref(null)
+const generatingPpt = ref(false)
 
 const suggestions = [
   '合同欺诈如何认定？',
@@ -269,6 +265,36 @@ const copyContent = (item) => {
   const text = `${item.lawTitle} ${item.articleNo} ${item.title}\n${item.content}`
   navigator.clipboard.writeText(text)
   ElMessage.success('已复制到剪贴板')
+}
+
+const generatePpt = async () => {
+  if (results.value.length === 0) {
+    ElMessage.warning('请先进行搜索后再生成PPT')
+    return
+  }
+  generatingPpt.value = true
+  try {
+    const searchResults = results.value.map(item => ({
+      articleId: item.articleId,
+      lawTitle: item.lawTitle,
+      articleNo: item.articleNo,
+      title: item.title,
+      content: item.content,
+      score: item.score
+    }))
+    const title = `法律研究报告 - ${query.value}`
+    const response = await api.ppt.generate({
+      title,
+      searchResults,
+      templateId: 'legal-blue',
+      userId: localStorage.getItem('userId') || 'default'
+    })
+    router.push(`/ppt-editor?id=${response.id}&title=${encodeURIComponent(title)}&searchResults=${encodeURIComponent(JSON.stringify(searchResults))}`)
+  } catch (error) {
+    ElMessage.error('生成PPT失败，请重试')
+  } finally {
+    generatingPpt.value = false
+  }
 }
 
 const viewCase = (c) => {
@@ -375,6 +401,25 @@ const viewCase = (c) => {
   }
 }
 
+.generate-ppt-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  transition: all 0.3s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    opacity: 0.95;
+  }
+}
+
 .search-tips {
   margin-top: 16px;
   display: flex;
@@ -428,6 +473,9 @@ const viewCase = (c) => {
 
 .result-header {
   margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 
   .result-stats {
     display: flex;

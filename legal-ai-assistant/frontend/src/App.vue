@@ -109,6 +109,24 @@
                     <span>AI文件问答</span>
                   </template>
                 </el-menu-item>
+
+                <el-divider class="menu-divider">
+                  <span>工具</span>
+                </el-divider>
+
+                <el-menu-item index="/ppt-editor">
+                  <el-icon><Memo /></el-icon>
+                  <template #title>
+                    <span>PPT生成器</span>
+                  </template>
+                </el-menu-item>
+
+                <el-menu-item index="/ppt-files">
+                  <el-icon><FolderOpened /></el-icon>
+                  <template #title>
+                    <span>PPT文件管理</span>
+                  </template>
+                </el-menu-item>
               </el-menu>
             </div>
 
@@ -247,6 +265,8 @@ const pageTitle = computed(() => {
     '/contract-review': 'AI合同审查',
     '/knowledge-base': '案例法规库',
     '/doc-qa': 'AI文件问答',
+    '/ppt-editor': 'PPT编辑器',
+    '/ppt-files': 'PPT文件管理',
     '/profile': '个人设置'
   }
   return titles[route.path] || '法律AI助手'

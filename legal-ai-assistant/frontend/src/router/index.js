@@ -65,6 +65,16 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/ppt-editor',
+    component: () => import('../views/PptEditor.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/ppt-files',
+    component: () => import('../views/FileManager.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/profile',
     component: () => import('../views/Profile.vue'),
     meta: { requiresAuth: true }
