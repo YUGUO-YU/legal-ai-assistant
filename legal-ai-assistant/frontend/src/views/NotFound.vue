@@ -6,7 +6,7 @@
       <p>抱歉，您访问的页面不存在或已被删除</p>
       <div class="actions">
         <el-button type="primary" @click="goHome">
-          <el-icon><Home /></el-icon>
+          <el-icon><HomeFilled /></el-icon>
           返回首页
         </el-button>
         <el-button @click="goBack">
@@ -28,7 +28,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { Home, ArrowLeft } from '@element-plus/icons-vue'
+import { HomeFilled, ArrowLeft } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
