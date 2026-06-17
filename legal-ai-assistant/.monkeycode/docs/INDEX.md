@@ -35,6 +35,7 @@
 | MOD-08 | AI合同审查 | 合同风险分析，8维度评估 | 已完成详细设计 |
 | MOD-09 | 案例法规库 | 知识库管理，文档上传 | 已完成详细设计 |
 | MOD-10 | AI文件问答 | 文档智能问答，多轮对话 | 已完成详细设计 |
+| MOD-11 | PPT演讲稿生成 | AI法律搜索结果生成PPT大纲，实时预览编辑，模板选择，PPTX下载 | 已完成需求和设计 |
 
 ## 目录结构
 
@@ -70,7 +71,8 @@ legal-ai-assistant/
 │       ├── 07-law-search/       # 法规查询
 │       ├── 08-contract-review/  # AI合同审查
 │       ├── 09-knowledge-base/   # 案例法规库
-│       └── 10-doc-qa/           # AI文件问答
+│       ├── 10-doc-qa/           # AI文件问答
+│       └── 11-ppt-generator/    # PPT演讲稿生成
 └── docker-compose.yml         # Docker编排
 ```
 
@@ -100,3 +102,4 @@ legal-ai-assistant/
 | MOD-08 AI合同审查 | [design.md](./specs/08-contract-review/design.md) | [tasklist.md](./specs/08-contract-review/tasklist.md) |
 | MOD-09 案例法规库 | [design.md](./specs/09-knowledge-base/design.md) | [tasklist.md](./specs/09-knowledge-base/tasklist.md) |
 | MOD-10 AI文件问答 | [design.md](./specs/10-doc-qa/design.md) | [tasklist.md](./specs/10-doc-qa/tasklist.md) |
+| MOD-11 PPT演讲稿生成 | [design.md](./specs/11-ppt-generator/design.md) | [tasklist.md](./specs/11-ppt-generator/tasklist.md) |
