@@ -154,25 +154,21 @@
               </div>
               <div class="ai-status-info">
                 <span class="ai-status-title">AI 服务状态</span>
-                <span class="ai-status-model">MiniMax M3</span>
+                <span class="ai-status-model">{{ aiStatusData.model }}</span>
               </div>
-              <el-tag type="success" size="small" effect="dark">
-                <span class="pulse"></span>
-                在线
+              <el-tag :type="aiStatusData.status === 'online' ? 'success' : aiStatusData.status === 'degraded' ? 'warning' : 'danger'" size="small" effect="dark">
+                <span v-if="aiStatusData.status === 'online'" class="pulse"></span>
+                {{ aiStatusData.status === 'online' ? '在线' : aiStatusData.status === 'degraded' ? '异常' : aiStatusData.status === 'error' ? '错误' : '离线' }}
               </el-tag>
             </div>
             <div class="ai-status-stats">
               <div class="status-item">
-                <span class="status-value">128ms</span>
-                <span class="status-label">平均响应</span>
+                <span class="status-value">{{ aiStatusData.status === 'online' ? '正常' : aiStatusData.status === 'degraded' ? '降级' : '不可用' }}</span>
+                <span class="status-label">服务状态</span>
               </div>
               <div class="status-item">
-                <span class="status-value">99.9%</span>
-                <span class="status-label">可用性</span>
-              </div>
-              <div class="status-item">
-                <span class="status-value">1M</span>
-                <span class="status-label">上下文</span>
+                <span class="status-value">{{ aiStatusData.status === 'checking' ? '...' : aiStatusData.message }}</span>
+                <span class="status-label">详细信息</span>
               </div>
             </div>
           </div>
@@ -305,12 +301,50 @@ const tips = [
   { title: '类案参考', desc: 'AI类案功能帮您了解类似案件的判决', icon: 'Connection', gradient: 'linear-gradient(135deg, #43e97b, #38f9d7)' }
 ]
 
+const aiStatusData = ref({
+  status: 'checking',
+  model: 'MiniMax-M3',
+  message: '检测中...'
+})
+
 const loadMore = () => {
   console.log('load more activities')
 }
 
+const loadAiStatus = async () => {
+  try {
+    const res = await fetch('/api/v1/ai-status')
+    const data = await res.json()
+    if (data.status === 'online') {
+      aiStatusData.value = {
+        status: 'online',
+        model: data.model || 'MiniMax-M3',
+        message: data.message || 'AI 服务正常运行'
+      }
+    } else if (data.status === 'degraded') {
+      aiStatusData.value = {
+        status: 'degraded',
+        model: data.model || 'MiniMax-M3',
+        message: data.message || 'AI 服务响应异常'
+      }
+    } else {
+      aiStatusData.value = {
+        status: 'offline',
+        model: data.model || 'MiniMax-M3',
+        message: data.message || 'AI 服务暂时不可用'
+      }
+    }
+  } catch (e) {
+    aiStatusData.value = {
+      status: 'error',
+      model: 'MiniMax-M3',
+      message: '无法连接 AI 服务'
+    }
+  }
+}
+
 onMounted(() => {
-  // 加载用户统计数据
+  loadAiStatus()
 })
 </script>
 
