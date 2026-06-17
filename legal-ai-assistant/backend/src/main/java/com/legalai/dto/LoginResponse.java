@@ -2,11 +2,14 @@ package com.legalai.dto;
 
 public class LoginResponse {
     private String token;
+    private String refreshToken;
     private UserInfo userInfo;
     private Long expireTime;
 
     public String getToken() { return token; }
     public void setToken(String token) { this.token = token; }
+    public String getRefreshToken() { return refreshToken; }
+    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
     public UserInfo getUserInfo() { return userInfo; }
     public void setUserInfo(UserInfo userInfo) { this.userInfo = userInfo; }
     public Long getExpireTime() { return expireTime; }

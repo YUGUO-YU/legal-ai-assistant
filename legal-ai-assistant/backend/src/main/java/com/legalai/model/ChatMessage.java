@@ -14,6 +14,8 @@ public class ChatMessage {
 
     private String sessionUuid;
 
+    private String userId;
+
     private String role;
 
     private String content;
@@ -37,6 +39,14 @@ public class ChatMessage {
 
     public void setSessionUuid(String sessionUuid) {
         this.sessionUuid = sessionUuid;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public String getRole() {

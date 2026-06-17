@@ -187,11 +187,13 @@ CREATE TABLE IF NOT EXISTS kb_session (
 CREATE TABLE IF NOT EXISTS kb_chat_message (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
     session_uuid    VARCHAR(64) NOT NULL COMMENT '会话UUID',
+    user_id         VARCHAR(64) NOT NULL DEFAULT 'default' COMMENT '用户ID',
     role            VARCHAR(20) NOT NULL COMMENT '角色: user/assistant',
     content         TEXT NOT NULL COMMENT '消息内容',
     `order`         INT DEFAULT 0 COMMENT '消息顺序',
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_session (session_uuid),
+    INDEX idx_user (user_id),
     INDEX idx_order (`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='聊天消息表';
 

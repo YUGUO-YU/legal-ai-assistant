@@ -26,6 +26,7 @@ class AuthServiceTest {
         assertNotNull(response);
         assertNotNull(response.getToken());
         assertTrue(response.getToken().startsWith("mock_token_"));
+        assertNotNull(response.getRefreshToken());
         assertNotNull(response.getUserInfo());
         assertEquals("testuser", response.getUserInfo().getUsername());
         assertEquals("法律用户", response.getUserInfo().getNickname());
@@ -48,19 +49,48 @@ class AuthServiceTest {
 
     @Test
     void testLogout() {
-        String token = "mock_token_test123";
-        assertDoesNotThrow(() -> authService.logout(token));
+        LoginRequest request = new LoginRequest();
+        request.setUsername("testuser");
+        request.setPassword("password123");
+
+        LoginResponse loginResponse = authService.login(request);
+        assertDoesNotThrow(() -> authService.logout(loginResponse.getToken()));
     }
 
     @Test
-    void testGetUserInfo() {
-        LoginResponse.UserInfo userInfo = authService.getUserInfo("any_token");
+    void testGetUserInfo_ValidToken() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("testuser");
+        request.setPassword("password123");
+
+        LoginResponse loginResponse = authService.login(request);
+        LoginResponse.UserInfo userInfo = authService.getUserInfo(loginResponse.getToken());
 
         assertNotNull(userInfo);
         assertEquals(1L, userInfo.getUserId());
-        assertEquals("demo_user", userInfo.getUsername());
+        assertEquals("testuser", userInfo.getUsername());
         assertEquals("法律用户", userInfo.getNickname());
-        assertEquals("demo@example.com", userInfo.getEmail());
+        assertEquals("testuser@example.com", userInfo.getEmail());
         assertEquals("lawyer", userInfo.getRole());
+    }
+
+    @Test
+    void testGetUserInfo_InvalidToken() {
+        LoginResponse.UserInfo userInfo = authService.getUserInfo("invalid_token");
+        assertNull(userInfo);
+    }
+
+    @Test
+    void testRefreshToken() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("testuser");
+        request.setPassword("password123");
+
+        LoginResponse loginResponse = authService.login(request);
+        LoginResponse refreshResponse = authService.refreshToken(loginResponse.getRefreshToken());
+
+        assertNotNull(refreshResponse);
+        assertNotNull(refreshResponse.getToken());
+        assertTrue(refreshResponse.getExpireTime() > System.currentTimeMillis());
     }
 }

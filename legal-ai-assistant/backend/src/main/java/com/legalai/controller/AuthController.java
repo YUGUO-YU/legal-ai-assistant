@@ -21,8 +21,17 @@ public class AuthController {
         return ApiResponse.success(response);
     }
 
+    @PostMapping("/refresh")
+    public ApiResponse<LoginResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
+        LoginResponse response = authService.refreshToken(request.getRefreshToken());
+        return ApiResponse.success(response);
+    }
+
     @PostMapping("/logout")
     public ApiResponse<Void> logout(@RequestHeader(value = "Authorization", required = false) String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
         authService.logout(token);
         return ApiResponse.success(null);
     }
@@ -30,6 +39,9 @@ public class AuthController {
     @GetMapping("/user-info")
     public ApiResponse<LoginResponse.UserInfo> getUserInfo(
             @RequestHeader(value = "Authorization", required = false) String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
         LoginResponse.UserInfo userInfo = authService.getUserInfo(token);
         return ApiResponse.success(userInfo);
     }
