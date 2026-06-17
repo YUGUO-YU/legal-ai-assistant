@@ -1,8 +1,13 @@
 import axios from 'axios'
 
+const DEFAULT_RETRY_COUNT = 2
+const DEFAULT_RETRY_DELAY = 1000
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
 const api = axios.create({
   baseURL: '/api/v1',
-  timeout: 30000
+  timeout: 60000
 })
 
 api.interceptors.request.use(config => {
@@ -43,15 +48,48 @@ api.interceptors.response.use(
         case 500:
           console.error('服务器内部错误')
           break
+        case 502:
+        case 503:
+        case 504:
+          console.error('服务暂时不可用，请稍后重试')
+          break
         default:
           console.error('请求失败:', error.message)
       }
+    } else if (error.code === 'ECONNABORTED') {
+      console.error('请求超时，请检查网络连接')
     } else if (error.request) {
       console.error('网络错误，请检查网络连接')
     }
     return Promise.reject(error)
   }
 )
+
+const withRetry = async (fn, retries = DEFAULT_RETRY_COUNT, delay = DEFAULT_RETRY_DELAY) => {
+  let lastError
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error
+      if (i < retries && shouldRetry(error)) {
+        await sleep(delay * (i + 1))
+      }
+    }
+  }
+  throw lastError
+}
+
+const shouldRetry = (error) => {
+  if (error.response) {
+    const status = error.response.status
+    return status === 502 || status === 503 || status === 504 || status === 429
+  }
+  if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
+    return true
+  }
+  return false
+}
 
 export const handleApiError = (error) => {
   if (error.response?.data?.message) {
@@ -60,68 +98,78 @@ export const handleApiError = (error) => {
   if (error.message) {
     return error.message
   }
+  if (error.code === 'ECONNABORTED') {
+    return '请求超时，请稍后重试'
+  }
   return '请求失败，请稍后重试'
+}
+
+export const requestWithRetry = (method, url, data, options = {}) => {
+  const { retries = DEFAULT_RETRY_COUNT, delay = DEFAULT_RETRY_DELAY } = options
+  return withRetry(() => api({ method, url, data }), retries, delay)
 }
 
 export default {
   legalSearch: {
-    search: (data) => api.post('/legal-search/search', data),
-    getArticle: (id) => api.get(`/legal-search/articles/${id}`),
-    feedback: (data) => api.post('/legal-search/feedback', data),
-    getSuggestedQueries: (query) => api.get('/legal-search/suggested-queries', { params: { query } })
+    search: (data) => withRetry(() => api.post('/legal-search/search', data)),
+    getArticle: (id) => withRetry(() => api.get(`/legal-search/articles/${id}`)),
+    feedback: (data) => withRetry(() => api.post('/legal-search/feedback', data)),
+    getSuggestedQueries: (query) => withRetry(() => api.get('/legal-search/suggested-queries', { params: { query } }))
   },
   caseSimilar: {
-    search: (data) => api.post('/case-similar/search', data)
+    search: (data) => withRetry(() => api.post('/case-similar/search', data))
   },
   caseSearch: {
-    search: (data) => api.post('/case-search/search', data),
-    getCaseDetail: (uuid) => api.get(`/case-search/cases/${uuid}`)
+    search: (data) => withRetry(() => api.post('/case-search/search', data)),
+    getCaseDetail: (uuid) => withRetry(() => api.get(`/case-search/cases/${uuid}`))
   },
   lawSearch: {
-    search: (data) => api.post('/law-search/search', data),
-    getCategories: () => api.get('/law-search/categories'),
-    getLawDetail: (uuid) => api.get(`/law-search/laws/${uuid}`)
+    search: (data) => withRetry(() => api.post('/law-search/search', data)),
+    getCategories: () => withRetry(() => api.get('/law-search/categories')),
+    getLawDetail: (uuid) => withRetry(() => api.get(`/law-search/laws/${uuid}`))
   },
   legalResearch: {
-    createTask: (data) => api.post('/legal-research/tasks', data),
-    getReport: (taskId) => api.get(`/legal-research/tasks/${taskId}/report`),
-    generateReport: (data) => api.post('/legal-research/generate', data)
+    createTask: (data) => withRetry(() => api.post('/legal-research/tasks', data)),
+    getReport: (taskId) => withRetry(() => api.get(`/legal-research/tasks/${taskId}/report`)),
+    generateReport: (data) => withRetry(() => api.post('/legal-research/generate', data))
   },
   document: {
-    draft: (data) => api.post('/document/draft', data),
-    getTemplates: () => api.get('/document/templates'),
-    getTemplate: (code) => api.get(`/document/templates/${code}`)
+    draft: (data) => withRetry(() => api.post('/document/draft', data)),
+    getTemplates: () => withRetry(() => api.get('/document/templates')),
+    getTemplate: (code) => withRetry(() => api.get(`/document/templates/${code}`))
   },
   company: {
-    query: (data) => api.post('/company/query', data),
-    getRiskLevels: () => api.get('/company/risk-levels')
+    query: (data) => withRetry(() => api.post('/company/query', data)),
+    getRiskLevels: () => withRetry(() => api.get('/company/risk-levels'))
   },
   contract: {
-    review: (data) => api.post('/contract/review', data),
-    getDimensions: () => api.get('/contract/dimensions')
+    review: (data) => withRetry(() => api.post('/contract/review', data)),
+    getDimensions: () => withRetry(() => api.get('/contract/dimensions'))
   },
   docQa: {
-    ask: (data) => api.post('/doc-qa/ask', data),
-    getSessionHistory: (sessionId) => api.get(`/doc-qa/sessions/${sessionId}/history`),
-    clearSession: (sessionId) => api.delete(`/doc-qa/sessions/${sessionId}`)
+    ask: (data) => withRetry(() => api.post('/doc-qa/ask', data)),
+    getSessionHistory: (sessionId) => withRetry(() => api.get(`/doc-qa/sessions/${sessionId}/history`)),
+    clearSession: (sessionId) => withRetry(() => api.delete(`/doc-qa/sessions/${sessionId}`)),
+    getSessionList: () => withRetry(() => api.get('/doc-qa/sessions')),
+    createSession: (data) => withRetry(() => api.post('/doc-qa/sessions', data))
   },
   knowledgeBase: {
-    list: (params) => api.get('/knowledge-base/list', { params }),
-    create: (data) => api.post('/knowledge-base/create', data),
-    delete: (id) => api.delete(`/knowledge-base/${id}`),
-    upload: (data) => api.post('/knowledge-base/upload', data)
+    list: (params) => withRetry(() => api.get('/knowledge-base/list', { params })),
+    create: (data) => withRetry(() => api.post('/knowledge-base/create', data)),
+    delete: (id) => withRetry(() => api.delete(`/knowledge-base/${id}`)),
+    upload: (data) => withRetry(() => api.post('/knowledge-base/upload', data))
   },
   auth: {
     login: (data) => api.post('/auth/login', data),
     logout: () => api.post('/auth/logout'),
-    getUserInfo: () => api.get('/auth/user-info')
+    getUserInfo: () => withRetry(() => api.get('/auth/user-info'))
   },
   health: () => api.get('/health'),
   dataImport: {
-    importCivilLaw: () => api.post('/admin/data/import-civil-law'),
-    importLaborLaw: () => api.post('/admin/data/import-labor-law'),
-    importConstructionLaw: () => api.post('/admin/data/import-construction-law'),
-    vectorize: () => api.post('/admin/data/vectorize'),
-    importAll: () => api.post('/admin/data/import-all')
+    importCivilLaw: (data) => withRetry(() => api.post('/admin/data/import-civil-law', data)),
+    importLaborLaw: (data) => withRetry(() => api.post('/admin/data/import-labor-law', data)),
+    importConstructionLaw: (data) => withRetry(() => api.post('/admin/data/import-construction-law', data)),
+    vectorize: (data) => withRetry(() => api.post('/admin/data/vectorize', data)),
+    importAll: (data) => withRetry(() => api.post('/admin/data/import-all', data))
   }
 }

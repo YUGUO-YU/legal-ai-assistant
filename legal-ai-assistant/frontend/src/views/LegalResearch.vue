@@ -199,36 +199,92 @@ const handleResearch = async () => {
 
   phases[0].active = true
   progressMessage.value = '正在解析研究问题...'
-  progress.value = 10
 
   try {
-    const res = await api.legalResearch.generateReport({
-      question: query.value,
-      depth: depth.value,
-      sources: sources.value
+    const response = await fetch('/api/v1/legal-research/generate/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      },
+      body: JSON.stringify({
+        question: query.value,
+        depth: depth.value,
+        sources: sources.value
+      })
     })
 
-    phases[0].active = false
+    if (!response.ok) {
+      throw new Error('请求失败')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let fullReportContent = ''
+
     phases[0].completed = true
+    phases[0].active = false
     phases[1].active = true
     progress.value = 30
     progressMessage.value = '检索法律法规...'
 
-    phases[1].active = false
     phases[1].completed = true
+    phases[1].active = false
     phases[2].active = true
     progress.value = 50
     progressMessage.value = '检索司法案例...'
 
-    phases[2].active = false
     phases[2].completed = true
+    phases[2].active = false
     phases[3].active = true
     progress.value = 70
     progressMessage.value = '正在生成研究报告...'
 
-    const reportContent = res.data.reportContent
-    const parsedReport = parseReportContent(reportContent)
-    report.value = parsedReport
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6)
+          if (data === '[DONE]') continue
+
+          try {
+            const event = JSON.parse(data)
+
+            if (event.type === 'progress') {
+              progress.value = event.progress
+              progressMessage.value = event.message
+
+              const phaseMap = {
+                'parse': 0,
+                'search': 1,
+                'generate': 3,
+                'complete': 6
+              }
+              const phaseIndex = phaseMap[event.phase]
+              if (phaseIndex !== undefined) {
+                phases[phaseIndex].active = false
+                phases[phaseIndex].completed = true
+                if (phaseIndex < phases.length - 1) {
+                  phases[phaseIndex + 1].active = true
+                }
+              }
+            } else if (event.type === 'report') {
+              fullReportContent = event.content
+              report.value = parseReportContent(fullReportContent)
+            }
+          } catch (e) {
+            console.error('解析SSE事件失败:', e)
+          }
+        }
+      }
+    }
 
     phases[3].active = false
     phases[3].completed = true

@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -119,6 +120,66 @@ public class DocQaService {
         response.setSessionId(sessionId);
 
         return response;
+    }
+
+    public Flux<String> answerQuestionStream(DocQaRequest request) {
+        log.info("文档问答流式请求: question={}, sessionId={}, kbId={}",
+            request.getQuestion(), request.getSessionId(), request.getKbId());
+
+        validateRequest(request);
+
+        String sessionId = request.getSessionId();
+        if (sessionId == null || sessionId.isEmpty()) {
+            sessionId = UUID.randomUUID().toString();
+        }
+
+        List<ChatMessage> history = getSessionHistory(sessionId);
+        String conversationContext = buildConversationContext(history);
+
+        persistMessage(sessionId, "user", request.getQuestion(), history.size());
+
+        List<DocQaResponse.Citation> citations = new ArrayList<>();
+        List<String> contextChunks = new ArrayList<>();
+
+        if (request.getKbId() != null) {
+            contextChunks = retrieveFromKnowledgeBase(request);
+        }
+
+        final String finalSessionId = sessionId;
+        final List<String> finalContextChunks = contextChunks;
+        final int historySize = history.size();
+
+        if (mockEnabled) {
+            String mockAnswer = generateMockAnswer(request.getQuestion(), citations, contextChunks, conversationContext);
+            persistMessage(finalSessionId, "assistant", mockAnswer, historySize);
+
+            return Flux.just(mockAnswer);
+        } else {
+            return Flux.create(emitter -> {
+                try {
+                    StringBuilder fullAnswer = new StringBuilder();
+
+                    aiService.chatStream(
+                        buildPrompt(request.getQuestion(), finalContextChunks, conversationContext),
+                        chunk -> {
+                            fullAnswer.append(chunk);
+                            emitter.next("data: " + chunk + "\n\n");
+                        },
+                        emitter::isCancelled
+                    );
+
+                    emitter.complete();
+
+                    persistMessage(finalSessionId, "assistant", fullAnswer.toString(), historySize);
+                } catch (IOException e) {
+                    log.error("流式AI服务调用失败: {}", e.getMessage());
+                    String fallbackAnswer = generateMockAnswer(request.getQuestion(), citations, finalContextChunks, conversationContext);
+                    persistMessage(finalSessionId, "assistant", fallbackAnswer, historySize);
+                    emitter.next(fallbackAnswer);
+                    emitter.complete();
+                }
+            });
+        }
     }
 
     private void validateRequest(DocQaRequest request) {
@@ -353,6 +414,49 @@ public class DocQaService {
     }
 
     public List<Map<String, Object>> getSessionList(String userId) {
-        return Collections.emptyList();
+        try {
+            List<Map<String, Object>> sessions = chatMessageMapper.findSessionsByUserId(userId);
+
+            for (Map<String, Object> session : sessions) {
+                List<ChatMessage> messages = chatMessageMapper.findBySessionUuid((String) session.get("sessionId"));
+                if (!messages.isEmpty()) {
+                    ChatMessage firstMsg = messages.get(0);
+                    String title = firstMsg.getContent();
+                    if (title.length() > 30) {
+                        title = title.substring(0, 30) + "...";
+                    }
+                    session.put("title", title);
+                    session.put("date", formatDate((java.sql.Timestamp) session.get("lastMessage")));
+                }
+            }
+
+            return sessions;
+        } catch (Exception e) {
+            log.error("获取会话列表失败: userId={}, error={}", userId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public Map<String, Object> createSession(String userId) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("sessionId", UUID.randomUUID().toString());
+        result.put("userId", userId);
+        result.put("createdAt", LocalDateTime.now().toString());
+        return result;
+    }
+
+    private String formatDate(java.sql.Timestamp timestamp) {
+        if (timestamp == null) return "";
+        java.time.LocalDateTime dateTime = timestamp.toLocalDateTime();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("MM月dd日");
+
+        if (dateTime.toLocalDate().equals(now.toLocalDate())) {
+            return "今天 " + dateTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+        } else if (dateTime.toLocalDate().equals(now.toLocalDate().minusDays(1))) {
+            return "昨天 " + dateTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+        } else {
+            return dateTime.format(formatter);
+        }
     }
 }

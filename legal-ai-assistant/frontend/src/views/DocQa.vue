@@ -247,11 +247,23 @@ const showKbSelector = ref(false)
 const selectedKb = ref('KB-001')
 const loading = ref(false)
 
-const sessions = ref([
-  { id: 1, title: '劳动合同解除问题', date: '今天 10:30' },
-  { id: 2, title: '竞业限制纠纷', date: '昨天 15:20' },
-  { id: 3, title: '合同欺诈认定', date: '6月10日' }
-])
+const sessions = ref([])
+
+const loadSessions = async () => {
+  try {
+    const res = await api.docQa.getSessionList()
+    if (res.data && res.data.length > 0) {
+      sessions.value = res.data.map(s => ({
+        id: s.sessionId,
+        sessionUuid: s.sessionId,
+        title: s.title || '新会话',
+        date: s.date || ''
+      }))
+    }
+  } catch (e) {
+    console.error('加载会话列表失败:', e)
+  }
+}
 
 const quickQuestions = [
   '合同欺诈的构成要件是什么？',
@@ -285,24 +297,65 @@ const handleAsk = async () => {
   await nextTick()
   chatContainer.value.scrollTop = chatContainer.value.scrollHeight
 
-  try {
-    const res = await api.docQa.ask({
-      question: q,
-      sessionId: sessionId.value,
-      kbId: selectedKb.value
-    })
-    sessionId.value = res.data.sessionId
+  const aiMsg = {
+    id: Date.now() + 1,
+    role: 'assistant',
+    content: '',
+    citations: [],
+    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  }
+  messages.value.push(aiMsg)
 
-    const aiMsg = {
-      id: Date.now() + 1,
-      role: 'assistant',
-      content: res.data.answer,
-      citations: res.data.citations,
-      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  try {
+    const response = await fetch('/api/v1/doc-qa/ask/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      },
+      body: JSON.stringify({
+        question: q,
+        sessionId: sessionId.value,
+        kbId: selectedKb.value
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('请求失败')
     }
-    messages.value.push(aiMsg)
+
+    sessionId.value = sessionId.value || `session-${Date.now()}`
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6)
+          if (data === '[DONE]') continue
+
+          aiMsg.content += data
+          messages.value[messages.value.length - 1] = { ...aiMsg }
+
+          await nextTick()
+          chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+        }
+      }
+    }
+
+    await loadSessions()
   } catch (e) {
     console.error(e)
+    aiMsg.content = '回答生成失败，请稍后重试'
     ElMessage.error('回答生成失败，请稍后重试')
   } finally {
     loading.value = false
@@ -326,11 +379,11 @@ const clearHistory = async () => {
 
 const switchSession = async (session) => {
   currentSession.value = session.id
-  sessionId.value = session.sessionUuid
+  sessionId.value = session.sessionUuid || session.id
   messages.value = []
 
   try {
-    const res = await api.docQa.getSessionHistory(session.sessionUuid)
+    const res = await api.docQa.getSessionHistory(session.sessionUuid || session.id)
     if (res.data && res.data.length > 0) {
       messages.value = res.data.map((msg, idx) => ({
         id: idx,
@@ -361,6 +414,7 @@ onMounted(() => {
     selectedKb.value = route.query.kbId
     currentKb.value = '已加载知识库'
   }
+  loadSessions()
 })
 </script>
 

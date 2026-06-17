@@ -7,7 +7,9 @@ import com.legalai.service.DocQaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
@@ -30,6 +32,12 @@ public class DocQaController {
     public ApiResponse<DocQaResponse> ask(@RequestBody DocQaRequest request) {
         DocQaResponse response = docQaService.answerQuestion(request);
         return ApiResponse.success(response);
+    }
+
+    @PostMapping(value = "/ask/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "文档问答(流式)", description = "基于知识库中的文档进行智能问答，流式返回")
+    public Flux<String> askStream(@RequestBody DocQaRequest request) {
+        return docQaService.answerQuestionStream(request);
     }
 
     @GetMapping("/sessions/{sessionId}/history")
@@ -63,5 +71,13 @@ public class DocQaController {
             @Parameter(description = "用户ID") @RequestParam(required = false, defaultValue = "default") String userId) {
         var sessions = docQaService.getSessionList(userId);
         return ApiResponse.success(sessions);
+    }
+
+    @PostMapping("/sessions")
+    @Operation(summary = "创建会话", description = "创建一个新的问答会话")
+    public ApiResponse<Map<String, Object>> createSession(
+            @Parameter(description = "用户ID") @RequestParam(required = false, defaultValue = "default") String userId) {
+        Map<String, Object> result = docQaService.createSession(userId);
+        return ApiResponse.success(result);
     }
 }
