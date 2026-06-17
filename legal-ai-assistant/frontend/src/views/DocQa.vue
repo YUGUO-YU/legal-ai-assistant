@@ -75,7 +75,7 @@
                       >
                         <el-progress
                           type="circle"
-                          :percentage="(c.score * 100)"
+                          :percentage="c.score > 1 ? c.score : (c.score * 100)"
                           :width="28"
                           :stroke-width="3"
                           :show-text="false"

@@ -108,7 +108,7 @@
               </div>
             </div>
             <div class="similarity-badge" :style="{ background: getSimilarityColor(item.similarityScore) }">
-              <span class="similarity-value">{{ (item.similarityScore * 100).toFixed(0) }}%</span>
+              <span class="similarity-value">{{ (item.similarityScore > 1 ? item.similarityScore : (item.similarityScore * 100)).toFixed(0) }}%</span>
               <span class="similarity-label">相似度</span>
             </div>
           </div>
@@ -121,7 +121,7 @@
               size="small"
               :type="getFeatureTagType(score)"
             >
-              {{ getFeatureName(key) }}: {{ (score * 100).toFixed(0) }}%
+              {{ getFeatureName(key) }}: {{ (score > 1 ? score : (score * 100)).toFixed(0) }}%
             </el-tag>
           </div>
 
