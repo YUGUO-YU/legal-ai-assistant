@@ -12,12 +12,6 @@ const app = createApp(App)
 
 app.config.globalProperties.$message = ElMessage
 
-ElMessage.config({
-  duration: 3000,
-  showClose: true,
-  center: false
-})
-
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
