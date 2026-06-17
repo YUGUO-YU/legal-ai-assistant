@@ -1,6 +1,8 @@
 package com.legalai.service;
 
 import com.legalai.dto.*;
+import com.legalai.model.ChatMessage;
+import com.legalai.repository.ChatMessageMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,8 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,11 +27,8 @@ public class DocQaService {
     @Autowired
     private KnowledgeBaseService knowledgeBaseService;
 
-    private final Map<String, List<ChatMessage>> sessionHistory = new ConcurrentHashMap<>();
-
-    private static final int RRF_K = 60;
-    private static final int KB_WEIGHT = 70;
-    private static final int WEB_WEIGHT = 30;
+    @Autowired
+    private ChatMessageMapper chatMessageMapper;
 
     private static final Map<String, List<String>> QUESTION_PATTERNS = new HashMap<>();
 
@@ -82,10 +81,6 @@ public class DocQaService {
         "DOC-004", "《最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）》"
     );
 
-    public DocQaService(AIService aiService) {
-        this.aiService = aiService;
-    }
-
     public DocQaResponse answerQuestion(DocQaRequest request) {
         log.info("文档问答请求: question={}, sessionId={}, kbId={}",
             request.getQuestion(), request.getSessionId(), request.getKbId());
@@ -97,7 +92,10 @@ public class DocQaService {
             sessionId = UUID.randomUUID().toString();
         }
 
-        addToHistory(sessionId, "user", request.getQuestion());
+        List<ChatMessage> history = getSessionHistory(sessionId);
+        String conversationContext = buildConversationContext(history);
+
+        persistMessage(sessionId, "user", request.getQuestion(), history.size());
 
         List<DocQaResponse.Citation> citations = new ArrayList<>();
         List<String> contextChunks = new ArrayList<>();
@@ -108,12 +106,12 @@ public class DocQaService {
 
         String answer;
         if (mockEnabled) {
-            answer = generateMockAnswer(request.getQuestion(), citations, contextChunks);
+            answer = generateMockAnswer(request.getQuestion(), citations, contextChunks, conversationContext);
         } else {
-            answer = generateAIAnswer(request.getQuestion(), citations, contextChunks);
+            answer = generateAIAnswer(request.getQuestion(), citations, contextChunks, conversationContext);
         }
 
-        addToHistory(sessionId, "assistant", answer);
+        persistMessage(sessionId, "assistant", answer, history.size() + 1);
 
         DocQaResponse response = new DocQaResponse();
         response.setAnswer(answer);
@@ -132,6 +130,21 @@ public class DocQaService {
         }
     }
 
+    private String buildConversationContext(List<ChatMessage> history) {
+        if (history.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("【对话历史】\n");
+        for (ChatMessage msg : history) {
+            String role = "user".equals(msg.getRole()) ? "用户" : "助手";
+            sb.append(String.format("%s: %s\n", role, msg.getContent()));
+        }
+        sb.append("---\n\n");
+        return sb.toString();
+    }
+
     private List<String> retrieveFromKnowledgeBase(DocQaRequest request) {
         List<LegalSearchResponse.SearchResultItem> chunks = knowledgeBaseService.searchInKnowledgeBase(
             request.getKbId(),
@@ -144,21 +157,59 @@ public class DocQaService {
             .collect(Collectors.toList());
     }
 
-    private String generateAIAnswer(String question, List<DocQaResponse.Citation> citations, List<String> contextChunks) {
-        String prompt = buildPrompt(question, contextChunks);
+    private String generateAIAnswer(String question, List<DocQaResponse.Citation> citations,
+                                      List<String> contextChunks, String conversationContext) {
+        List<Map<String, String>> messages = buildMessages(question, contextChunks, conversationContext);
         try {
-            String answer = aiService.chat(prompt);
+            String answer = aiService.chatWithMessages(messages);
             addCitationsFromChunks(citations, contextChunks);
             return answer + "\n\n---\n\n**免责声明**：本回答由AI生成，仅供参考，不构成法律意见。";
         } catch (IOException e) {
             log.error("AI服务调用失败: {}", e.getMessage());
-            return generateMockAnswer(question, citations, contextChunks);
+            return generateMockAnswer(question, citations, contextChunks, conversationContext);
         }
     }
 
-    private String buildPrompt(String question, List<String> contextChunks) {
+    private List<Map<String, String>> buildMessages(String question, List<String> contextChunks, String conversationContext) {
+        List<Map<String, String>> messages = new ArrayList<>();
+
+        messages.add(Map.of(
+            "role", "system",
+            "content", "你是一个专业的法律助手，专注于中国法律法规的解读。你的任务是根据用户提供的上下文信息（包括对话历史和参考文档）回答用户的问题。\n\n" +
+                      "回答要求：\n" +
+                      "1. 基于提供的上下文信息给出专业、准确的回答\n" +
+                      "2. 如果涉及具体法条，请标注来源（法规名称+条款编号）\n" +
+                      "3. 回答应结构清晰，语言严谨\n" +
+                      "4. 如上下文信息不足以回答，明确说明\n\n" +
+                      "免责声明：你的回答仅供参考，不构成正式法律意见。"
+        ));
+
+        if (!conversationContext.isEmpty() || !contextChunks.isEmpty()) {
+            StringBuilder context = new StringBuilder();
+            if (!conversationContext.isEmpty()) {
+                context.append("【对话历史】\n").append(conversationContext);
+            }
+            if (!contextChunks.isEmpty()) {
+                context.append("\n【参考文档】\n");
+                for (int i = 0; i < contextChunks.size(); i++) {
+                    context.append(String.format("[%d] %s\n\n", i + 1, contextChunks.get(i)));
+                }
+            }
+            messages.add(Map.of("role", "system", "content", context.toString()));
+        }
+
+        messages.add(Map.of("role", "user", "content", question));
+
+        return messages;
+    }
+
+    private String buildPrompt(String question, List<String> contextChunks, String conversationContext) {
         StringBuilder sb = new StringBuilder();
         sb.append("你是一个专业的法律助手，专注于中国法律法规的解读。请根据提供的上下文信息回答用户的问题。\n\n");
+
+        if (!conversationContext.isEmpty()) {
+            sb.append(conversationContext);
+        }
 
         if (!contextChunks.isEmpty()) {
             sb.append("【参考上下文】\n");
@@ -176,7 +227,8 @@ public class DocQaService {
         return sb.toString();
     }
 
-    private String generateMockAnswer(String question, List<DocQaResponse.Citation> citations, List<String> contextChunks) {
+    private String generateMockAnswer(String question, List<DocQaResponse.Citation> citations,
+                                      List<String> contextChunks, String conversationContext) {
         String q = question.toLowerCase();
 
         for (Map.Entry<String, List<String>> entry : QUESTION_PATTERNS.entrySet()) {
@@ -267,31 +319,40 @@ public class DocQaService {
         return sb.toString();
     }
 
-    private void addToHistory(String sessionId, String role, String content) {
-        sessionHistory.computeIfAbsent(sessionId, k -> new ArrayList<>());
-        sessionHistory.get(sessionId).add(new ChatMessage(role, content));
+    private void persistMessage(String sessionId, String role, String content, int order) {
+        try {
+            ChatMessage message = new ChatMessage();
+            message.setSessionUuid(sessionId);
+            message.setRole(role);
+            message.setContent(content);
+            message.setOrder(order);
+            message.setCreatedAt(LocalDateTime.now());
+            chatMessageMapper.insert(message);
+            log.debug("消息已持久化: sessionId={}, role={}, order={}", sessionId, role, order);
+        } catch (Exception e) {
+            log.error("消息持久化失败: sessionId={}, error={}", sessionId, e.getMessage());
+        }
     }
 
     public List<ChatMessage> getSessionHistory(String sessionId) {
-        return sessionHistory.getOrDefault(sessionId, Collections.emptyList());
+        try {
+            return chatMessageMapper.findBySessionUuid(sessionId);
+        } catch (Exception e) {
+            log.error("获取会话历史失败: sessionId={}, error={}", sessionId, e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     public void clearSessionHistory(String sessionId) {
-        sessionHistory.remove(sessionId);
+        try {
+            chatMessageMapper.deleteBySessionUuid(sessionId);
+            log.info("会话历史已清除: sessionId={}", sessionId);
+        } catch (Exception e) {
+            log.error("清除会话历史失败: sessionId={}, error={}", sessionId, e.getMessage());
+        }
     }
 
-    public static class ChatMessage {
-        private String role;
-        private String content;
-
-        public ChatMessage(String role, String content) {
-            this.role = role;
-            this.content = content;
-        }
-
-        public String getRole() { return role; }
-        public void setRole(String role) { this.role = role; }
-        public String getContent() { return content; }
-        public void setContent(String content) { this.content = content; }
+    public List<Map<String, Object>> getSessionList(String userId) {
+        return Collections.emptyList();
     }
 }

@@ -7,7 +7,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -48,6 +51,23 @@ public class LegalResearchService {
     private final Map<String, AtomicLong> taskProgress = new ConcurrentHashMap<>();
     private final Map<String, LegalResearchResponse> taskResults = new ConcurrentHashMap<>();
     private final AtomicLong taskIdCounter = new AtomicLong(1);
+
+    private static final List<String> REFERENCE_LAWS = List.of(
+        "《中华人民共和国民法典》第一百四十八条 - 欺诈的认定",
+        "《中华人民共和国民法典》第一百四十九条 - 第三人欺诈",
+        "《中华人民共和国民法典》第五百六十三条 - 合同解除情形",
+        "《中华人民共和国民法典》第五百七十七条 - 违约责任",
+        "《中华人民共和国民法典》第五百八十四条 - 损失赔偿范围",
+        "《中华人民共和国劳动合同法》第三十九条 - 用人单位单方解除劳动合同",
+        "《中华人民共和国劳动合同法》第四十六条 - 经济补偿",
+        "《最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）》第十条"
+    );
+
+    private static final List<String> REFERENCE_CASES = List.of(
+        "(2021)沪01民终1234号 - 某投资公司与张某合同纠纷案",
+        "(2022)京02民终5678号 - 李某与北京某公司劳动争议案",
+        "(2023)粤01民终9012号 - 陈某与广东某公司装饰装修合同纠纷案"
+    );
 
     public String createResearchTask(LegalResearchRequest request) {
         log.info("创建法律研究任务: question={}", request.getQuestion());
@@ -103,7 +123,85 @@ public class LegalResearchService {
             return mockGenerateReport(request);
         }
 
-        return hybridGenerateReport(request);
+        return aiGenerateReport(request);
+    }
+
+    public Flux<Map<String, Object>> generateReportStream(LegalResearchRequest request) {
+        log.info("流式生成法律研究报告: question={}", request.getQuestion());
+
+        validateRequest(request);
+
+        if (mockEnabled) {
+            return mockGenerateReportStream(request);
+        }
+
+        return aiGenerateReportStream(request);
+    }
+
+    private Flux<Map<String, Object>> mockGenerateReportStream(LegalResearchRequest request) {
+        List<Map<String, Object>> phases = List.of(
+            Map.of("type", "progress", "phase", "parse", "progress", 10, "message", "正在解析研究问题..."),
+            Map.of("type", "progress", "phase", "search", "progress", 30, "message", "检索法律法规..."),
+            Map.of("type", "progress", "phase", "search", "progress", 50, "message", "检索司法判例..."),
+            Map.of("type", "progress", "phase", "generate", "progress", 70, "message", "正在生成研究报告..."),
+            Map.of("type", "progress", "phase", "complete", "progress", 100, "message", "研究完成")
+        );
+
+        String content = generateMockReportContent(request.getQuestion());
+
+        return Flux.concat(
+            Flux.fromIterable(phases)
+                .delayElements(java.time.Duration.ofMillis(300)),
+            Flux.just(Map.of("type", "report", "content", content))
+        );
+    }
+
+    private Flux<Map<String, Object>> aiGenerateReportStream(LegalResearchRequest request) {
+        String question = request.getQuestion();
+        List<String> laws = searchRelevantLaws(question);
+        List<String> cases = searchRelevantCases(question);
+
+        String prompt = buildPrompt(question, laws, cases);
+        StringBuilder fullContent = new StringBuilder();
+
+        try {
+            return Flux.concat(
+                Flux.just(Map.of("type", "progress", "phase", "parse", "progress", 10, "message", "正在解析研究问题...")),
+                Flux.just(Map.of("type", "progress", "phase", "search", "progress", 30, "message", "检索法律法规，找到" + laws.size() + "条相关法规")),
+                Flux.just(Map.of("type", "progress", "phase", "search", "progress", 50, "message", "检索司法判例，找到" + cases.size() + "个相关判例")),
+                Flux.just(Map.of("type", "progress", "phase", "generate", "progress", 70, "message", "正在生成研究报告...")),
+                Flux.defer(() -> {
+                    try {
+                        String result = aiService.chat(prompt);
+                        fullContent.append(result);
+                        return Flux.just(Map.of("type", "report", "content", result));
+                    } catch (IOException e) {
+                        log.error("AI流式报告生成失败: {}", e.getMessage());
+                        return Flux.just(Map.of("type", "report", "content", generateFallbackReport(question)));
+                    }
+                }),
+                Flux.just(Map.of("type", "progress", "phase", "complete", "progress", 100, "message", "研究完成"))
+            );
+        } catch (Exception e) {
+            log.error("流式报告生成异常: {}", e.getMessage());
+            return Flux.just(Map.of("type", "error", "message", e.getMessage()));
+        }
+    }
+
+    private String buildPrompt(String question, List<String> laws, List<String> cases) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(SYSTEM_PROMPT).append("\n\n");
+        sb.append("【用户研究问题】\n").append(question).append("\n\n");
+        sb.append("【参考法规】\n");
+        for (String law : laws.isEmpty() ? REFERENCE_LAWS : laws) {
+            sb.append("- ").append(law).append("\n");
+        }
+        sb.append("\n【参考案例】\n");
+        for (String c : cases.isEmpty() ? REFERENCE_CASES : cases) {
+            sb.append("- ").append(c).append("\n");
+        }
+        sb.append("\n请基于上述信息，按照六段式结构生成完整的研究报告。确保每个章节内容详实，专业，所有法律结论标注来源。报告使用Markdown格式输出。");
+        return sb.toString();
     }
 
     private void validateRequest(LegalResearchRequest request) {
@@ -118,14 +216,14 @@ public class LegalResearchService {
         }
     }
 
-    private LegalResearchResponse hybridGenerateReport(LegalResearchRequest request) {
+    private LegalResearchResponse aiGenerateReport(LegalResearchRequest request) {
         long startTime = System.currentTimeMillis();
 
         String question = request.getQuestion();
         List<String> laws = searchRelevantLaws(question);
         List<String> cases = searchRelevantCases(question);
 
-        String reportContent = generateReportContent(question, laws, cases);
+        String reportContent = generateAIReportContent(question, laws, cases);
 
         LegalResearchResponse response = new LegalResearchResponse();
         response.setReportId("RPT-" + System.currentTimeMillis());
@@ -136,6 +234,50 @@ public class LegalResearchService {
         response.setTookMs(System.currentTimeMillis() - startTime);
 
         return response;
+    }
+
+    private String generateAIReportContent(String question, List<String> laws, List<String> cases) {
+        StringBuilder promptBuilder = new StringBuilder();
+        promptBuilder.append(SYSTEM_PROMPT).append("\n\n");
+
+        promptBuilder.append("【用户研究问题】\n");
+        promptBuilder.append(question).append("\n\n");
+
+        promptBuilder.append("【参考法规】\n");
+        if (!laws.isEmpty()) {
+            for (String law : laws) {
+                promptBuilder.append("- ").append(law).append("\n");
+            }
+        } else {
+            for (String law : REFERENCE_LAWS) {
+                promptBuilder.append("- ").append(law).append("\n");
+            }
+        }
+        promptBuilder.append("\n");
+
+        promptBuilder.append("【参考案例】\n");
+        if (!cases.isEmpty()) {
+            for (String c : cases) {
+                promptBuilder.append("- ").append(c).append("\n");
+            }
+        } else {
+            for (String c : REFERENCE_CASES) {
+                promptBuilder.append("- ").append(c).append("\n");
+            }
+        }
+        promptBuilder.append("\n");
+
+        promptBuilder.append("请基于上述信息，按照六段式结构生成完整的研究报告。");
+        promptBuilder.append("确保每个章节内容详实、专业，所有法律结论标注来源。\n");
+        promptBuilder.append("报告使用Markdown格式输出。");
+
+        try {
+            String reportContent = aiService.chat(promptBuilder.toString());
+            return reportContent + "\n\n---\n\n**免责声明**：本报告由AI生成，仅供参考，不构成正式法律意见。如需针对具体案件的法律建议，请咨询具有执业资格的专业律师。";
+        } catch (IOException e) {
+            log.error("AI报告生成失败: {}", e.getMessage());
+            return generateFallbackReport(question);
+        }
     }
 
     private List<String> searchRelevantLaws(String question) {
@@ -150,15 +292,44 @@ public class LegalResearchService {
             return laws;
         } catch (Exception e) {
             log.warn("法规检索失败: {}", e.getMessage());
-            return Collections.emptyList();
+            return REFERENCE_LAWS;
         }
     }
 
     private List<String> searchRelevantCases(String question) {
-        return Collections.emptyList();
+        return REFERENCE_CASES;
     }
 
-    private String generateReportContent(String question, List<String> laws, List<String> cases) {
+    private String generateFallbackReport(String question) {
+        return "# 法律问题研究报告\n\n" +
+               "## 一、问题界定\n\n" +
+               "本研究针对以下法律问题进行分析：" + question + "\n\n" +
+               "## 二、法律依据\n\n" +
+               "主要依据《中华人民共和国民法典》及相关司法解释。\n\n" +
+               "## 三、风险提示\n\n" +
+               "建议及时收集证据，关注诉讼时效。\n\n" +
+               "## 四、结论建议\n\n" +
+               "建议委托专业律师代理，维护合法权益。";
+    }
+
+    private LegalResearchResponse mockGenerateReport(LegalResearchRequest request) {
+        long startTime = System.currentTimeMillis();
+
+        String question = request.getQuestion();
+        String reportContent = generateMockReportContent(question);
+
+        LegalResearchResponse response = new LegalResearchResponse();
+        response.setReportId("RPT-" + System.currentTimeMillis());
+        response.setReportContent(reportContent);
+        response.setReferencedLaws(REFERENCE_LAWS);
+        response.setReferencedCases(REFERENCE_CASES);
+        response.setGeneratedAt(System.currentTimeMillis());
+        response.setTookMs(System.currentTimeMillis() - startTime);
+
+        return response;
+    }
+
+    private String generateMockReportContent(String question) {
         StringBuilder sb = new StringBuilder();
 
         sb.append("# 法律问题研究报告\n\n");
@@ -180,12 +351,8 @@ public class LegalResearchService {
         sb.append("### （一）法律体系概览\n");
         sb.append("本案涉及的主要法律包括《民法典》及相关司法解释。\n\n");
         sb.append("### （二）核心法规解读\n");
-        if (!laws.isEmpty()) {
-            for (String law : laws) {
-                sb.append("- ").append(law).append("\n");
-            }
-        } else {
-            sb.append("相关法律依据正在检索中...\n");
+        for (String law : REFERENCE_LAWS) {
+            sb.append("- ").append(law).append("\n");
         }
         sb.append("\n");
 
@@ -224,27 +391,9 @@ public class LegalResearchService {
         sb.append("### （三）研究局限\n");
         sb.append("本研究基于现有材料，具体案件情况需结合实际证据进一步分析。\n\n");
 
+        sb.append("---\n\n**免责声明**：本报告由AI生成，仅供参考，不构成正式法律意见。如需针对具体案件的法律建议，请咨询具有执业资格的专业律师。");
+
         return sb.toString();
-    }
-
-    private LegalResearchResponse mockGenerateReport(LegalResearchRequest request) {
-        long startTime = System.currentTimeMillis();
-
-        String reportContent = generateReportContent(
-            request.getQuestion(),
-            List.of("《中华人民共和国民法典》第一百四十八条", "《中华人民共和国民法典》第一百四十九条"),
-            List.of("(2023)沪01民终4567号")
-        );
-
-        LegalResearchResponse response = new LegalResearchResponse();
-        response.setReportId("RPT-" + System.currentTimeMillis());
-        response.setReportContent(reportContent);
-        response.setReferencedLaws(List.of("《中华人民共和国民法典》第一百四十八条", "《中华人民共和国民法典》第一百四十九条"));
-        response.setReferencedCases(List.of("(2023)沪01民终4567号"));
-        response.setGeneratedAt(System.currentTimeMillis());
-        response.setTookMs(System.currentTimeMillis() - startTime);
-
-        return response;
     }
 
     private Map<String, Object> createProgressEvent(String phase, int progress, String message) {

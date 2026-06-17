@@ -1,15 +1,22 @@
 <template>
-  <div class="page-card">
+  <div class="document-page">
     <div class="page-header">
-      <h2>AI文书起草</h2>
-      <p>选择文书模板，输入案件信息，智能生成法律文书</p>
+      <div class="header-content">
+        <h2>AI文书起草</h2>
+        <p>选择文书模板，输入案件信息，智能生成法律文书</p>
+      </div>
     </div>
 
     <el-row :gutter="24">
       <el-col :span="8">
-        <div class="template-list">
+        <el-card class="template-card">
           <div class="search-box">
-            <el-input v-model="templateSearch" placeholder="搜索模板" clearable prefix-icon="Search" />
+            <el-input
+              v-model="templateSearch"
+              placeholder="搜索模板"
+              clearable
+              prefix-icon="Search"
+            />
           </div>
 
           <el-tabs v-model="activeCategory" class="category-tabs">
@@ -18,7 +25,7 @@
                 <div
                   v-for="tpl in filteredTemplatesByCategory('民事诉讼')"
                   :key="tpl.templateCode"
-                  :class="['template-card', { active: selectedTemplate === tpl.templateCode }]"
+                  :class="['template-item', { active: selectedTemplate === tpl.templateCode }]"
                   @click="selectTemplate(tpl)"
                 >
                   <div class="template-icon">
@@ -36,7 +43,7 @@
                 <div
                   v-for="tpl in filteredTemplatesByCategory('劳动人事')"
                   :key="tpl.templateCode"
-                  :class="['template-card', { active: selectedTemplate === tpl.templateCode }]"
+                  :class="['template-item', { active: selectedTemplate === tpl.templateCode }]"
                   @click="selectTemplate(tpl)"
                 >
                   <div class="template-icon">
@@ -54,7 +61,7 @@
                 <div
                   v-for="tpl in filteredTemplatesByCategory('商业函件')"
                   :key="tpl.templateCode"
-                  :class="['template-card', { active: selectedTemplate === tpl.templateCode }]"
+                  :class="['template-item', { active: selectedTemplate === tpl.templateCode }]"
                   @click="selectTemplate(tpl)"
                 >
                   <div class="template-icon">
@@ -72,7 +79,7 @@
                 <div
                   v-for="tpl in filteredTemplatesByCategory('知识产权')"
                   :key="tpl.templateCode"
-                  :class="['template-card', { active: selectedTemplate === tpl.templateCode }]"
+                  :class="['template-item', { active: selectedTemplate === tpl.templateCode }]"
                   @click="selectTemplate(tpl)"
                 >
                   <div class="template-icon">
@@ -85,14 +92,15 @@
               </div>
             </el-tab-pane>
           </el-tabs>
-        </div>
+        </el-card>
       </el-col>
+
       <el-col :span="16">
-        <div class="form-area">
+        <el-card class="form-card">
           <div class="selected-template-info" v-if="selectedTemplate">
             <el-alert
               :title="'已选择：' + getTemplateName(selectedTemplate)"
-              type="info"
+              type="success"
               :closable="false"
               show-icon
             />
@@ -155,7 +163,7 @@
           </el-form>
 
           <loading v-if="loading" text="正在生成法律文书..." />
-        </div>
+        </el-card>
       </el-col>
     </el-row>
 
@@ -203,8 +211,20 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import {
+  Document,
+  User,
+  Message,
+  Connection,
+  OfficeBuilding,
+  Refresh,
+  CopyDocument,
+  Download,
+  Printer,
+  Search
+} from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
 
@@ -332,20 +352,73 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.template-list {
-  background: #fafafa;
-  padding: 16px;
-  border-radius: 8px;
-  height: fit-content;
+.document-page {
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-header {
+  margin-bottom: 24px;
+
+  .header-content {
+    h2 {
+      margin: 0 0 8px 0;
+      font-size: 26px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+  }
+}
+
+.template-card {
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+
+  :deep(.el-card__body) {
+    padding: 20px;
+  }
 
   .search-box {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+
+    :deep(.el-input__wrapper) {
+      border-radius: 12px;
+      padding: 8px 16px;
+    }
   }
 }
 
 .category-tabs {
-  :deep(.el-tabs__header) {
-    margin-bottom: 12px;
+  :deep(.el-tabs__item) {
+    font-weight: 500;
+
+    &.is-active {
+      color: #667eea;
+    }
+  }
+
+  :deep(.el-tabs__active-bar) {
+    background: linear-gradient(135deg, #667eea, #764ba2);
   }
 }
 
@@ -355,99 +428,157 @@ onMounted(() => {
   gap: 12px;
 }
 
-.template-card {
+.template-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 14px;
+  padding: 14px;
   border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.3s;
 
   &:hover {
-    border-color: #1890ff;
-    background: #e6f7ff;
+    border-color: #667eea;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    transform: translateX(4px);
   }
 
   &.active {
-    border-color: #1890ff;
-    background: #e6f7ff;
+    border-color: #667eea;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
   }
 
   .template-icon {
-    width: 40px;
-    height: 40px;
-    background: #fff;
-    border-radius: 8px;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #1890ff;
+    color: #fff;
+    font-size: 20px;
   }
 
   .template-info {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 
     .template-name {
       font-size: 14px;
-      color: #333;
+      font-weight: 500;
+      color: #1f2937;
     }
   }
 }
 
-.form-area {
-  background: #fff;
-  padding: 24px;
-  border-radius: 8px;
+.form-card {
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+
+  :deep(.el-card__body) {
+    padding: 28px;
+  }
 
   .selected-template-info {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+
+    :deep(.el-alert) {
+      border-radius: 12px;
+    }
+  }
+
+  :deep(.el-form-item__label) {
+    font-weight: 500;
+    color: #4b5563;
+  }
+
+  :deep(.el-input__wrapper),
+  :deep(.el-textarea__inner) {
+    border-radius: 10px;
+    padding: 12px 16px;
+  }
+
+  :deep(.el-button--primary) {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 28px;
+    transition: all 0.3s;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    &:disabled {
+      background: #d1d5db;
+    }
+  }
+
+  :deep(.el-button:not(.el-button--primary)) {
+    border-radius: 10px;
+    padding: 12px 20px;
   }
 }
 
 .result-content {
-  padding: 20px;
+  padding: 8px;
 
   .document-content {
-    background: #fafafa;
-    padding: 20px;
-    border-radius: 8px;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    padding: 24px;
+    border-radius: 16px;
     white-space: pre-wrap;
     font-family: 'Songti SC', 'SimSun', serif;
-    line-height: 1.8;
+    line-height: 2;
     font-size: 14px;
     max-height: 500px;
     overflow-y: auto;
+    border: 1px solid #e5e7eb;
   }
 
   .risk-content {
-    padding: 16px;
-    background: #fffbe6;
-    border-radius: 8px;
+    padding: 20px;
+    background: linear-gradient(135deg, #fefce8, #fef9c3);
+    border-radius: 14px;
     line-height: 1.8;
+    border: 1px solid #fef08a;
   }
 
   .laws-list {
     .law-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 12px;
-      border-bottom: 1px solid #f0f0f0;
-      color: #333;
+      gap: 12px;
+      padding: 14px;
+      border-bottom: 1px solid #f3f4f6;
+      color: #374151;
+      font-size: 14px;
+
+      .el-icon {
+        color: #667eea;
+        font-size: 18px;
+      }
     }
   }
 
   .actions {
     margin-top: 24px;
     display: flex;
-    gap: 12px;
+    gap: 14px;
     padding-top: 20px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid #f3f4f6;
+
+    :deep(.el-button) {
+      border-radius: 10px;
+      padding: 10px 20px;
+    }
   }
 }
 </style>

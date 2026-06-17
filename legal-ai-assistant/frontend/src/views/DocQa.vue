@@ -288,7 +288,8 @@ const handleAsk = async () => {
   try {
     const res = await api.docQa.ask({
       question: q,
-      sessionId: sessionId.value
+      sessionId: sessionId.value,
+      kbId: selectedKb.value
     })
     sessionId.value = res.data.sessionId
 
@@ -310,15 +311,38 @@ const handleAsk = async () => {
   }
 }
 
-const clearHistory = () => {
+const clearHistory = async () => {
+  if (sessionId.value) {
+    try {
+      await api.docQa.clearSession(sessionId.value)
+    } catch (e) {
+      console.error(e)
+    }
+  }
   messages.value = []
   sessionId.value = null
   ElMessage.success('对话已清空')
 }
 
-const switchSession = (id) => {
-  currentSession.value = id
+const switchSession = async (session) => {
+  currentSession.value = session.id
+  sessionId.value = session.sessionUuid
   messages.value = []
+
+  try {
+    const res = await api.docQa.getSessionHistory(session.sessionUuid)
+    if (res.data && res.data.length > 0) {
+      messages.value = res.data.map((msg, idx) => ({
+        id: idx,
+        role: msg.role,
+        content: msg.content,
+        time: msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : ''
+      }))
+    }
+  } catch (e) {
+    console.error('获取会话历史失败:', e)
+  }
+
   ElMessage.info('已切换会话')
 }
 

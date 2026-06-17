@@ -82,6 +82,111 @@ public class AIService {
         }
     }
 
+    public String chatWithMessages(List<Map<String, String>> messages) throws IOException {
+        log.info("调用OpenClaw网关(多轮对话): 消息数量={}", messages.size());
+
+        Map<String, Object> requestBody = Map.of(
+            "model", model,
+            "messages", messages,
+            "stream", false
+        );
+
+        String json = objectMapper.writeValueAsString(requestBody);
+
+        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+                .url(openClawUrl + "/v1/chat/completions")
+                .addHeader("Authorization", "Bearer " + openClawToken)
+                .addHeader("Content-Type", "application/json")
+                .post(body)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String errorBody = response.body() != null ? response.body().string() : "no body";
+                log.error("OpenClaw API调用失败: code={}, message={}, body={}", response.code(), response.message(), errorBody);
+                throw new IOException("API调用失败: " + response.code());
+            }
+
+            String responseBody = response.body().string();
+            log.info("OpenClaw API响应长度: {}", responseBody.length());
+
+            return parseResponse(responseBody);
+        } catch (Exception e) {
+            log.error("OpenClaw API异常: {}", e.getMessage(), e);
+            throw new IOException("API调用异常: " + e.getMessage(), e);
+        }
+    }
+
+    public String chatStream(String prompt, java.util.function.Consumer<String> onChunk, java.util.function.Supplier<Boolean> isCancelled) throws IOException {
+        log.info("调用OpenClaw流式网关: model={}, prompt长度={}", model, prompt.length());
+
+        Map<String, Object> requestBody = Map.of(
+            "model", model,
+            "messages", List.of(Map.of("role", "user", "content", prompt)),
+            "stream", true
+        );
+
+        String json = objectMapper.writeValueAsString(requestBody);
+
+        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+                .url(openClawUrl + "/v1/chat/completions")
+                .addHeader("Authorization", "Bearer " + openClawToken)
+                .addHeader("Content-Type", "application/json")
+                .post(body)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String errorBody = response.body() != null ? response.body().string() : "no body";
+                log.error("OpenClaw流式API调用失败: code={}, message={}, body={}", response.code(), response.message(), errorBody);
+                throw new IOException("流式API调用失败: " + response.code());
+            }
+
+            if (response.body() == null) {
+                throw new IOException("响应体为空");
+            }
+
+            StringBuilder fullResponse = new StringBuilder();
+            String responseBody = response.body().string();
+
+            String[] lines = responseBody.split("\n");
+            for (String line : lines) {
+                if (line.startsWith("data: ")) {
+                    String data = line.substring(6);
+                    if ("[DONE]".equals(data)) {
+                        break;
+                    }
+                    try {
+                        JsonNode jsonNode = objectMapper.readTree(data);
+                        JsonNode choices = jsonNode.get("choices");
+                        if (choices != null && choices.isArray() && choices.size() > 0) {
+                            JsonNode delta = choices.get(0).get("delta");
+                            if (delta != null && delta.has("content")) {
+                                String content = delta.get("content").asText();
+                                fullResponse.append(content);
+                                if (onChunk != null) {
+                                    onChunk.accept(content);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.debug("解析流式响应行失败: {}", line);
+                    }
+                }
+            }
+
+            log.info("流式响应完成: 总长度={}", fullResponse.length());
+            return fullResponse.toString();
+        } catch (Exception e) {
+            log.error("OpenClaw流式API异常: {}", e.getMessage(), e);
+            throw new IOException("流式API异常: " + e.getMessage(), e);
+        }
+    }
+
     public float[] embedText(String text) throws IOException {
         log.info("调用OpenClaw Embedding API: text长度={}", text.length());
 

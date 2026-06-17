@@ -205,8 +205,9 @@ public class KnowledgeBaseService {
     private void vectorizeChunk(DocumentChunk chunk) {
         try {
             float[] vector = aiService.embedText(chunk.getContent());
+            chunk.setVector(vector);
             chunk.setVectorId("VEC-" + chunkIdGenerator.getAndIncrement());
-            log.debug("向量化语义块: {}", chunk.getVectorId());
+            log.debug("向量化语义块: {}, 向量维度={}", chunk.getVectorId(), vector.length);
         } catch (Exception e) {
             log.error("向量化失败: {}", e.getMessage());
         }
@@ -220,17 +221,91 @@ public class KnowledgeBaseService {
             return Collections.emptyList();
         }
 
-        return chunks.stream()
-            .limit(topK)
-            .map(chunk -> {
-                LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
-                item.setArticleId(String.valueOf(chunk.getChunkId()));
-                item.setTitle(chunk.getFileName());
-                item.setContent(chunk.getContent());
-                item.setScore(0.85 + Math.random() * 0.15);
-                return item;
-            })
-            .collect(Collectors.toList());
+        if (mockEnabled) {
+            return chunks.stream()
+                .limit(topK)
+                .map(chunk -> {
+                    LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
+                    item.setArticleId(String.valueOf(chunk.getChunkId()));
+                    item.setTitle(chunk.getFileName());
+                    item.setContent(chunk.getContent());
+                    item.setScore(0.85 + Math.random() * 0.15);
+                    return item;
+                })
+                .collect(Collectors.toList());
+        }
+
+        return semanticSearch(chunks, query, topK);
+    }
+
+    private List<LegalSearchResponse.SearchResultItem> semanticSearch(List<DocumentChunk> chunks, String query, int topK) {
+        try {
+            float[] queryVector = aiService.embedText(query);
+            log.info("开始语义搜索: query长度={}, chunk数量={}", query.length(), chunks.size());
+
+            List<ScoredChunk> scoredChunks = new ArrayList<>();
+            for (DocumentChunk chunk : chunks) {
+                if (chunk.getVector() != null) {
+                    float similarity = cosineSimilarity(queryVector, chunk.getVector());
+                    scoredChunks.add(new ScoredChunk(chunk, similarity));
+                }
+            }
+
+            scoredChunks.sort((a, b) -> Float.compare(b.score, a.score));
+
+            return scoredChunks.stream()
+                .limit(topK)
+                .map(sc -> {
+                    LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
+                    item.setArticleId(String.valueOf(sc.chunk.getChunkId()));
+                    item.setTitle(sc.chunk.getFileName());
+                    item.setContent(sc.chunk.getContent());
+                    item.setScore((double) sc.score);
+                    return item;
+                })
+                .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.error("语义搜索失败: {}", e.getMessage());
+            return chunks.stream()
+                .limit(topK)
+                .map(chunk -> {
+                    LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
+                    item.setArticleId(String.valueOf(chunk.getChunkId()));
+                    item.setTitle(chunk.getFileName());
+                    item.setContent(chunk.getContent());
+                    item.setScore(0.85);
+                    return item;
+                })
+                .collect(Collectors.toList());
+        }
+    }
+
+    private float cosineSimilarity(float[] a, float[] b) {
+        if (a.length != b.length) return 0f;
+
+        float dotProduct = 0f;
+        float normA = 0f;
+        float normB = 0f;
+
+        for (int i = 0; i < a.length; i++) {
+            dotProduct += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
+        }
+
+        if (normA == 0f || normB == 0f) return 0f;
+        return dotProduct / (float) (Math.sqrt(normA) * Math.sqrt(normB));
+    }
+
+    private static class ScoredChunk {
+        DocumentChunk chunk;
+        float score;
+
+        ScoredChunk(DocumentChunk chunk, float score) {
+            this.chunk = chunk;
+            this.score = score;
+        }
     }
 
     public static class DocumentChunk {
@@ -240,6 +315,7 @@ public class KnowledgeBaseService {
         private int chunkIndex;
         private int tokenCount;
         private String vectorId;
+        private float[] vector;
 
         public Long getChunkId() { return chunkId; }
         public void setChunkId(Long chunkId) { this.chunkId = chunkId; }
@@ -253,5 +329,7 @@ public class KnowledgeBaseService {
         public void setTokenCount(int tokenCount) { this.tokenCount = tokenCount; }
         public String getVectorId() { return vectorId; }
         public void setVectorId(String vectorId) { this.vectorId = vectorId; }
+        public float[] getVector() { return vector; }
+        public void setVector(float[] vector) { this.vector = vector; }
     }
 }

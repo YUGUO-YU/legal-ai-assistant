@@ -1,27 +1,33 @@
 <template>
-  <div class="page-card">
+  <div class="knowledge-base">
     <div class="page-header">
-      <h2>案例法规库</h2>
-      <p>管理个人文档知识库，支持语义检索和团队共享</p>
-    </div>
-
-    <div class="action-bar">
-      <el-button type="primary" @click="showUpload = true">
-        <el-icon><Upload /></el-icon>
-        上传文档
-      </el-button>
-      <el-button type="primary" @click="showCreateKb = true">
-        <el-icon><Plus /></el-icon>
-        新建知识库
-      </el-button>
-      <div class="search-box">
-        <el-input v-model="searchKeyword" placeholder="搜索知识库" clearable>
-          <template #append>
-            <el-button :icon="Search" />
-          </template>
-        </el-input>
+      <div class="header-content">
+        <h2>案例法规库</h2>
+        <p>管理个人文档知识库，支持语义检索和团队共享</p>
       </div>
     </div>
+
+    <el-card class="action-card">
+      <div class="action-bar">
+        <div class="action-buttons">
+          <el-button type="primary" @click="showUpload = true">
+            <el-icon><Upload /></el-icon>
+            上传文档
+          </el-button>
+          <el-button type="primary" @click="showCreateKb = true">
+            <el-icon><Plus /></el-icon>
+            新建知识库
+          </el-button>
+        </div>
+        <div class="search-box">
+          <el-input v-model="searchKeyword" placeholder="搜索知识库" clearable>
+            <template #append>
+              <el-button :icon="Search" />
+            </template>
+          </el-input>
+        </div>
+      </div>
+    </el-card>
 
     <el-dialog v-model="showUpload" title="上传文档" width="600px">
       <el-form :model="uploadForm" label-width="100px">
@@ -86,7 +92,7 @@
       </template>
     </el-dialog>
 
-    <el-row :gutter="16" class="kb-grid">
+    <el-row :gutter="20" class="kb-grid">
       <el-col :span="8" v-for="kb in filteredKbList" :key="kb.id">
         <el-card class="kb-card" :body-style="{ padding: '0px' }">
           <div class="kb-header" :style="{ background: getKbColor(kb.type) }">
@@ -155,6 +161,16 @@
 import { ref, computed, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import {
+  Upload,
+  Plus,
+  Search,
+  Folder,
+  User,
+  Clock,
+  ChatDotRound,
+  Setting
+} from '@element-plus/icons-vue'
 import EmptyState from '../components/EmptyState.vue'
 
 const router = useRouter()
@@ -319,26 +335,99 @@ const manageKb = (kb) => {
 </script>
 
 <style lang="scss" scoped>
+.knowledge-base {
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-header {
+  margin-bottom: 24px;
+
+  .header-content {
+    h2 {
+      margin: 0 0 8px 0;
+      font-size: 26px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+  }
+}
+
+.action-card {
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+
+  :deep(.el-card__body) {
+    padding: 20px;
+  }
+}
+
 .action-bar {
   display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
+  justify-content: space-between;
   align-items: center;
 
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+
+    :deep(.el-button--primary) {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border: none;
+      border-radius: 12px;
+      padding: 12px 24px;
+      transition: all 0.3s;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      }
+    }
+  }
+
   .search-box {
-    width: 240px;
-    margin-left: auto;
+    width: 260px;
+
+    :deep(.el-input__wrapper) {
+      border-radius: 12px;
+      padding: 8px 16px;
+    }
   }
 }
 
 .kb-grid {
   .kb-card {
     margin-bottom: 16px;
-    border-radius: 12px;
+    border: none;
+    border-radius: 20px;
     overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
     transition: all 0.3s;
+
     &:hover {
-      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
     }
   }
 }
@@ -353,19 +442,23 @@ const manageKb = (kb) => {
   .kb-icon {
     width: 56px;
     height: 56px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
+    backdrop-filter: blur(10px);
   }
 
   .kb-info {
     flex: 1;
+
     h3 {
       margin: 0 0 4px 0;
       font-size: 18px;
+      font-weight: 600;
     }
+
     p {
       margin: 0;
       font-size: 13px;
@@ -375,26 +468,31 @@ const manageKb = (kb) => {
 }
 
 .kb-body {
-  padding: 16px;
+  padding: 20px;
 
   .kb-stats {
     display: flex;
     justify-content: space-around;
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f3f4f6;
 
     .stat-item {
       text-align: center;
+
       .stat-value {
         display: block;
-        font-size: 20px;
-        font-weight: bold;
-        color: #333;
+        font-size: 22px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
+
       .stat-label {
         font-size: 12px;
-        color: #999;
+        color: #9ca3af;
       }
     }
   }
@@ -403,31 +501,46 @@ const manageKb = (kb) => {
     display: flex;
     gap: 16px;
     font-size: 13px;
-    color: #666;
-    margin-bottom: 12px;
+    color: #6b7280;
+    margin-bottom: 14px;
 
     span {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
+
+      .el-icon {
+        color: #667eea;
+      }
     }
   }
 
   .kb-tags {
     display: flex;
     gap: 8px;
+
+    :deep(.el-tag) {
+      border-radius: 6px;
+    }
   }
 }
 
 .kb-actions {
   display: flex;
-  padding: 12px 16px;
-  background: #fafafa;
-  border-top: 1px solid #f0f0f0;
-  gap: 8px;
-}
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-top: 1px solid #f3f4f6;
+  gap: 10px;
 
-.empty-state {
-  padding: 48px 0;
+  :deep(.el-button) {
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  :deep(.el-button--primary) {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+  }
 }
 </style>

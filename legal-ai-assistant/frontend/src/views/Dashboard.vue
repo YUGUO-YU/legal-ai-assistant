@@ -129,7 +129,7 @@
         <el-card class="tips-card" style="margin-top: 24px">
           <template #header>
             <div class="header-title">
-              <el-icon><LightBulb /></el-icon>
+              <el-icon><Star /></el-icon>
               <span>使用技巧</span>
             </div>
           </template>
@@ -196,7 +196,7 @@ import {
   Right,
   Lightning,
   TrendCharts,
-  LightBulb,
+  Star,
   MagicStick,
   Connection,
   DocumentCopy,

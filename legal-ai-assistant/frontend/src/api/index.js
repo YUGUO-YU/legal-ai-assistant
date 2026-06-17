@@ -101,7 +101,9 @@ export default {
     getDimensions: () => api.get('/contract/dimensions')
   },
   docQa: {
-    ask: (data) => api.post('/doc-qa/ask', data)
+    ask: (data) => api.post('/doc-qa/ask', data),
+    getSessionHistory: (sessionId) => api.get(`/doc-qa/sessions/${sessionId}/history`),
+    clearSession: (sessionId) => api.delete(`/doc-qa/sessions/${sessionId}`)
   },
   knowledgeBase: {
     list: (params) => api.get('/knowledge-base/list', { params }),

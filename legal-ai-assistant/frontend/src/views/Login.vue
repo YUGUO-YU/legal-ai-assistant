@@ -10,7 +10,7 @@
     <div class="login-box">
       <div class="login-header">
         <div class="logo-icon">
-          <el-icon :size="48"><Scale /></el-icon>
+          <el-icon :size="48"><Sunny /></el-icon>
         </div>
         <h1>法律AI助手</h1>
         <p>智能法律服务解决方案</p>
@@ -104,7 +104,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, CircleCheck, Scale } from '@element-plus/icons-vue'
+import { User, Lock, CircleCheck, Sunny } from '@element-plus/icons-vue'
 import api from '../api'
 
 const router = useRouter()

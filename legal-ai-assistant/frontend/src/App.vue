@@ -6,7 +6,7 @@
           <el-aside width="260px" class="sidebar">
             <div class="logo">
               <div class="logo-icon">
-                <el-icon :size="28"><Scale /></el-icon>
+                <el-icon :size="28"><Sunny /></el-icon>
               </div>
               <div class="logo-text">
                 <h2>法律AI助手</h2>
@@ -214,7 +214,7 @@ import {
   QuestionFilled,
   SwitchButton,
   ArrowDown,
-  Scale,
+  Sunny,
   TrendCharts,
   MagicStick
 } from '@element-plus/icons-vue'

@@ -146,8 +146,9 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
+ import { ref, reactive } from 'vue'
+ import { ElMessage } from 'element-plus'
+ import api from '../api'
 import {
   Edit,
   DataAnalysis,
@@ -196,108 +197,126 @@ const handleResearch = async () => {
     p.completed = false
   })
 
-  const phaseConfigs = [
-    { progress: 10, phase: 'parse', message: '正在解析研究问题...', duration: 800 },
-    { progress: 25, phase: 'search_laws', message: '检索法律法规...找到12条相关法规', duration: 1200 },
-    { progress: 40, phase: 'search_cases', message: '检索司法案例...找到8个相关判例', duration: 1000 },
-    { progress: 55, phase: 'generate_def', message: '正在生成问题界定章节...', duration: 1500 },
-    { progress: 70, phase: 'generate_basis', message: '正在生成法律依据章节...', duration: 1500 },
-    { progress: 85, phase: 'generate_risk', message: '正在生成风险提示章节...', duration: 1200 },
-    { progress: 95, phase: 'generate_conclusion', message: '正在生成结论建议...', duration: 1000 },
-    { progress: 100, phase: 'done', message: '研究完成！', duration: 500 }
+  phases[0].active = true
+  progressMessage.value = '正在解析研究问题...'
+  progress.value = 10
+
+  try {
+    const res = await api.legalResearch.generateReport({
+      question: query.value,
+      depth: depth.value,
+      sources: sources.value
+    })
+
+    phases[0].active = false
+    phases[0].completed = true
+    phases[1].active = true
+    progress.value = 30
+    progressMessage.value = '检索法律法规...'
+
+    phases[1].active = false
+    phases[1].completed = true
+    phases[2].active = true
+    progress.value = 50
+    progressMessage.value = '检索司法案例...'
+
+    phases[2].active = false
+    phases[2].completed = true
+    phases[3].active = true
+    progress.value = 70
+    progressMessage.value = '正在生成研究报告...'
+
+    const reportContent = res.data.reportContent
+    const parsedReport = parseReportContent(reportContent)
+    report.value = parsedReport
+
+    phases[3].active = false
+    phases[3].completed = true
+    phases[4].completed = true
+    phases[5].completed = true
+    phases[6].completed = true
+    progress.value = 100
+    progressMessage.value = '研究完成！'
+    progressStatus.value = 'success'
+
+    loading.value = false
+    ElMessage.success('研究报告生成完成')
+  } catch (e) {
+    console.error(e)
+    loading.value = false
+    progressStatus.value = 'exception'
+    progressMessage.value = '生成失败，请稍后重试'
+    ElMessage.error('研究报告生成失败')
+  }
+}
+
+const parseReportContent = (content) => {
+  if (!content) return []
+
+  const sections = []
+  const sectionTitles = [
+    { pattern: /#+\s*一[、、]?问题界定/, title: '一、问题界定' },
+    { pattern: /#+\s*二[、、]?法律依据/, title: '二、法律依据' },
+    { pattern: /#+\s*三[、、]?学术观点/, title: '三、学术观点' },
+    { pattern: /#+\s*四[、、]?实务指引/, title: '四、实务指引' },
+    { pattern: /#+\s*五[、、]?风险提示/, title: '五、风险提示' },
+    { pattern: /#+\s*六[、、]?结论建议/, title: '六、结论建议' }
   ]
 
-  for (const config of phaseConfigs) {
-    await new Promise(r => setTimeout(r, config.duration))
-    progress.value = config.progress
-    progressMessage.value = config.message
+  let currentSection = null
+  let currentContent = []
 
-    const phase = phases.find(p => p.name === config.phase)
-    if (phase) {
-      phase.completed = config.progress === 100
-      phase.active = config.progress < 100
+  const lines = content.split('\n')
+  for (const line of lines) {
+    let matched = false
+    for (const st of sectionTitles) {
+      if (st.pattern.test(line)) {
+        if (currentSection) {
+          sections.push({
+            id: sections.length + 1,
+            title: currentSection,
+            content: formatContent(currentContent.join('\n')),
+            citations: []
+          })
+        }
+        currentSection = st.title
+        currentContent = []
+        matched = true
+        break
+      }
     }
-
-    if (config.progress === 100) {
-      progressStatus.value = 'success'
+    if (!matched) {
+      currentContent.push(line)
     }
   }
 
-  report.value = [
-    {
-      id: 1,
-      title: '一、问题界定',
-      content: `<p><strong>（一）研究背景</strong></p>
-        <p>随着基础设施建设规模的持续扩大，建设工程合同纠纷已成为民商事诉讼中占比最高的案件类型之一。其中，工期延误索赔问题因其涉及因素复杂、证据认定困难等特点，成为司法实践中的难点问题。</p>
-        <p><strong>（二）核心问题</strong></p>
-        <p>本研究聚焦以下核心问题：承包人主张工期顺延应满足何种条件？工期延误损失赔偿的范围如何确定？发包人反索赔的诉讼时效从何时起算？</p>
-        <p><strong>（三）关键术语</strong></p>
-        <ul>
-          <li><strong>工期延误</strong>：指建设工程合同的实际完工日期超出合同约定的完工日期。</li>
-          <li><strong>工期索赔</strong>：承包人基于合同约定或法律规定，向发包人主张延长工期或赔偿损失的权利。</li>
-          <li><strong>不可抗力</strong>：不能预见、不能避免并不能克服的客观情况，如自然灾害、社会事件等。</li>
-        </ul>`,
+  if (currentSection && currentContent.length > 0) {
+    sections.push({
+      id: sections.length + 1,
+      title: currentSection,
+      content: formatContent(currentContent.join('\n')),
       citations: []
-    },
-    {
-      id: 2,
-      title: '二、法律依据',
-      content: `<p><strong>（一）核心法规</strong></p>
-        <p>《民法典》合同编相关规定：</p>
-        <ul>
-          <li><strong>第577条</strong>：当事人一方不履行合同义务或者履行合同义务不符合约定的，应当承担违约责任。</li>
-          <li><strong>第584条</strong>：当事人一方不履行合同义务或者履行合同义务不符合约定的，给对方造成损失的，损失赔偿额应当相当于因违约所造成的损失。</li>
-          <li><strong>第590条</strong>：当事人一方因不可抗力不能履行合同的，根据不可抗力的影响，部分或者全部免除责任。</li>
-        </ul>
-        <p><strong>（二）司法解释</strong></p>
-        <ul>
-          <li>《最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）》第10条、第11条对工期延误责任认定作出具体规定。</li>
-        </ul>`,
-      citations: [
-        { id: 1, title: '《民法典》', url: 'https://flk.npc.gov.cn/', source: '国家法律法规信息库' }
-      ]
-    },
-    {
-      id: 3,
-      title: '三、风险提示',
-      content: `<p><strong>（一）法律风险识别</strong></p>
-        <ul>
-          <li><strong>证据风险</strong>：工期延误索赔需提供完整的工期顺延签证、往来函件、监理日志等证据，证据不足将导致索赔失败。</li>
-          <li><strong>时效风险</strong>：建设工程款请求权诉讼时效为3年，需在法定期限内主张权利。</li>
-          <li><strong>鉴定风险</strong>：工期延误的因果关系认定往往需要专业鉴定，鉴定周期长、费用高。</li>
-        </ul>
-        <p><strong>（二）风险防控建议</strong></p>
-        <ul>
-          <li>建议在合同履行过程中建立完善的文档管理制度，确保工期签证及时签认。</li>
-          <li>发生工期延误事件后，应在合同约定的期限内向发包人提出书面索赔报告。</li>
-          <li>及时委托专业律师介入，固定证据，制定诉讼策略。</li>
-        </ul>`,
-      citations: []
-    },
-    {
-      id: 4,
-      title: '四、结论与建议',
-      content: `<p><strong>（一）核心结论</strong></p>
-        <p>建设工程工期延误索赔纠纷的处理应遵循"有约定从约定，无约定依法定"的原则。承包人主张工期顺延，必须提供充分证据证明延误原因符合合同约定的顺延条件或存在不可抗力等免责事由。</p>
-        <p><strong>（二）行动建议</strong></p>
-        <p><strong>对承包人的建议：</strong></p>
-        <ul>
-          <li>在合同签订阶段，务必明确工期延误的免责条款和顺延条件。</li>
-          <li>施工过程中，指派专人负责工期管理，及时办理签证手续。</li>
-          <li>发生延误后，按合同约定的时间和程序提交索赔报告。</li>
-        </ul>
-        <p><strong>对发包人的建议：</strong></p>
-        <ul>
-          <li>加强项目管理，确保设计变更，材料供应等及时到位。</li>
-          <li>建立工期考核机制，定期评估施工进度。</li>
-          <li>如遇承包人索赔，及时固定反证材料，准备应诉策略。</li>
-        </ul>`,
-      citations: []
-    }
-  ]
+    })
+  }
 
-  loading.value = false
-  ElMessage.success('研究报告生成完成')
+  if (sections.length === 0) {
+    sections.push({
+      id: 1,
+      title: '研究报告',
+      content: formatContent(content),
+      citations: []
+    })
+  }
+
+  return sections
+}
+
+const formatContent = (text) => {
+  if (!text) return ''
+  return text
+    .replace(/^#+\s*/gm, '')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>')
 }
 
 const exportPdf = () => {

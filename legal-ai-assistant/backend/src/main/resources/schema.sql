@@ -183,6 +183,18 @@ CREATE TABLE IF NOT EXISTS kb_session (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会话表';
 
+-- 聊天消息表
+CREATE TABLE IF NOT EXISTS kb_chat_message (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    session_uuid    VARCHAR(64) NOT NULL COMMENT '会话UUID',
+    role            VARCHAR(20) NOT NULL COMMENT '角色: user/assistant',
+    content         TEXT NOT NULL COMMENT '消息内容',
+    `order`         INT DEFAULT 0 COMMENT '消息顺序',
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_session (session_uuid),
+    INDEX idx_order (`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='聊天消息表';
+
 -- 初始化示例数据
 INSERT INTO law_document (law_uuid, title, short_title, category_l1, category_l2, issuing_authority, issue_date, effective_date, status, source_url, source_name) VALUES
 ('LAW-2023-001', '中华人民共和国民法典', '民法典', '法律', '民法', '全国人民代表大会', '2020-05-28', '2021-01-01', 1, 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3YWIzYzIyYzA2M2I=', '国家法律法规信息库'),

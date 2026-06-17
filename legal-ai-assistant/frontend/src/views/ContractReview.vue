@@ -203,7 +203,7 @@
               </div>
               <p class="risk-desc">{{ item.description }}</p>
               <div class="risk-suggestion">
-                <el-icon><LightBulb /></el-icon>
+                <el-icon><Star /></el-icon>
                 <span>修改建议：{{ item.suggestion }}</span>
               </div>
             </div>
@@ -230,7 +230,7 @@
               </div>
               <p class="risk-desc">{{ item.description }}</p>
               <div class="risk-suggestion">
-                <el-icon><LightBulb /></el-icon>
+                <el-icon><Star /></el-icon>
                 <span>修改建议：{{ item.suggestion }}</span>
               </div>
             </div>
@@ -257,7 +257,7 @@
               </div>
               <p class="risk-desc">{{ item.description }}</p>
               <div class="risk-suggestion">
-                <el-icon><LightBulb /></el-icon>
+                <el-icon><Star /></el-icon>
                 <span>优化建议：{{ item.suggestion }}</span>
               </div>
             </div>
@@ -306,7 +306,7 @@ import {
   Warning,
   WarningFilled,
   SuccessFilled,
-  LightBulb,
+  Star,
   CircleCheck,
   ChatLineSquare,
   Download,
