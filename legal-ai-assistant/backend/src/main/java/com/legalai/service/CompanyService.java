@@ -3,9 +3,11 @@ package com.legalai.service;
 import com.legalai.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -17,6 +19,9 @@ public class CompanyService {
 
     @Value("${mock.enabled:true}")
     private boolean mockEnabled;
+
+    @Autowired
+    private AIService aiService;
 
     public CompanyQueryResponse queryCompany(CompanyQueryRequest request) {
         log.info("企业查询请求: companyName={}", request.getCompanyName());
@@ -74,9 +79,120 @@ public class CompanyService {
     }
 
     private CompanyQueryResponse realQueryCompany(CompanyQueryRequest request) {
-        log.info("调用第三方API查询企业信息...");
+        log.info("调用MiniMax AI查询企业信息...");
 
-        return mockQueryCompany(request);
+        String prompt = buildCompanyQueryPrompt(request);
+
+        try {
+            String aiResponse = aiService.chat(prompt);
+            return parseAIResponse(aiResponse, request);
+        } catch (IOException e) {
+            log.error("AI企业查询失败: {}", e.getMessage());
+            return mockQueryCompany(request);
+        }
+    }
+
+    private String buildCompanyQueryPrompt(CompanyQueryRequest request) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是一位专业的企业信息分析专家。请根据用户输入的企业名称，生成该企业的公开信息查询结果。\n\n");
+        sb.append("【查询企业】").append(request.getCompanyName()).append("\n\n");
+        sb.append("请生成以下信息（基于公开信息和合理推断）：\n\n");
+
+        sb.append("1. 企业基本信息：\n");
+        sb.append("   - 统一社会信用代码（18位标准格式）\n");
+        sb.append("   - 法定代表人\n");
+        sb.append("   - 注册资本\n");
+        sb.append("   - 经营状态（存续/吊销/注销等）\n");
+        sb.append("   - 登记机关\n");
+        sb.append("   - 成立日期\n\n");
+
+        sb.append("2. 股东信息（列出主要股东及持股比例）\n\n");
+
+        if (Boolean.TRUE.equals(request.getEnableRiskWarning())) {
+            sb.append("3. 风险提示（根据企业名称判断可能的风险）：\n");
+            sb.append("   - 经营异常信息\n");
+            sb.append("   - 法律诉讼情况\n");
+            sb.append("   - 被执行人信息\n");
+            sb.append("   - 风险等级评估\n\n");
+        }
+
+        sb.append("请直接输出JSON格式，不要有其他内容：\n");
+        sb.append("{\n");
+        sb.append("  \"companyName\": \"企业名称\",\n");
+        sb.append("  \"unifiedSocialCreditCode\": \"91110000XXXXXXXX\",\n");
+        sb.append("  \"legalRepresentative\": \"法定代表人姓名\",\n");
+        sb.append("  \"registeredCapital\": 1000,\n");
+        sb.append("  \"businessStatus\": \"存续\",\n");
+        sb.append("  \"registrationAuthority\": \"登记机关\",\n");
+        sb.append("  \"establishDate\": \"2020-01-15\",\n");
+        sb.append("  \"shareholders\": [\n");
+        sb.append("    {\"name\": \"股东1\", \"capitalContribution\": \"500万元\", \"ratio\": \"50%\", \"type\": \"自然人股东\"}\n");
+        sb.append("  ],\n");
+        sb.append("  \"riskWarnings\": [\n");
+        sb.append("    {\"level\": \"LOW\", \"type\": \"类型\", \"description\": \"描述\", \"date\": \"2024-01-01\", \"count\": 1}\n");
+        sb.append("  ],\n");
+        sb.append("  \"riskLevel\": \"LOW\",\n");
+        sb.append("  \"dataSource\": \"AI分析生成\"\n");
+        sb.append("}\n\n");
+        sb.append("注意：只输出JSON，不要有其他解释性文字。");
+
+        return sb.toString();
+    }
+
+    private CompanyQueryResponse parseAIResponse(String aiResponse, CompanyQueryRequest request) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(aiResponse);
+
+            CompanyQueryResponse response = new CompanyQueryResponse();
+            response.setCompanyName(node.has("companyName") ? node.get("companyName").asText() : request.getCompanyName());
+            response.setUnifiedSocialCreditCode(node.has("unifiedSocialCreditCode") ? node.get("unifiedSocialCreditCode").asText() : "91110000XXXXXXXX");
+            response.setLegalRepresentative(node.has("legalRepresentative") ? node.get("legalRepresentative").asText() : "未知");
+            response.setRegisteredCapital(node.has("registeredCapital") ? new BigDecimal(node.get("registeredCapital").asText()) : new BigDecimal("0"));
+            response.setBusinessStatus(node.has("businessStatus") ? node.get("businessStatus").asText() : "存续");
+            response.setRegistrationAuthority(node.has("registrationAuthority") ? node.get("registrationAuthority").asText() : "未知");
+            response.setEstablishDate(node.has("establishDate") ? node.get("establishDate").asText() : "2020-01-01");
+            response.setDataSource(node.has("dataSource") ? node.get("dataSource").asText() : "AI分析生成");
+
+            java.util.List<CompanyQueryResponse.ShareholderInfo> shareholders = new java.util.ArrayList<>();
+            if (node.has("shareholders")) {
+                for (com.fasterxml.jackson.databind.JsonNode sh : node.get("shareholders")) {
+                    CompanyQueryResponse.ShareholderInfo info = new CompanyQueryResponse.ShareholderInfo();
+                    info.setName(sh.has("name") ? sh.get("name").asText() : "未知");
+                    info.setCapitalContribution(sh.has("capitalContribution") ? sh.get("capitalContribution").asText() : "0万元");
+                    info.setRatio(sh.has("ratio") ? sh.get("ratio").asText() : "0%");
+                    info.setType(sh.has("type") ? sh.get("type").asText() : "未知");
+                    shareholders.add(info);
+                }
+            }
+            response.setShareholders(shareholders);
+
+            if (Boolean.TRUE.equals(request.getEnableRiskWarning())) {
+                java.util.List<CompanyQueryResponse.RiskWarning> warnings = new java.util.ArrayList<>();
+                if (node.has("riskWarnings")) {
+                    for (com.fasterxml.jackson.databind.JsonNode w : node.get("riskWarnings")) {
+                        CompanyQueryResponse.RiskWarning warning = new CompanyQueryResponse.RiskWarning();
+                        warning.setLevel(w.has("level") ? w.get("level").asText() : "LOW");
+                        warning.setType(w.has("type") ? w.get("type").asText() : "其他");
+                        warning.setDescription(w.has("description") ? w.get("description").asText() : "");
+                        warning.setDate(w.has("date") ? w.get("date").asText() : "");
+                        warning.setCount(w.has("count") ? w.get("count").asInt() : 0);
+                        warnings.add(warning);
+                    }
+                }
+                response.setRiskWarnings(warnings);
+                response.setRiskLevel(node.has("riskLevel") ? node.get("riskLevel").asText() : "LOW");
+            } else {
+                response.setRiskWarnings(new java.util.ArrayList<>());
+                response.setRiskLevel("NONE");
+            }
+
+            return response;
+
+        } catch (Exception e) {
+            log.error("解析AI企业查询响应失败: {}", e.getMessage());
+            return mockQueryCompany(request);
+        }
     }
 
     private CompanyQueryResponse.ShareholderInfo createShareholder(String name, String capital, String ratio, String type) {

@@ -214,11 +214,15 @@ public class KnowledgeBaseService {
     }
 
     public List<LegalSearchResponse.SearchResultItem> searchInKnowledgeBase(Long kbId, String query, int topK) {
-        log.info("知识库内搜索: kbId={}, query={}", kbId, query);
+        log.info("知识库内搜索: kbId={}, query={}, topK={}", kbId, query, topK);
 
         List<DocumentChunk> chunks = chunkStore.get(kbId);
         if (chunks == null || chunks.isEmpty()) {
             return Collections.emptyList();
+        }
+
+        if (!mockEnabled && chunks.stream().anyMatch(c -> c.getVector() != null)) {
+            return semanticSearch(chunks, query, topK);
         }
 
         return textSearchChunks(chunks, query, topK);

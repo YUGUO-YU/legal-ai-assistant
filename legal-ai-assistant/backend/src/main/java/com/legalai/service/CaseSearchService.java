@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,6 +24,9 @@ public class CaseSearchService {
 
     @Autowired
     private ElasticsearchConfig esConfig;
+
+    @Autowired
+    private AIService aiService;
 
     public CaseSearchResponse searchCases(CaseSearchRequest request) {
         log.info("案例查询请求: keyword={}, caseType={}, courtLevel={}",
@@ -73,14 +77,25 @@ public class CaseSearchService {
     private CaseSearchResponse esSearchCases(CaseSearchRequest request) {
         long startTime = System.currentTimeMillis();
 
+        if (!esConfig.isEnabled() || !elasticsearchService.isAvailable()) {
+            log.info("ES不可用，使用AI生成案例检索结果");
+            return aiGenerateCases(request, startTime);
+        }
+
         Map<String, Object> filters = buildFilters(request);
 
-        List<LegalSearchResponse.SearchResultItem> esResults = elasticsearchService.searchByES(
-            request.getKeyword(),
-            request.getPage(),
-            request.getPageSize(),
-            filters
-        );
+        List<LegalSearchResponse.SearchResultItem> esResults;
+        try {
+            esResults = elasticsearchService.searchByES(
+                request.getKeyword(),
+                request.getPage(),
+                request.getPageSize(),
+                filters
+            );
+        } catch (Exception e) {
+            log.warn("ES检索失败: {}，使用AI生成", e.getMessage());
+            return aiGenerateCases(request, startTime);
+        }
 
         List<CaseSearchResponse.CaseSearchItem> items = esResults.stream()
             .map(this::convertToCaseSearchItem)
@@ -92,6 +107,115 @@ public class CaseSearchService {
         response.setPageSize(request.getPageSize());
         response.setTookMs(System.currentTimeMillis() - startTime);
         response.setItems(items);
+
+        return response;
+    }
+
+    private CaseSearchResponse aiGenerateCases(CaseSearchRequest request, long startTime) {
+        log.info("使用AI生成案例检索结果: keyword={}", request.getKeyword());
+
+        String prompt = buildCaseSearchPrompt(request);
+
+        try {
+            String aiResponse = aiService.chat(prompt);
+            return parseAIResponse(aiResponse, request, startTime);
+        } catch (IOException e) {
+            log.error("AI生成案例失败: {}", e.getMessage());
+            return mockSearchCases(request);
+        }
+    }
+
+    private String buildCaseSearchPrompt(CaseSearchRequest request) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是一位专业的法律案例检索专家。请根据用户的关键词检索相关司法案例。\n\n");
+        sb.append("【检索关键词】").append(request.getKeyword() != null ? request.getKeyword() : "").append("\n\n");
+
+        if (request.getCaseType() != null) {
+            sb.append("【案件类型】").append(getCaseTypeName(request.getCaseType())).append("\n\n");
+        }
+        if (request.getCourtLevel() != null) {
+            sb.append("【法院层级】").append(getCourtLevelName(request.getCourtLevel())).append("\n\n");
+        }
+
+        sb.append("请返回最相关的10个案例，采用JSON数组格式：\n\n");
+        sb.append("[\n");
+        sb.append("  {\n");
+        sb.append("    \"caseUuid\": \"CASE-2023-001\",\n");
+        sb.append("    \"caseNo\": \"(2023)沪01民终1234号\",\n");
+        sb.append("    \"title\": \"某公司与某劳动者合同纠纷案\",\n");
+        sb.append("    \"court\": \"上海市第一中级人民法院\",\n");
+        sb.append("    \"caseType\": \"民事\",\n");
+        sb.append("    \"caseCause\": \"合同纠纷\",\n");
+        sb.append("    \"judgeDate\": \"2023-08-15\",\n");
+        sb.append("    \"trialProcedure\": \"二审\",\n");
+        sb.append("    \"judgmentResult\": 2,\n");
+        sb.append("    \"litigationAmount\": 180000,\n");
+        sb.append("    \"summary\": \"法院认定被告构成违约，判决支持原告诉讼请求。\",\n");
+        sb.append("    \"sourceUrl\": \"https://wenshu.court.gov.cn/\",\n");
+        sb.append("    \"sourceName\": \"中国裁判文书网\"\n");
+        sb.append("  }\n");
+        sb.append("]\n\n");
+        sb.append("judgmentResult说明：1=全部支持，2=部分支持，3=驳回，4=调解，5=撤诉。\n");
+        sb.append("只返回JSON数组，不要有其他解释性文字。");
+
+        return sb.toString();
+    }
+
+    private String getCourtLevelName(Integer level) {
+        if (level == null) return "全部";
+        return switch (level) {
+            case 1 -> "基层法院";
+            case 2 -> "中级人民法院";
+            case 3 -> "高级人民法院";
+            case 4 -> "最高人民法院";
+            default -> "全部";
+        };
+    }
+
+    private CaseSearchResponse parseAIResponse(String aiResponse, CaseSearchRequest request, long startTime) {
+        java.util.List<CaseSearchResponse.CaseSearchItem> items = new java.util.ArrayList<>();
+
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(aiResponse);
+
+            if (node.isArray()) {
+                for (com.fasterxml.jackson.databind.JsonNode item : node) {
+                    CaseSearchResponse.CaseSearchItem caseItem = new CaseSearchResponse.CaseSearchItem();
+                    caseItem.setCaseUuid(item.has("caseUuid") ? item.get("caseUuid").asText() : "AI-" + System.currentTimeMillis());
+                    caseItem.setCaseNo(item.has("caseNo") ? item.get("caseNo").asText() : "");
+                    caseItem.setTitle(item.has("title") ? item.get("title").asText() : "");
+                    caseItem.setCourt(item.has("court") ? item.get("court").asText() : "");
+                    caseItem.setCaseType(item.has("caseType") ? item.get("caseType").asText() : "民事");
+                    caseItem.setCaseCause(item.has("caseCause") ? item.get("caseCause").asText() : "");
+                    caseItem.setJudgeDate(item.has("judgeDate") ? item.get("judgeDate").asText() : "");
+                    caseItem.setTrialProcedure(item.has("trialProcedure") ? item.get("trialProcedure").asText() : "");
+                    caseItem.setJudgmentResult(item.has("judgmentResult") ? item.get("judgmentResult").asInt() : 1);
+                    caseItem.setLitigationAmount(item.has("litigationAmount") ? item.get("litigationAmount").asLong() : 0L);
+                    caseItem.setSummary(item.has("summary") ? item.get("summary").asText() : "");
+                    caseItem.setSourceUrl(item.has("sourceUrl") ? item.get("sourceUrl").asText() : "https://wenshu.court.gov.cn/");
+                    caseItem.setSourceName(item.has("sourceName") ? item.get("sourceName").asText() : "中国裁判文书网");
+                    items.add(caseItem);
+                }
+            }
+        } catch (Exception e) {
+            log.error("解析AI案例响应失败: {}", e.getMessage());
+        }
+
+        if (items.isEmpty()) {
+            return mockSearchCases(request);
+        }
+
+        int from = (request.getPage() - 1) * request.getPageSize();
+        int to = Math.min(from + request.getPageSize(), items.size());
+        List<CaseSearchResponse.CaseSearchItem> pagedItems = from < items.size() ? items.subList(from, to) : java.util.Collections.emptyList();
+
+        CaseSearchResponse response = new CaseSearchResponse();
+        response.setTotal((long) items.size());
+        response.setPage(request.getPage());
+        response.setPageSize(request.getPageSize());
+        response.setTookMs(System.currentTimeMillis() - startTime);
+        response.setItems(pagedItems);
 
         return response;
     }

@@ -153,17 +153,95 @@ public class LegalSearchService {
         } else if (!milvusResults.isEmpty()) {
             fusedResults = milvusResults;
         } else {
-            log.warn("所有检索引擎均不可用，降级到Mock");
-            fusedResults = mockSearch(request).getItems();
+            log.warn("所有检索引擎均不可用，使用AI生成检索结果");
+            fusedResults = aiGenerateSearchResults(request, topK);
         }
 
         return buildResponse(request, fusedResults, startTime);
     }
 
+    private List<LegalSearchResponse.SearchResultItem> aiGenerateSearchResults(LegalSearchRequest request, int topK) {
+        log.info("使用AI生成法律检索结果: query={}", request.getQuery());
+
+        String prompt = buildSearchPrompt(request, topK);
+
+        try {
+            String aiResponse = aiService.chat(prompt);
+            return parseAISearchResponse(aiResponse, request);
+        } catch (Exception e) {
+            log.error("AI生成检索结果失败: {}", e.getMessage());
+            return mockSearch(request).getItems();
+        }
+    }
+
+    private String buildSearchPrompt(LegalSearchRequest request, int topK) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是一位专业的中国法律法规检索专家。请根据用户的法律问题，检索并返回相关的法律法规条文。\n\n");
+        sb.append("【用户问题】").append(request.getQuery()).append("\n\n");
+        sb.append("请检索以下相关法律条文，返回最相关的").append(topK > 10 ? 10 : topK).append("条结果：\n\n");
+
+        sb.append("返回格式要求（严格JSON数组格式）：\n");
+        sb.append("[\n");
+        sb.append("  {\n");
+        sb.append("    \"articleId\": \"ART-001\",\n");
+        sb.append("    \"lawTitle\": \"中华人民共和国民法典\",\n");
+        sb.append("    \"articleNo\": \"第一百四十八条\",\n");
+        sb.append("    \"title\": \"欺诈的认定\",\n");
+        sb.append("    \"content\": \"法条完整内容...\",\n");
+        sb.append("    \"categoryL1\": \"法律\",\n");
+        sb.append("    \"categoryL2\": \"民法\",\n");
+        sb.append("    \"sourceUrl\": \"https://flk.npc.gov.cn/\",\n");
+        sb.append("    \"sourceName\": \"国家法律法规信息库\",\n");
+        sb.append("    \"score\": 0.95\n");
+        sb.append("  }\n");
+        sb.append("]\n\n");
+        sb.append("只返回JSON数组，不要有其他解释性文字。确保content字段包含法条的完整内容。");
+
+        return sb.toString();
+    }
+
+    private List<LegalSearchResponse.SearchResultItem> parseAISearchResponse(String aiResponse, LegalSearchRequest request) {
+        java.util.List<LegalSearchResponse.SearchResultItem> items = new java.util.ArrayList<>();
+
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(aiResponse);
+
+            if (node.isArray()) {
+                for (com.fasterxml.jackson.databind.JsonNode item : node) {
+                    LegalSearchResponse.SearchResultItem result = new LegalSearchResponse.SearchResultItem();
+                    result.setArticleId(item.has("articleId") ? item.get("articleId").asText() : "AI-" + System.currentTimeMillis());
+                    result.setLawId("LAW-AI-001");
+                    result.setLawTitle(item.has("lawTitle") ? item.get("lawTitle").asText() : "");
+                    result.setArticleNo(item.has("articleNo") ? item.get("articleNo").asText() : "");
+                    result.setTitle(item.has("title") ? item.get("title").asText() : "");
+                    result.setContent(item.has("content") ? item.get("content").asText() : "");
+                    result.setCategoryL1(item.has("categoryL1") ? item.get("categoryL1").asText() : "法律");
+                    result.setCategoryL2(item.has("categoryL2") ? item.get("categoryL2").asText() : "民法");
+                    result.setSourceUrl(item.has("sourceUrl") ? item.get("sourceUrl").asText() : "https://flk.npc.gov.cn/");
+                    result.setSourceName(item.has("sourceName") ? item.get("sourceName").asText() : "国家法律法规信息库");
+                    result.setScore(item.has("score") ? item.get("score").asDouble() : 0.85);
+                    result.setHighlights(java.util.List.of("<em>" + (request.getQuery() != null ? request.getQuery() : "法律") + "</em>"));
+
+                    items.add(result);
+                }
+            }
+        } catch (Exception e) {
+            log.error("解析AI检索响应失败: {}", e.getMessage());
+        }
+
+        if (items.isEmpty()) {
+            items = mockSearch(request).getItems();
+        }
+
+        return items;
+    }
+
     private LegalSearchResponse fallbackToESOnly(LegalSearchRequest request,
             List<LegalSearchResponse.SearchResultItem> esResults, long startTime) {
         if (esResults.isEmpty()) {
-            esResults = mockSearch(request).getItems();
+            log.info("ES结果为空，使用AI生成检索结果");
+            esResults = aiGenerateSearchResults(request, request.getPageSize() * 5);
         }
         return buildResponse(request, esResults, startTime);
     }

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -81,7 +82,8 @@ public class CaseService {
         }
 
         if (milvusResults.isEmpty()) {
-            milvusResults = mockSearch(request).getItems();
+            log.info("Milvus结果为空，使用AI生成类案检索结果");
+            milvusResults = aiGenerateSimilarCases(request);
         }
 
         List<CaseSimilarSearchResponse.SimilarCaseItem> rerankedResults = rerankResults(
@@ -99,6 +101,117 @@ public class CaseService {
         response.setStatistics(statistics);
 
         return response;
+    }
+
+    private List<CaseSimilarSearchResponse.SimilarCaseItem> aiGenerateSimilarCases(CaseSimilarSearchRequest request) {
+        log.info("使用AI生成类案检索结果: caseType={}", request.getCaseType());
+
+        String prompt = buildSimilarCasePrompt(request);
+
+        try {
+            String aiResponse = aiService.chat(prompt);
+            return parseAIResponse(aiResponse, request);
+        } catch (IOException e) {
+            log.error("AI生成类案失败: {}", e.getMessage());
+            return mockSearch(request).getItems();
+        }
+    }
+
+    private String buildSimilarCasePrompt(CaseSimilarSearchRequest request) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是一位专业的法律案例分析专家。请根据用户提供的案件描述，检索相似的司法案例。\n\n");
+        sb.append("【案件描述】\n").append(request.getCaseDescription()).append("\n\n");
+
+        if (request.getCaseType() != null) {
+            sb.append("【案件类型】").append(request.getCaseType()).append("\n\n");
+        }
+
+        sb.append("请返回与上述案件最相似的5个案例，采用JSON数组格式：\n\n");
+        sb.append("[\n");
+        sb.append("  {\n");
+        sb.append("    \"caseId\": 12345,\n");
+        sb.append("    \"caseNo\": \"(2023)沪01民终4567号\",\n");
+        sb.append("    \"caseName\": \"某装饰装修合同纠纷案\",\n");
+        sb.append("    \"courtLevel\": 3,\n");
+        sb.append("    \"courtName\": \"上海市第一中级人民法院\",\n");
+        sb.append("    \"judgeDate\": \"2023-08-15\",\n");
+        sb.append("    \"judgmentResult\": 2,\n");
+        sb.append("    \"litigationAmount\": 180000,\n");
+        sb.append("    \"similarityScore\": 0.92,\n");
+        sb.append("    \"matchingFeatures\": {\n");
+        sb.append("      \"fact_similarity\": 0.95,\n");
+        sb.append("      \"claim_similarity\": 0.88,\n");
+        sb.append("      \"dispute_similarity\": 0.90\n");
+        sb.append("    },\n");
+        sb.append("    \"keyFacts\": \"案件关键事实描述...\",\n");
+        sb.append("    \"judgmentSummary\": \"法院认定被告构成违约，判决解除合同，退还已付款项并支付违约金。\",\n");
+        sb.append("    \"legalBasis\": [\"《民法典》第577条\", \"《建设工程施工合同司法解释》第12条\"],\n");
+        sb.append("    \"sourceUrl\": \"https://wenshu.court.gov.cn/\",\n");
+        sb.append("    \"sourceName\": \"中国裁判文书网\"\n");
+        sb.append("  }\n");
+        sb.append("]\n\n");
+        sb.append("courtLevel说明：1=基层法院，2=中级人民法院，3=高级人民法院，4=最高人民法院。\n");
+        sb.append("judgmentResult说明：1=全部支持，2=部分支持，3=驳回。\n");
+        sb.append("similarityScore范围：0-1，越接近1相似度越高。\n");
+        sb.append("只返回JSON数组，不要有其他解释性文字。");
+
+        return sb.toString();
+    }
+
+    private List<CaseSimilarSearchResponse.SimilarCaseItem> parseAIResponse(String aiResponse, CaseSimilarSearchRequest request) {
+        java.util.List<CaseSimilarSearchResponse.SimilarCaseItem> items = new java.util.ArrayList<>();
+
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(aiResponse);
+
+            if (node.isArray()) {
+                for (com.fasterxml.jackson.databind.JsonNode item : node) {
+                    CaseSimilarSearchResponse.SimilarCaseItem caseItem = new CaseSimilarSearchResponse.SimilarCaseItem();
+                    caseItem.setCaseId(item.has("caseId") ? item.get("caseId").asLong() : System.currentTimeMillis());
+                    caseItem.setCaseNo(item.has("caseNo") ? item.get("caseNo").asText() : "");
+                    caseItem.setCaseName(item.has("caseName") ? item.get("caseName").asText() : "");
+                    caseItem.setCourtLevel(item.has("courtLevel") ? item.get("courtLevel").asInt() : 3);
+                    caseItem.setCourtName(item.has("courtName") ? item.get("courtName").asText() : "");
+                    caseItem.setJudgeDate(item.has("judgeDate") ? item.get("judgeDate").asText() : "");
+                    caseItem.setJudgmentResult(item.has("judgmentResult") ? item.get("judgmentResult").asInt() : 2);
+                    caseItem.setLitigationAmount(item.has("litigationAmount") ? new BigDecimal(item.get("litigationAmount").asText()) : BigDecimal.ZERO);
+                    caseItem.setSimilarityScore(item.has("similarityScore") ? item.get("similarityScore").asDouble() : 0.85);
+
+                    java.util.Map<String, Double> features = new java.util.HashMap<>();
+                    if (item.has("matchingFeatures")) {
+                        com.fasterxml.jackson.databind.JsonNode mf = item.get("matchingFeatures");
+                        features.put("fact_similarity", mf.has("fact_similarity") ? mf.get("fact_similarity").asDouble() : 0.8);
+                        features.put("claim_similarity", mf.has("claim_similarity") ? mf.get("claim_similarity").asDouble() : 0.8);
+                        features.put("dispute_similarity", mf.has("dispute_similarity") ? mf.get("dispute_similarity").asDouble() : 0.8);
+                    }
+                    caseItem.setMatchingFeatures(features);
+
+                    caseItem.setKeyFacts(item.has("keyFacts") ? item.get("keyFacts").asText() : "");
+                    caseItem.setJudgmentSummary(item.has("judgmentSummary") ? item.get("judgmentSummary").asText() : "");
+                    caseItem.setSourceUrl(item.has("sourceUrl") ? item.get("sourceUrl").asText() : "https://wenshu.court.gov.cn/");
+                    caseItem.setSourceName(item.has("sourceName") ? item.get("sourceName").asText() : "中国裁判文书网");
+
+                    if (item.has("legalBasis") && item.get("legalBasis").isArray()) {
+                        java.util.List<String> basis = new java.util.ArrayList<>();
+                        for (com.fasterxml.jackson.databind.JsonNode b : item.get("legalBasis")) {
+                            basis.add(b.asText());
+                        }
+                        caseItem.setLegalBasis(basis);
+                    }
+
+                    items.add(caseItem);
+                }
+            }
+        } catch (Exception e) {
+            log.error("解析AI类案响应失败: {}", e.getMessage());
+        }
+
+        if (items.isEmpty()) {
+            items = mockSearch(request).getItems();
+        }
+
+        return items;
     }
 
     private Map<String, String> extractCaseElements(String description) {

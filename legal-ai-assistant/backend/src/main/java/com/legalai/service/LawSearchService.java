@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,6 +24,9 @@ public class LawSearchService {
 
     @Autowired
     private ElasticsearchConfig esConfig;
+
+    @Autowired
+    private AIService aiService;
 
     private static final List<Map<String, String>> CATEGORIES_L1 = List.of(
         Map.of("code", "法律", "name", "法律"),
@@ -81,6 +85,11 @@ public class LawSearchService {
     private LawSearchResponse esSearchLaws(LawSearchRequest request) {
         long startTime = System.currentTimeMillis();
 
+        if (!esConfig.isEnabled() || !elasticsearchService.isAvailable()) {
+            log.info("ES不可用，使用AI生成法规检索结果");
+            return aiGenerateLaws(request, startTime);
+        }
+
         Map<String, Object> filters = new HashMap<>();
         if (request.getCategoryL1() != null) {
             filters.put("category_l1", request.getCategoryL1());
@@ -89,12 +98,18 @@ public class LawSearchService {
             filters.put("status", request.getStatus());
         }
 
-        List<LegalSearchResponse.SearchResultItem> esResults = elasticsearchService.searchByES(
-            request.getKeyword(),
-            request.getPage(),
-            request.getPageSize(),
-            filters
-        );
+        List<LegalSearchResponse.SearchResultItem> esResults;
+        try {
+            esResults = elasticsearchService.searchByES(
+                request.getKeyword(),
+                request.getPage(),
+                request.getPageSize(),
+                filters
+            );
+        } catch (Exception e) {
+            log.warn("ES检索失败: {}，使用AI生成", e.getMessage());
+            return aiGenerateLaws(request, startTime);
+        }
 
         List<LawSearchResponse.LawSearchItem> items = esResults.stream()
             .map(this::convertToLawSearchItem)
@@ -106,6 +121,117 @@ public class LawSearchService {
         response.setPageSize(request.getPageSize());
         response.setTookMs(System.currentTimeMillis() - startTime);
         response.setItems(items);
+
+        return response;
+    }
+
+    private LawSearchResponse aiGenerateLaws(LawSearchRequest request, long startTime) {
+        log.info("使用AI生成法规检索结果: keyword={}", request.getKeyword());
+
+        String prompt = buildLawSearchPrompt(request);
+
+        try {
+            String aiResponse = aiService.chat(prompt);
+            return parseAIResponse(aiResponse, request, startTime);
+        } catch (IOException e) {
+            log.error("AI生成法规失败: {}", e.getMessage());
+            return mockSearchLaws(request);
+        }
+    }
+
+    private String buildLawSearchPrompt(LawSearchRequest request) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是一位专业的中国法律法规检索专家。请根据用户的关键词检索相关法规。\n\n");
+        sb.append("【检索关键词】").append(request.getKeyword() != null ? request.getKeyword() : "").append("\n\n");
+
+        if (request.getCategoryL1() != null) {
+            sb.append("【法规类别】").append(request.getCategoryL1()).append("\n\n");
+        }
+        if (request.getStatus() != null) {
+            sb.append("【法规状态】").append(getStatusName(request.getStatus())).append("\n\n");
+        }
+
+        sb.append("请返回最相关的法规，采用JSON数组格式：\n\n");
+        sb.append("[\n");
+        sb.append("  {\n");
+        sb.append("    \"lawUuid\": \"LAW-2023-001\",\n");
+        sb.append("    \"title\": \"中华人民共和国民法典\",\n");
+        sb.append("    \"shortTitle\": \"民法典\",\n");
+        sb.append("    \"categoryL1\": \"法律\",\n");
+        sb.append("    \"categoryL2\": \"民法\",\n");
+        sb.append("    \"issuingAuthority\": \"全国人民代表大会\",\n");
+        sb.append("    \"issueDate\": \"2020-05-28\",\n");
+        sb.append("    \"effectiveDate\": \"2021-01-01\",\n");
+        sb.append("    \"status\": 1,\n");
+        sb.append("    \"articleCount\": 1260,\n");
+        sb.append("    \"viewCount\": 156789,\n");
+        sb.append("    \"sourceUrl\": \"https://flk.npc.gov.cn/\",\n");
+        sb.append("    \"sourceName\": \"国家法律法规信息库\"\n");
+        sb.append("  }\n");
+        sb.append("]\n\n");
+        sb.append("status说明：1=现行有效，2=已废止，3=修订中，4=尚未生效，5=部分失效。\n");
+        sb.append("只返回JSON数组，不要有其他解释性文字。");
+
+        return sb.toString();
+    }
+
+    private String getStatusName(Integer status) {
+        if (status == null) return "全部";
+        return switch (status) {
+            case 1 -> "现行有效";
+            case 2 -> "已废止";
+            case 3 -> "修订中";
+            case 4 -> "尚未生效";
+            case 5 -> "部分失效";
+            default -> "全部";
+        };
+    }
+
+    private LawSearchResponse parseAIResponse(String aiResponse, LawSearchRequest request, long startTime) {
+        java.util.List<LawSearchResponse.LawSearchItem> items = new java.util.ArrayList<>();
+
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(aiResponse);
+
+            if (node.isArray()) {
+                for (com.fasterxml.jackson.databind.JsonNode item : node) {
+                    LawSearchResponse.LawSearchItem lawItem = new LawSearchResponse.LawSearchItem();
+                    lawItem.setLawUuid(item.has("lawUuid") ? item.get("lawUuid").asText() : "AI-" + System.currentTimeMillis());
+                    lawItem.setTitle(item.has("title") ? item.get("title").asText() : "");
+                    lawItem.setShortTitle(item.has("shortTitle") ? item.get("shortTitle").asText() : lawItem.getTitle());
+                    lawItem.setCategoryL1(item.has("categoryL1") ? item.get("categoryL1").asText() : "法律");
+                    lawItem.setCategoryL2(item.has("categoryL2") ? item.get("categoryL2").asText() : "民法");
+                    lawItem.setIssuingAuthority(item.has("issuingAuthority") ? item.get("issuingAuthority").asText() : "");
+                    lawItem.setIssueDate(item.has("issueDate") ? item.get("issueDate").asText() : "");
+                    lawItem.setEffectiveDate(item.has("effectiveDate") ? item.get("effectiveDate").asText() : "");
+                    lawItem.setStatus(item.has("status") ? item.get("status").asInt() : 1);
+                    lawItem.setStatusName(getStatusName(item.has("status") ? item.get("status").asInt() : 1));
+                    lawItem.setArticleCount(item.has("articleCount") ? item.get("articleCount").asInt() : 0);
+                    lawItem.setViewCount(item.has("viewCount") ? item.get("viewCount").asInt() : 0);
+                    lawItem.setSourceUrl(item.has("sourceUrl") ? item.get("sourceUrl").asText() : "https://flk.npc.gov.cn/");
+                    lawItem.setSourceName(item.has("sourceName") ? item.get("sourceName").asText() : "国家法律法规信息库");
+                    items.add(lawItem);
+                }
+            }
+        } catch (Exception e) {
+            log.error("解析AI法规响应失败: {}", e.getMessage());
+        }
+
+        if (items.isEmpty()) {
+            return mockSearchLaws(request);
+        }
+
+        int from = (request.getPage() - 1) * request.getPageSize();
+        int to = Math.min(from + request.getPageSize(), items.size());
+        List<LawSearchResponse.LawSearchItem> pagedItems = from < items.size() ? items.subList(from, to) : java.util.Collections.emptyList();
+
+        LawSearchResponse response = new LawSearchResponse();
+        response.setTotal((long) items.size());
+        response.setPage(request.getPage());
+        response.setPageSize(request.getPageSize());
+        response.setTookMs(System.currentTimeMillis() - startTime);
+        response.setItems(pagedItems);
 
         return response;
     }
