@@ -32,10 +32,34 @@ public class DocumentDraftRequest {
 
         private BigDecimal claimAmount;
         private String claimDescription;
-        private List<String> facts;
-        private List<String> evidence;
+        private Object facts;
+        private Object evidence;
         private String courtName;
         private String caseCause;
+
+        @SuppressWarnings("unchecked")
+        public List<String> getFacts() {
+            if (facts == null) return null;
+            if (facts instanceof List) return (List<String>) facts;
+            if (facts instanceof String) {
+                return List.of(((String) facts).split("\n"));
+            }
+            return null;
+        }
+
+        public void setFacts(Object facts) { this.facts = facts; }
+
+        @SuppressWarnings("unchecked")
+        public List<String> getEvidence() {
+            if (evidence == null) return null;
+            if (evidence instanceof List) return (List<String>) evidence;
+            if (evidence instanceof String) {
+                return List.of(((String) evidence).split("\n"));
+            }
+            return null;
+        }
+
+        public void setEvidence(Object evidence) { this.evidence = evidence; }
 
         public String getPlaintiffName() { return plaintiffName; }
         public void setPlaintiffName(String plaintiffName) { this.plaintiffName = plaintiffName; }
@@ -59,10 +83,6 @@ public class DocumentDraftRequest {
         public void setClaimAmount(BigDecimal claimAmount) { this.claimAmount = claimAmount; }
         public String getClaimDescription() { return claimDescription; }
         public void setClaimDescription(String claimDescription) { this.claimDescription = claimDescription; }
-        public List<String> getFacts() { return facts; }
-        public void setFacts(List<String> facts) { this.facts = facts; }
-        public List<String> getEvidence() { return evidence; }
-        public void setEvidence(List<String> evidence) { this.evidence = evidence; }
         public String getCourtName() { return courtName; }
         public void setCourtName(String courtName) { this.courtName = courtName; }
         public String getCaseCause() { return caseCause; }
