@@ -54,32 +54,7 @@ public class AIService {
             "stream", false
         );
 
-        String json = objectMapper.writeValueAsString(requestBody);
-
-        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
-
-        Request request = new Request.Builder()
-                .url(openClawUrl + "/v1/chat/completions")
-                .addHeader("Authorization", "Bearer " + openClawToken)
-                .addHeader("Content-Type", "application/json")
-                .post(body)
-                .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                String errorBody = response.body() != null ? response.body().string() : "no body";
-                log.error("OpenClaw API调用失败: code={}, message={}, body={}", response.code(), response.message(), errorBody);
-                throw new IOException("API调用失败: " + response.code());
-            }
-
-            String responseBody = response.body().string();
-            log.info("OpenClaw API响应长度: {}", responseBody.length());
-
-            return parseResponse(responseBody);
-        } catch (Exception e) {
-            log.error("OpenClaw API异常: {}", e.getMessage(), e);
-            throw new IOException("API调用异常: " + e.getMessage(), e);
-        }
+        return executeChatRequest(requestBody);
     }
 
     public String chatWithMessages(List<Map<String, String>> messages) throws IOException {
@@ -91,32 +66,7 @@ public class AIService {
             "stream", false
         );
 
-        String json = objectMapper.writeValueAsString(requestBody);
-
-        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
-
-        Request request = new Request.Builder()
-                .url(openClawUrl + "/v1/chat/completions")
-                .addHeader("Authorization", "Bearer " + openClawToken)
-                .addHeader("Content-Type", "application/json")
-                .post(body)
-                .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                String errorBody = response.body() != null ? response.body().string() : "no body";
-                log.error("OpenClaw API调用失败: code={}, message={}, body={}", response.code(), response.message(), errorBody);
-                throw new IOException("API调用失败: " + response.code());
-            }
-
-            String responseBody = response.body().string();
-            log.info("OpenClaw API响应长度: {}", responseBody.length());
-
-            return parseResponse(responseBody);
-        } catch (Exception e) {
-            log.error("OpenClaw API异常: {}", e.getMessage(), e);
-            throw new IOException("API调用异常: " + e.getMessage(), e);
-        }
+        return executeChatRequest(requestBody);
     }
 
     public String chatStream(String prompt, java.util.function.Consumer<String> onChunk, java.util.function.Supplier<Boolean> isCancelled) throws IOException {
@@ -129,7 +79,6 @@ public class AIService {
         );
 
         String json = objectMapper.writeValueAsString(requestBody);
-
         RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
@@ -184,6 +133,36 @@ public class AIService {
         } catch (Exception e) {
             log.error("OpenClaw流式API异常: {}", e.getMessage(), e);
             throw new IOException("流式API异常: " + e.getMessage(), e);
+        }
+    }
+
+    private String executeChatRequest(Map<String, Object> requestBody) throws IOException {
+        String json = objectMapper.writeValueAsString(requestBody);
+        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+                .url(openClawUrl + "/v1/chat/completions")
+                .addHeader("Authorization", "Bearer " + openClawToken)
+                .addHeader("Content-Type", "application/json")
+                .post(body)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String errorBody = response.body() != null ? response.body().string() : "no body";
+                log.error("OpenClaw API调用失败: code={}, message={}, body={}", response.code(), response.message(), errorBody);
+                throw new IOException("API调用失败: " + response.code());
+            }
+
+            String responseBody = response.body().string();
+            log.info("OpenClaw API响应长度: {}", responseBody.length());
+
+            return parseResponse(responseBody);
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("OpenClaw API异常: {}", e.getMessage(), e);
+            throw new IOException("API调用异常: " + e.getMessage(), e);
         }
     }
 
