@@ -2,8 +2,10 @@ package com.legalai.controller;
 
 import com.legalai.dto.ApiResponse;
 import com.legalai.dto.KnowledgeBaseListResponse;
+import com.legalai.service.DocumentParserService;
 import com.legalai.service.KnowledgeBaseService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -13,9 +15,11 @@ import java.util.Map;
 public class KnowledgeBaseController {
 
     private final KnowledgeBaseService knowledgeBaseService;
+    private final DocumentParserService documentParserService;
 
-    public KnowledgeBaseController(KnowledgeBaseService knowledgeBaseService) {
+    public KnowledgeBaseController(KnowledgeBaseService knowledgeBaseService, DocumentParserService documentParserService) {
         this.knowledgeBaseService = knowledgeBaseService;
+        this.documentParserService = documentParserService;
     }
 
     @GetMapping("/list")
@@ -61,5 +65,21 @@ public class KnowledgeBaseController {
 
         String result = knowledgeBaseService.uploadDocument(kbId, fileName, content);
         return ApiResponse.success(result);
+    }
+
+    @PostMapping("/upload/file")
+    public ApiResponse<String> uploadFile(
+            @RequestParam("kbId") Long kbId,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            String fileName = file.getOriginalFilename();
+            String content = documentParserService.parseDocument(file);
+            String result = knowledgeBaseService.uploadDocument(kbId, fileName, content);
+            return ApiResponse.success(result);
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.error(400, e.getMessage());
+        } catch (Exception e) {
+            return ApiResponse.error(500, "文件解析失败: " + e.getMessage());
+        }
     }
 }
