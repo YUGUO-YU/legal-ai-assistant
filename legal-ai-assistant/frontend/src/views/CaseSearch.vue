@@ -166,6 +166,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Search,
@@ -177,13 +178,13 @@ import {
   Calendar,
   Clock,
   Link,
-  View,
   CopyDocument
 } from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 
+const router = useRouter()
 const loading = ref(false)
 const results = ref([])
 const total = ref(0)
@@ -253,7 +254,7 @@ const getResultName = (result) => {
 }
 
 const viewDetail = (item) => {
-  ElMessage.info('案例详情页开发中...')
+  router.push(`/case-detail/${item.caseUuid}`)
 }
 
 const copyCaseNo = (caseNo) => {

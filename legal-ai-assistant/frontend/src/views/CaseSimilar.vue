@@ -95,6 +95,7 @@
           v-for="item in results"
           :key="item.caseId"
           class="case-card"
+          @click="viewDetail(item)"
         >
           <div class="case-header">
             <div class="case-info">
@@ -142,6 +143,13 @@
               {{ law }}
             </el-tag>
           </div>
+
+          <div class="case-footer">
+            <el-button type="primary" link @click.stop="viewDetail(item)">
+              <el-icon><View /></el-icon>
+              查看详情
+            </el-button>
+          </div>
         </el-card>
       </div>
     </div>
@@ -159,6 +167,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Edit,
@@ -167,12 +176,14 @@ import {
   Search,
   CircleCheck,
   Coin,
-  Collection
+  Collection,
+  View
 } from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 
+const router = useRouter()
 const caseDescription = ref('')
 const caseType = ref(null)
 const caseCause = ref('')
@@ -230,6 +241,10 @@ const getFeatureTagType = (score) => {
   if (score >= 0.8) return 'success'
   if (score >= 0.6) return 'warning'
   return 'info'
+}
+
+const viewDetail = (item) => {
+  router.push(`/case-detail/${item.caseId}`)
 }
 </script>
 
@@ -532,6 +547,21 @@ const getFeatureTagType = (score) => {
 
     .law-tag {
       border-radius: 6px;
+    }
+  }
+
+  .case-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid #f3f4f6;
+    margin-top: 16px;
+
+    :deep(.el-button) {
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
   }
 }

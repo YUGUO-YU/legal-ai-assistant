@@ -45,6 +45,11 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/case-detail/:caseUuid',
+    component: () => import('../views/CaseDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/law-search',
     component: () => import('../views/LawSearch.vue'),
     meta: { requiresAuth: true }
