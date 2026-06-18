@@ -164,8 +164,11 @@ public class OpenClawHealthCheck implements ApplicationRunner {
         }
 
         String os = System.getProperty("os.name").toLowerCase();
+        String cwd = System.getProperty("user.dir");
         String[] candidateDirs = os.contains("win")
                 ? new String[]{
+                    cwd + "\\openclaw",
+                    cwd + "\\..\\openclaw",
                     "C:\\openclaw\\bin",
                     "C:\\openclaw",
                     "C:\\Program Files\\openclaw\\bin",
@@ -173,6 +176,8 @@ public class OpenClawHealthCheck implements ApplicationRunner {
                     System.getProperty("user.home") + "\\.openclaw"
                 }
                 : new String[]{
+                    cwd + "/openclaw",
+                    cwd + "/../openclaw",
                     "/usr/local/bin",
                     "/usr/bin",
                     "/opt/openclaw/bin",

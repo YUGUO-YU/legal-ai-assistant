@@ -1,13 +1,14 @@
 # OpenClaw 配置说明
 
+> **部署位置**（Windows）：所有文件统一放到 `E:\legal-ai-assistant\legal-ai-assistant\openclaw` 下，不要再放到 `E:\openclaw`。详细操作见 `openclaw/README.md`。
+
 ## 安装信息
 - OpenClaw 版本: 2026.6.6
-- 安装路径: /usr/local/bin/openclaw
-- 配置目录: ~/.openclaw/
+- 二进制路径（Windows）: `E:\legal-ai-assistant\legal-ai-assistant\openclaw\openclaw.exe`
+- 配置文件（Windows）: `E:\legal-ai-assistant\legal-ai-assistant\openclaw\openclaw.json`
+- 启动日志（Spring Boot 重定向）: `E:\legal-ai-assistant\legal-ai-assistant\backend\logs\openclaw_stderr.log`
 
-## 配置文件
-- 配置文件: ~/.openclaw/openclaw.json
-- 日志文件: /tmp/openclaw/openclaw-*.log
+> Linux/macOS: 二进制 `/usr/local/bin/openclaw`，配置 `~/.openclaw/openclaw.json`，日志 `/tmp/openclaw_stderr.log`。
 
 ## MiniMax API 配置 (M3)
 ```json

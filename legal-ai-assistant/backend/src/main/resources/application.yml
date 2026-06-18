@@ -39,15 +39,16 @@ server:
   port: 3001
 
 # AI Configuration - OpenClaw Gateway
+# 所有 OpenClaw 相关文件统一存放在项目根目录 E:\legal-ai-assistant\legal-ai-assistant\openclaw
 ai:
   openclaw:
     url: http://localhost:19001
     token: my-secret-token
     auto-start: true
-    # 二进制可执行文件绝对路径（Windows: E:\openclaw\openclaw.exe / Linux: /usr/local/bin/openclaw）
-    binary-path: "E:\\openclaw\\openclaw.exe"
-    # 自定义配置文件路径
-    config-path: "E:\\legal-ai-assistant\\legal-ai-assistant\\.openclaw\\openclaw.json"
+    # 二进制可执行文件（必须放在项目 openclaw/ 目录下）
+    binary-path: "E:\\legal-ai-assistant\\legal-ai-assistant\\openclaw\\openclaw.exe"
+    # 自定义配置文件（项目 openclaw/openclaw.json）
+    config-path: "E:\\legal-ai-assistant\\legal-ai-assistant\\openclaw\\openclaw.json"
     # 网关启动参数
     gateway-args: gateway --allow-unconfigured
     # 启动日志输出文件
