@@ -432,8 +432,7 @@ const handleExtractInfo = async () => {
   extracting.value = true
   try {
     const res = await api.document.extractInfo(pasteText.value, selectedTemplate.value)
-    const ok = (res.code === 200 || res.code === 0)
-    if (ok && res.data) {
+    if (res.data) {
       const info = res.data
       if (info.plaintiffName) formData.plaintiffName = info.plaintiffName
       if (info.plaintiffAddress) formData.plaintiffAddress = info.plaintiffAddress
@@ -465,7 +464,12 @@ const handleExtractInfo = async () => {
         ElMessage.success(`已自动填充 ${totalFilled} 项信息（${source}），请检查并补全`)
         showPasteDialogVisible.value = false
       } else {
-        ElMessage.warning('未能从文本中识别到关键信息，请检查粘贴内容')
+        if (info.success === false && info.errorMessage) {
+          ElMessage.warning(info.errorMessage)
+        } else {
+          ElMessage.warning('未能从文本中识别到关键信息，请检查粘贴内容或手动填写')
+        }
+        showPasteDialogVisible.value = false
       }
     } else {
       ElMessage.error(res.message || '信息提取失败')

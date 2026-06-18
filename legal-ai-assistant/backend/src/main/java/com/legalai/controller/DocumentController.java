@@ -54,11 +54,7 @@ public class DocumentController {
     public ApiResponse<ExtractedInfo> extractInfo(@RequestBody ExtractInfoRequest request) {
         try {
             ExtractedInfo info = documentService.extractInfoFromText(request.getText(), request.getTemplateCode());
-            if (info.isSuccess()) {
-                return ApiResponse.success(info);
-            } else {
-                return ApiResponse.error(400, info.getErrorMessage());
-            }
+            return ApiResponse.success(info);
         } catch (Exception e) {
             log.error("信息提取失败: {}", e.getMessage());
             return ApiResponse.error(500, "信息提取失败: " + e.getMessage());
