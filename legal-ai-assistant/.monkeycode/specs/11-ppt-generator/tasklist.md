@@ -25,8 +25,8 @@
 - [x] 创建 `PptDocumentRepository.java`
 
 ### Task 1.5 Testing
-- [ ] 编写 PptService 单元测试
-- [ ] 编写 PPTGenerator 单元测试
+- [x] 编写 PptService 单元测试
+- [x] 编写 PPTGenerator 单元测试
 
 ---
 
@@ -57,7 +57,7 @@
 
 ### Task 3.1 LegalSearch Integration
 - [x] 在 `LegalSearch.vue` 添加"生成PPT"按钮
-- [ ] 实现流式进度反馈UI
+- [x] 实现流式进度反馈UI
 - [x] 实现跳转到PPT编辑器
 
 ### Task 3.2 PPT Editor Features
@@ -83,9 +83,9 @@
 ## Phase 4: AI Template Recommendation (Optional)
 
 ### Task 4.1 AI Template Search
-- [ ] 实现AI搜索网络模板API
-- [ ] 实现模板预览图加载
-- [ ] 实现模板下载和应用
+- [x] 实现AI搜索网络模板API
+- [x] 实现模板预览图加载
+- [x] 实现模板下载和应用
 
 ---
 

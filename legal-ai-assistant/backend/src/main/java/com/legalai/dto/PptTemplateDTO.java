@@ -11,5 +11,7 @@ public class PptTemplateDTO {
     private String secondaryColor;
     private String fontFamily;
     private String backgroundStyle;
+    private String description;
+    private String tags;
     private String source;
 }

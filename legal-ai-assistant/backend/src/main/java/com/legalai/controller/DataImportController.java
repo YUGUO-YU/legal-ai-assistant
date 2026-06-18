@@ -4,6 +4,8 @@ import com.legalai.dto.ApiResponse;
 import com.legalai.service.DataImportService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/admin/data")
 @CrossOrigin
@@ -42,6 +44,12 @@ public class DataImportController {
     @PostMapping("/import-all")
     public ApiResponse<String> importAll() {
         String result = dataImportService.importAllData();
+        return ApiResponse.success(result);
+    }
+
+    @PostMapping("/import-judgments")
+    public ApiResponse<String> importJudgments(@RequestBody Map<String, Object> request) {
+        String result = dataImportService.importJudgments(request);
         return ApiResponse.success(result);
     }
 }

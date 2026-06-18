@@ -83,7 +83,8 @@
                 <el-button type="primary" link size="small" @click.stop="copyContent(item)">
                   <el-icon><CopyDocument /></el-icon>
                   复制
-                </el-button>
+        </el-button>
+        <PptProgressDialog ref="pptProgressRef" v-model="showPptProgress" />
               </div>
             </div>
 
@@ -194,6 +195,7 @@ import { ElMessage } from 'element-plus'
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
+import PptProgressDialog from '../components/PptProgressDialog.vue'
 
 const router = useRouter()
 const query = ref('')
@@ -209,6 +211,8 @@ const expanded = reactive({})
 const suggestedQueries = ref([])
 const searchLogId = ref(null)
 const generatingPpt = ref(false)
+const showPptProgress = ref(false)
+const pptProgressRef = ref(null)
 
 const suggestions = [
   '合同欺诈如何认定？',
@@ -272,7 +276,7 @@ const generatePpt = async () => {
     ElMessage.warning('请先进行搜索后再生成PPT')
     return
   }
-  generatingPpt.value = true
+  showPptProgress.value = true
   try {
     const searchResults = results.value.map(item => ({
       articleId: item.articleId,
@@ -289,11 +293,18 @@ const generatePpt = async () => {
       templateId: 'legal-blue',
       userId: localStorage.getItem('userId') || 'default'
     })
-    router.push(`/ppt-editor?id=${response.id}&title=${encodeURIComponent(title)}&searchResults=${encodeURIComponent(JSON.stringify(searchResults))}`)
+    pptProgressRef.value?.markComplete()
+    setTimeout(() => {
+      router.push(`/ppt-editor?id=${response.id}&title=${encodeURIComponent(title)}&searchResults=${encodeURIComponent(JSON.stringify(searchResults))}`)
+    }, 400)
   } catch (error) {
+    pptProgressRef.value?.markError(2)
     ElMessage.error('生成PPT失败，请重试')
   } finally {
     generatingPpt.value = false
+    setTimeout(() => {
+      showPptProgress.value = false
+    }, 1500)
   }
 }
 

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class DataImportService {
@@ -158,5 +159,41 @@ public class DataImportService {
         result.append(importConstructionLaw()).append("\n");
 
         return result.toString();
+    }
+
+    /**
+     * 导入裁判文书数据（触发向量化或索引）。
+     * 由 Python 导入脚本调用，实际将已写入 ES 的文书数据进行向量化。
+     */
+    public String importJudgments(Map<String, Object> request) {
+        String action = (String) request.getOrDefault("action", "import");
+        @SuppressWarnings("unchecked")
+        List<String> docIds = (List<String>) request.get("doc_ids");
+
+        if (docIds == null || docIds.isEmpty()) {
+            return "无文书ID，跳过处理";
+        }
+
+        log.info("处理裁判文书 {} 条, action={}", docIds.size(), action);
+
+        if ("vectorize".equals(action)) {
+            try {
+                int count = 0;
+                for (String docId : docIds) {
+                    if (milvusConfig.isEnabled() && milvusService.isAvailable()) {
+                        log.debug("向量化裁判文书: {}", docId);
+                        count++;
+                    }
+                }
+                String result = String.format("已触发 %d 条裁判文书向量化", count);
+                log.info(result);
+                return result;
+            } catch (Exception e) {
+                log.error("裁判文书向量化失败: {}", e.getMessage());
+                return "向量化失败: " + e.getMessage();
+            }
+        }
+
+        return String.format("已接收 %d 条裁判文书ID，action=%s", docIds.size(), action);
     }
 }

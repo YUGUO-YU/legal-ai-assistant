@@ -12,6 +12,7 @@
           <div class="template-preview-title">{{ template.name }}</div>
         </div>
         <div class="template-name">{{ template.name }}</div>
+        <div class="template-desc" v-if="template.description">{{ template.description }}</div>
         <el-tag v-if="template.source === 'ai'" size="small" type="warning" effect="plain">AI推荐</el-tag>
       </div>
     </div>
@@ -106,10 +107,17 @@ const getTemplateStyle = (template) => {
     }
 
     .template-name {
-      padding: 8px 12px 4px;
+      padding: 8px 12px 0;
       font-size: 13px;
       font-weight: 500;
       color: #1f2937;
+      text-align: center;
+    }
+
+    .template-desc {
+      padding: 2px 12px 4px;
+      font-size: 11px;
+      color: #6b7280;
       text-align: center;
     }
 
