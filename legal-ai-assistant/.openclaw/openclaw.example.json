@@ -1,0 +1,42 @@
+{
+  "env": {
+    "MINIMAX_API_KEY": "<YOUR_MINIMAX_API_KEY>"
+  },
+  "agents": {
+    "defaults": {
+      "model": "minimax/MiniMax-M3"
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "minimax": {
+        "baseUrl": "https://api.minimax.chat/v1",
+        "apiKey": "${MINIMAX_API_KEY}",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "MiniMax-M3",
+            "name": "MiniMax M3",
+            "input": ["text"],
+            "contextWindow": 1000000,
+            "maxTokens": 163840
+          }
+        ]
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "port": 19001,
+    "auth": {
+      "mode": "token",
+      "token": "my-secret-token"
+    },
+    "http": {
+      "endpoints": {
+        "chatCompletions": { "enabled": true }
+      }
+    }
+  }
+}

@@ -150,13 +150,15 @@ public class OpenClawHealthCheck implements ApplicationRunner {
                 return null;
             }
             Path configuredPath = Paths.get(configured);
-            if (Files.isExecutable(configuredPath)) {
+            if (Files.isExecutable(configuredPath) || isExecutableBinary(configuredPath)) {
                 return configuredPath.toAbsolutePath().toString();
             }
             if (Files.exists(configuredPath) && Files.isDirectory(configuredPath)) {
                 log.error("ai.openclaw.binary-path 指向的是目录而不是可执行文件: {}", configured);
+            } else if (!Files.exists(configuredPath)) {
+                log.error("ai.openclaw.binary-path 指定的文件不存在: {}", configured);
             } else {
-                log.error("ai.openclaw.binary-path 指定的文件不存在或不可执行: {}", configured);
+                log.error("ai.openclaw.binary-path 指定的文件不可执行: {}", configured);
             }
             return null;
         }
@@ -165,6 +167,7 @@ public class OpenClawHealthCheck implements ApplicationRunner {
         String[] candidateDirs = os.contains("win")
                 ? new String[]{
                     "C:\\openclaw\\bin",
+                    "C:\\openclaw",
                     "C:\\Program Files\\openclaw\\bin",
                     System.getProperty("user.home") + "\\.openclaw\\bin",
                     System.getProperty("user.home") + "\\.openclaw"
@@ -183,7 +186,7 @@ public class OpenClawHealthCheck implements ApplicationRunner {
         for (String dir : candidateDirs) {
             for (String name : candidateNames) {
                 Path p = Paths.get(dir, name);
-                if (Files.isExecutable(p)) {
+                if (Files.isExecutable(p) || isExecutableBinary(p)) {
                     return p.toAbsolutePath().toString();
                 }
             }
@@ -196,7 +199,7 @@ public class OpenClawHealthCheck implements ApplicationRunner {
                 if (dir == null || dir.isEmpty()) continue;
                 for (String name : candidateNames) {
                     Path p = Paths.get(dir, name);
-                    if (Files.isExecutable(p)) {
+                    if (Files.isExecutable(p) || isExecutableBinary(p)) {
                         return p.toAbsolutePath().toString();
                     }
                 }
@@ -204,6 +207,14 @@ public class OpenClawHealthCheck implements ApplicationRunner {
         }
 
         return null;
+    }
+
+    private boolean isExecutableBinary(Path path) {
+        if (path == null || !Files.isRegularFile(path)) {
+            return false;
+        }
+        String name = path.getFileName().toString().toLowerCase();
+        return name.endsWith(".exe") || name.endsWith(".cmd") || name.endsWith(".bat") || name.endsWith(".sh");
     }
 
     private boolean looksLikeLogFile(String path) {
