@@ -162,9 +162,6 @@
                   <span class="light-dot" :class="lightClass"></span>
                   <span class="light-text">{{ lightText }}</span>
                 </div>
-                <el-button size="small" :loading="restarting" @click="restartOpenClaw" :icon="Refresh">
-                  重启 OpenClaw
-                </el-button>
               </div>
             </div>
             <div class="ai-status-stats">
@@ -173,12 +170,12 @@
                 <span class="status-label">服务状态</span>
               </div>
               <div class="status-item">
-                <span class="status-value">{{ aiStatusData.status === 'checking' ? '...' : (aiStatusData.openclawError || aiStatusData.message) }}</span>
+                <span class="status-value">{{ aiStatusData.status === 'checking' ? '...' : aiStatusData.message }}</span>
                 <span class="status-label">详细信息</span>
               </div>
               <div class="status-item">
-                <span class="status-value">{{ openclawStateText }}</span>
-                <span class="status-label">OpenClaw 状态</span>
+                <span class="status-value">{{ aiStatusData.baseUrl || '-' }}</span>
+                <span class="status-label">接入地址</span>
               </div>
             </div>
           </div>
@@ -312,8 +309,7 @@ import {
   DataAnalysis,
   FolderOpened,
   EditPen,
-  View,
-  Refresh
+  View
 } from '@element-plus/icons-vue'
 
 const statsData = reactive([
@@ -419,59 +415,26 @@ const tips = [
 const aiStatusData = ref({
   status: 'checking',
   model: 'MiniMax-M3',
-  message: '检测中...',
-  openclawState: 'NOT_STARTED',
-  openclawError: null,
-  openclawBinary: null,
-  openclawLogFile: null
+  baseUrl: '',
+  message: '检测中...'
 })
 
-const restarting = ref(false)
-
 const lightClass = computed(() => {
-  if (aiStatusData.value.openclawState === 'RUNNING' && aiStatusData.value.status === 'online') {
-    return 'light-green'
-  }
-  if (aiStatusData.value.openclawState === 'FAILED' || aiStatusData.value.openclawState === 'STARTING') {
-    return 'light-orange'
-  }
+  if (aiStatusData.value.status === 'online') return 'light-green'
+  if (aiStatusData.value.status === 'degraded') return 'light-orange'
+  if (aiStatusData.value.status === 'checking') return 'light-orange'
   return 'light-red'
 })
 
 const lightText = computed(() => {
-  if (aiStatusData.value.openclawState === 'RUNNING' && aiStatusData.value.status === 'online') {
-    return '绿灯 · 启动成功'
-  }
-  if (aiStatusData.value.openclawState === 'STARTING') {
-    return '橙灯 · 启动中'
-  }
-  if (aiStatusData.value.openclawState === 'FAILED') {
-    return '橙灯 · 启动失败'
-  }
-  if (aiStatusData.value.openclawState === 'NOT_STARTED' && aiStatusData.value.status === 'checking') {
-    return '检测中'
-  }
-  return '红灯 · 未启动'
+  if (aiStatusData.value.status === 'online') return '绿灯 · 在线'
+  if (aiStatusData.value.status === 'degraded') return '橙灯 · 异常'
+  if (aiStatusData.value.status === 'checking') return '检测中'
+  return '红灯 · 离线'
 })
 
 const lightTooltip = computed(() => {
-  if (aiStatusData.value.openclawError) {
-    return aiStatusData.value.openclawError
-  }
-  if (aiStatusData.value.openclawState === 'RUNNING' && aiStatusData.value.status === 'online') {
-    return 'OpenClaw 网关运行中，AI 模型可正常调用'
-  }
-  return lightText.value
-})
-
-const openclawStateText = computed(() => {
-  const map = {
-    NOT_STARTED: '未启动',
-    STARTING: '启动中',
-    RUNNING: '运行中',
-    FAILED: '启动失败'
-  }
-  return map[aiStatusData.value.openclawState] || aiStatusData.value.openclawState
+  return aiStatusData.value.message || lightText.value
 })
 
 const detailDrawerVisible = ref(false)
@@ -695,55 +658,16 @@ const loadAiStatus = async () => {
     aiStatusData.value = {
       status: data.status || 'offline',
       model: data.model || 'MiniMax-M3',
-      message: data.message || 'AI 服务状态未知',
-      openclawState: data.openclawState || 'NOT_STARTED',
-      openclawError: data.openclawError || null,
-      openclawBinary: data.openclawBinary || null,
-      openclawLogFile: data.openclawLogFile || null
+      baseUrl: data.baseUrl || '',
+      message: data.message || 'AI 服务状态未知'
     }
   } catch (e) {
     aiStatusData.value = {
       status: 'error',
       model: 'MiniMax-M3',
-      message: '无法连接 AI 服务',
-      openclawState: 'NOT_STARTED',
-      openclawError: e?.message || String(e),
-      openclawBinary: null,
-      openclawLogFile: null
+      baseUrl: '',
+      message: '无法连接 AI 服务: ' + (e?.message || e)
     }
-  }
-}
-
-const restartOpenClaw = async () => {
-  if (restarting.value) return
-  restarting.value = true
-  aiStatusData.value = {
-    ...aiStatusData.value,
-    openclawState: 'STARTING',
-    openclawError: null,
-    message: '正在重启 OpenClaw ...'
-  }
-  try {
-    const res = await fetch('/api/v1/ai-status/restart', { method: 'POST' })
-    const data = await res.json().catch(() => ({}))
-    if (data && data.openclawState) {
-      aiStatusData.value = {
-        ...aiStatusData.value,
-        openclawState: data.openclawState,
-        openclawError: data.openclawError || null,
-        message: data.message || aiStatusData.value.message
-      }
-    }
-    if (data && data.success) {
-      ElMessage.success(data.message || 'OpenClaw 重启成功')
-    } else {
-      ElMessage.error(data?.message || 'OpenClaw 重启失败')
-    }
-    await loadAiStatus()
-  } catch (e) {
-    ElMessage.error('重启请求失败: ' + (e?.message || e))
-  } finally {
-    restarting.value = false
   }
 }
 

@@ -38,24 +38,20 @@ mybatis-plus:
 server:
   port: 3001
 
-# AI Configuration - OpenClaw Gateway
-# 所有 OpenClaw 相关文件统一存放在项目根目录 E:\legal-ai-assistant\legal-ai-assistant\openclaw
+# AI Configuration - 直接接入 MiniMax-M3
+# 不再经过 OpenClaw 网关；使用 OpenAI 兼容协议
 ai:
-  openclaw:
-    url: http://localhost:19001
-    token: my-secret-token
-    auto-start: true
-    # 二进制可执行文件（必须放在项目 openclaw/ 目录下）
-    binary-path: "E:\\legal-ai-assistant\\legal-ai-assistant\\openclaw\\openclaw.exe"
-    # 自定义配置文件（项目 openclaw/openclaw.json）
-    config-path: "E:\\legal-ai-assistant\\legal-ai-assistant\\openclaw\\openclaw.json"
-    # 网关启动参数
-    gateway-args: gateway --allow-unconfigured
-    # 启动日志输出文件
-    log-path: "E:\\legal-ai-assistant\\legal-ai-assistant\\backend\\logs\\openclaw_stderr.log"
   minimax:
-    model: minimax/MiniMax-M3
+    # MiniMax OpenAI 兼容接口
+    base-url: https://api.minimax.chat/v1
+    # API Key（生产环境请使用环境变量或密钥管理服务）
+    api-key: ${MINIMAX_API_KEY:sk-cp-ekoYcsSAxZvJrF7fvTa6Ysotr5tUdq0tuDip1T288mxFO2VoH6oguSDnUvHUyyrpY1BzzQeifVkOTrSZMZ_gnr1NrvimwFs7IWccNtjjqMyLq1wOEBuagUs}
+    # 模型名
+    model: MiniMax-M3
+    # 请求超时（秒）
     timeout: 120
+    # Embedding 模型
+    embedding-model: embo-01
 
 # Mock Mode (false = 使用MiniMax AI)
 mock:
