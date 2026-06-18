@@ -284,7 +284,7 @@ public class CaseAnalysisService {
         reasoning.setId("reasoning");
         reasoning.setTitle("裁判逻辑分析");
         reasoning.setIcon("🧠");
-        reasoning.setContent("法院在审理过程中遵循了"三段论"式法律推理方法：\n\n1. **事实认定**：基于双方提交的证据材料，对争议事实进行认定\n2. **法律适用**：根据认定的法律关系性质，援引相应的法律条文\n3. **裁判结论**：综合事实与法律，作出裁判");
+        reasoning.setContent("法院在审理过程中遵循了\"三段论\"式法律推理方法：\n\n1. **事实认定**：基于双方提交的证据材料，对争议事实进行认定\n2. **法律适用**：根据认定的法律关系性质，援引相应的法律条文\n3. **裁判结论**：综合事实与法律，作出裁判");
         reasoning.setKeyPoints(Arrays.asList(
             "采用三段论推理方法",
             "事实认定以证据为基础",
