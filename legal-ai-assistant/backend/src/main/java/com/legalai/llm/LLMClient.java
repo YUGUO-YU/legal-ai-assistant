@@ -130,6 +130,42 @@ public class LLMClient {
     }
 
     /**
+     * 带联网搜索的对话（MiniMax web_search 工具）。
+     * 返回 AI 整理后的文本，搜索结果会合并在响应中。
+     */
+    public String searchWeb(String prompt) throws IOException {
+        log.info("调用 MiniMax(联网搜索): model={}, prompt长度={}", model, prompt == null ? 0 : prompt.length());
+
+        List<Map<String, Object>> tools = List.of(Map.of(
+            "type", "web_search",
+            "web_search", Map.of(
+                "search_mode", "outline",
+                "enable_brief_search_result", false
+            )
+        ));
+
+        return chatWithTools(prompt, tools);
+    }
+
+    /**
+     * 联网搜索 + 结构化输出：先用 web_search 获取信息，再调用一次让 AI 整理为结构化 JSON。
+     */
+    public String searchAndStructure(String searchPrompt, String structurePrompt) throws IOException {
+        log.info("调用 MiniMax(搜索+结构化): 两步流程");
+
+        String searchResult = searchWeb(searchPrompt);
+        log.info("联网搜索完成，结果长度={}", searchResult != null ? searchResult.length() : 0);
+
+        List<Map<String, String>> messages = List.of(
+            Map.of("role", "system", "content", searchPrompt),
+            Map.of("role", "assistant", "content", searchResult != null ? searchResult : ""),
+            Map.of("role", "user", "content", structurePrompt)
+        );
+
+        return chatWithMessages(messages);
+    }
+
+    /**
      * 流式对话
      */
     public String chatStream(String prompt, Consumer<String> onChunk, Supplier<Boolean> isCancelled) throws IOException {

@@ -70,6 +70,7 @@ public class CompanyService {
         response.setRegistrationAuthority("北京市市场监督管理局（模拟）");
         response.setEstablishDate("2020-01-15");
         response.setDataSource("Mock数据 | 仅供参考");
+        response.setSearchSources(Collections.singletonList("模拟数据源"));
 
         List<CompanyQueryResponse.ShareholderInfo> shareholders = new ArrayList<>();
         shareholders.add(createShareholder("李四（模拟）", "500", "50%", "自然人股东"));
@@ -91,12 +92,16 @@ public class CompanyService {
     }
 
     private CompanyQueryResponse realQueryCompany(CompanyQueryRequest request) {
-        log.info("调用MiniMax AI查询企业信息...");
-
-        String prompt = buildCompanyQueryPrompt(request);
+        log.info("两阶段查询: 1.联网搜索 + 2.AI结构化整理...");
 
         try {
-            String aiResponse = aiService.chat(prompt);
+            String searchPrompt = buildSearchPrompt(request);
+            String searchResult = aiService.searchWeb(searchPrompt);
+            log.info("联网搜索完成，结果长度={}", searchResult != null ? searchResult.length() : 0);
+
+            String structurePrompt = buildStructurePrompt(request, searchResult);
+            String aiResponse = aiService.chat(structurePrompt);
+
             return parseAIResponse(aiResponse, request);
         } catch (IOException e) {
             log.error("AI企业查询失败: {}", e.getMessage());
@@ -104,55 +109,48 @@ public class CompanyService {
         }
     }
 
-    private String buildCompanyQueryPrompt(CompanyQueryRequest request) {
+    private String buildSearchPrompt(CompanyQueryRequest request) {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是一位专业的企业信息查询助手。请使用你的网络搜索能力，查找并核实用户输入企业的真实公开信息。\n\n");
-        sb.append("【查询企业】").append(request.getCompanyName()).append("\n\n");
-        sb.append("请执行以下搜索查询来获取真实信息：\n");
-        sb.append("1. 搜索 \"").append(request.getCompanyName()).append(" 企业信息 统一社会信用代码\"\n");
-        sb.append("2. 搜索 \"").append(request.getCompanyName()).append(" 法定代表人 注册资本\"\n");
-        sb.append("3. 搜索 \"").append(request.getCompanyName()).append(" 股东信息\"\n\n");
-        sb.append("根据搜索结果，提取以下信息（以JSON格式输出）：\n\n");
+        sb.append("请帮我搜索以下企业的公开信息：\n");
+        sb.append("1. 搜索 \"").append(request.getCompanyName()).append(" 企业基本信息 统一社会信用代码\"\n");
+        sb.append("2. 搜索 \"").append(request.getCompanyName()).append(" 法定代表人 注册资本 经营范围\"\n");
+        sb.append("3. 搜索 \"").append(request.getCompanyName()).append(" 股东信息 股权结构\"\n");
+        if (Boolean.TRUE.equals(request.getEnableRiskWarning())) {
+            sb.append("4. 搜索 \"").append(request.getCompanyName()).append(" 经营异常 法律诉讼 被执行人 失信\"\n");
+        }
+        sb.append("\n请尽可能多地收集上述信息，包括企业基础信息、股东、风险提示等。");
+        return sb.toString();
+    }
 
-        sb.append("1. 企业基本信息：\n");
-        sb.append("   - 统一社会信用代码（18位标准格式）\n");
-        sb.append("   - 法定代表人\n");
-        sb.append("   - 注册资本及实缴资本\n");
-        sb.append("   - 经营状态（存续/吊销/注销等）\n");
-        sb.append("   - 登记机关\n");
-        sb.append("   - 成立日期\n");
-        sb.append("   - 注册地址\n\n");
+    private String buildStructurePrompt(CompanyQueryRequest request, String searchResult) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("根据以下网络搜索结果，提取并整理 ").append(request.getCompanyName()).append(" 的企业信息。\n\n");
+        sb.append("【搜索结果】\n");
+        sb.append(searchResult != null ? searchResult : "无搜索结果").append("\n\n");
+        sb.append("请提取以下信息并以JSON格式输出：\n\n");
 
+        sb.append("1. 企业基本信息：统一社会信用代码、法定代表人、注册资本(万元，纯数字)、经营状态、登记机关、成立日期、注册地址\n");
         sb.append("2. 股东信息（主要股东及持股比例）\n\n");
 
         if (Boolean.TRUE.equals(request.getEnableRiskWarning())) {
-            sb.append("3. 风险提示（如有，搜索相关诉讼、被执行人、失信等信息）：\n");
-            sb.append("   - 经营异常信息\n");
-            sb.append("   - 法律诉讼情况\n");
-            sb.append("   - 被执行人信息\n");
-            sb.append("   - 失信被执行人信息\n");
-            sb.append("   - 风险等级评估：LOW/MEDIUM/HIGH\n\n");
+            sb.append("3. 风险提示：经营异常、法律诉讼、被执行人、失信被执行人，风险等级(LOW/MEDIUM/HIGH)\n\n");
         }
 
-        sb.append("请输出JSON格式（如果某项信息确实无法查到，请填\"未知\"）：\n");
+        sb.append("输出JSON格式（查不到的信息填\"未知\"）：\n");
         sb.append("{\n");
-        sb.append("  \"companyName\": \"企业名称（以搜索到的为准）\",\n");
+        sb.append("  \"companyName\": \"企业名称\",\n");
         sb.append("  \"unifiedSocialCreditCode\": \"统一社会信用代码\",\n");
         sb.append("  \"legalRepresentative\": \"法定代表人\",\n");
-        sb.append("  \"registeredCapital\": 注册资本数值（单位万元，纯数字）,\n");
+        sb.append("  \"registeredCapital\": 数字,\n");
         sb.append("  \"businessStatus\": \"存续/吊销/注销等\",\n");
-        sb.append("  \"registrationAuthority\": \"市场监督管理局名称\",\n");
+        sb.append("  \"registrationAuthority\": \"登记机关\",\n");
         sb.append("  \"establishDate\": \"成立日期如2020-01-15\",\n");
-        sb.append("  \"shareholders\": [\n");
-        sb.append("    {\"name\": \"股东名称\", \"capitalContribution\": \"出资金额万元\", \"ratio\": \"持股比例\", \"type\": \"自然人股东/企业法人\"}\n");
-        sb.append("  ],\n");
-        sb.append("  \"riskWarnings\": [\n");
-        sb.append("    {\"level\": \"LOW/MEDIUM/HIGH\", \"type\": \"风险类型\", \"description\": \"简要描述\", \"date\": \"日期\", \"count\": 数量}\n");
-        sb.append("  ],\n");
+        sb.append("  \"shareholders\": [{\"name\":\"\", \"capitalContribution\":\"\", \"ratio\":\"\", \"type\":\"\"}],\n");
+        sb.append("  \"riskWarnings\": [{\"level\":\"LOW/MEDIUM/HIGH\", \"type\":\"\", \"description\":\"\", \"date\":\"\", \"count\":0}],\n");
         sb.append("  \"riskLevel\": \"NONE/LOW/MEDIUM/HIGH\",\n");
-        sb.append("  \"dataSource\": \"AI网络搜索核实\"\n");
+        sb.append("  \"dataSource\": \"网络搜索+AI整理\"\n");
         sb.append("}\n\n");
-        sb.append("重要：只输出JSON，不要有任何解释性文字。如果企业不存在或无法查到，请返回空数据并标注dataSource为\"未找到相关信息\"。");
+        sb.append("只输出JSON，不要任何解释。");
 
         return sb.toString();
     }
@@ -176,7 +174,17 @@ public class CompanyService {
             response.setBusinessStatus(node.has("businessStatus") ? node.get("businessStatus").asText() : "存续");
             response.setRegistrationAuthority(node.has("registrationAuthority") ? node.get("registrationAuthority").asText() : "未知");
             response.setEstablishDate(node.has("establishDate") ? node.get("establishDate").asText() : "2020-01-01");
-            response.setDataSource(node.has("dataSource") ? node.get("dataSource").asText() : "AI分析生成");
+            response.setDataSource(node.has("dataSource") ? node.get("dataSource").asText() : "网络搜索+AI整理");
+
+            if (node.has("searchSources") && node.get("searchSources").isArray()) {
+                List<String> sources = new ArrayList<>();
+                for (JsonNode s : node.get("searchSources")) {
+                    sources.add(s.asText());
+                }
+                response.setSearchSources(sources);
+            } else {
+                response.setSearchSources(Collections.singletonList("通过互联网搜索引擎获取的公开企业信息"));
+            }
 
             java.util.List<CompanyQueryResponse.ShareholderInfo> shareholders = new java.util.ArrayList<>();
             if (node.has("shareholders")) {

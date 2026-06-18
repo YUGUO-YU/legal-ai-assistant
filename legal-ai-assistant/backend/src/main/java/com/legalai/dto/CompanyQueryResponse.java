@@ -16,6 +16,7 @@ public class CompanyQueryResponse {
     private List<RiskWarning> riskWarnings;
     private String riskLevel;
     private String dataSource;
+    private List<String> searchSources;
     private String queryTime;
 
     public String getQueryUuid() { return queryUuid; }
@@ -42,6 +43,8 @@ public class CompanyQueryResponse {
     public void setRiskLevel(String riskLevel) { this.riskLevel = riskLevel; }
     public String getDataSource() { return dataSource; }
     public void setDataSource(String dataSource) { this.dataSource = dataSource; }
+    public List<String> getSearchSources() { return searchSources; }
+    public void setSearchSources(List<String> searchSources) { this.searchSources = searchSources; }
     public String getQueryTime() { return queryTime; }
     public void setQueryTime(String queryTime) { this.queryTime = queryTime; }
 

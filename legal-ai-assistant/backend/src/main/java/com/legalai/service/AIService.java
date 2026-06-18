@@ -43,4 +43,12 @@ public class AIService {
     public float[] embedText(String text) throws IOException {
         return llmClient.embedText(text);
     }
+
+    public String searchWeb(String prompt) throws IOException {
+        return llmClient.searchWeb(prompt);
+    }
+
+    public String searchAndStructure(String searchPrompt, String structurePrompt) throws IOException {
+        return llmClient.searchAndStructure(searchPrompt, structurePrompt);
+    }
 }

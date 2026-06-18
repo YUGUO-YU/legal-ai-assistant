@@ -25,7 +25,22 @@
       </div>
     </el-card>
 
-    <loading v-if="loading" text="正在查询企业信息..." />
+    <div v-if="loading" class="search-progress">
+      <el-card class="info-card progress-card">
+        <div class="progress-steps">
+          <div class="progress-step" :class="searchStep >= 1 ? 'active' : ''">
+            <div class="step-number">1</div>
+            <span>联网搜索企业信息...</span>
+          </div>
+          <div class="step-connector" :class="searchStep >= 2 ? 'active' : ''"></div>
+          <div class="progress-step" :class="searchStep >= 2 ? 'active' : ''">
+            <div class="step-number">2</div>
+            <span>AI 结构化整理...</span>
+          </div>
+        </div>
+        <div class="progress-tip">首次查询约需 10-30 秒，请耐心等待</div>
+      </el-card>
+    </div>
 
     <template v-else-if="companyInfo">
       <el-card class="info-card company-header-card">
@@ -169,8 +184,15 @@
               </div>
             </template>
             <div class="source-info">
-              <el-icon><OfficeBuilding /></el-icon>
-              <span>{{ companyInfo.dataSource }}</span>
+              <div class="source-main">
+                <el-icon><OfficeBuilding /></el-icon>
+                <span>{{ companyInfo.dataSource }}</span>
+              </div>
+              <div v-if="companyInfo.searchSources?.length" class="source-list">
+                <div v-for="(src, idx) in companyInfo.searchSources" :key="idx" class="source-item">
+                  <el-tag size="small" type="info" effect="plain">{{ src }}</el-tag>
+                </div>
+              </div>
             </div>
           </el-card>
         </el-col>
@@ -205,12 +227,12 @@ import {
   Right
 } from '@element-plus/icons-vue'
 import api from '../api'
-import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 
 const router = useRouter()
 const companyName = ref('')
 const loading = ref(false)
+const searchStep = ref(0)
 const companyInfo = ref(null)
 const hasSearched = ref(false)
 
@@ -237,15 +259,19 @@ const handleQuery = async () => {
   }
 
   loading.value = true
+  searchStep.value = 0
   hasSearched.value = true
   try {
+    searchStep.value = 1
     const res = await api.company.query({ companyName: companyName.value })
+    searchStep.value = 2
     companyInfo.value = res.data
   } catch (e) {
     console.error(e)
     ElMessage.error('查询失败，请稍后重试')
   } finally {
     loading.value = false
+    searchStep.value = 0
   }
 }
 
@@ -665,13 +691,108 @@ const getRiskItemClass = (level) => {
 .data-source {
   .source-info {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 12px;
     padding: 16px;
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
     border-radius: 12px;
     color: #667eea;
     font-size: 14px;
+
+    .source-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .source-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+
+      .source-item {
+        :deep(.el-tag) {
+          font-size: 12px;
+        }
+      }
+    }
+  }
+}
+
+.search-progress {
+  animation: fadeIn 0.3s ease;
+
+  .progress-card {
+    padding: 24px;
+  }
+
+  .progress-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 16px;
+  }
+
+  .progress-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0.35;
+    transition: opacity 0.4s ease;
+
+    &.active {
+      opacity: 1;
+
+      .step-number {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+      }
+
+      span {
+        color: #667eea;
+        font-weight: 500;
+      }
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      background: #e5e7eb;
+      color: #9ca3af;
+      transition: all 0.4s ease;
+    }
+
+    span {
+      font-size: 14px;
+      color: #9ca3af;
+      transition: color 0.4s ease;
+    }
+  }
+
+  .step-connector {
+    width: 60px;
+    height: 2px;
+    background: #e5e7eb;
+    margin: 0 12px;
+    transition: background 0.4s ease;
+
+    &.active {
+      background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+  }
+
+  .progress-tip {
+    text-align: center;
+    font-size: 12px;
+    color: #9ca3af;
   }
 }
 </style>
