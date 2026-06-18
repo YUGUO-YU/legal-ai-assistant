@@ -228,10 +228,10 @@
       <div class="paste-dialog-content">
         <el-alert type="info" :closable="false" show-icon>
           <template #title>
-            请粘贴案件相关信息，AI将自动识别并填入表单
+            本地智能识别：粘贴法律文本后自动提取当事人、金额、事实等关键信息
           </template>
           <template #description>
-            支持粘贴起诉书、仲裁申请书、合同等法律文本中的当事人信息、金额、事实描述等
+            完全在本地完成，不联网、不调用 AI，毫秒级响应。支持起诉状、仲裁申请书、合同等法律文本。
           </template>
         </el-alert>
         <el-input
@@ -242,15 +242,15 @@
           class="paste-textarea"
         />
         <div class="paste-tips">
-          <el-tag type="warning" size="small">提示</el-tag>
-          <span>粘贴内容越完整，识别越准确。支持识别：当事人姓名/名称、地址、金额、事实描述、法院名称等。</span>
+          <el-tag type="success" size="small">本地识别</el-tag>
+          <span>粘贴内容越完整，识别越准确。支持识别：当事人姓名/名称、地址、金额、事实描述、法院名称、入职日期、工资、争议类型等。</span>
         </div>
       </div>
       <template #footer>
         <el-button @click="showPasteDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleExtractInfo" :loading="extracting">
           <el-icon v-if="!extracting"><DocumentCopy /></el-icon>
-          识别并填充
+          本地识别并填充
         </el-button>
       </template>
     </el-dialog>
@@ -461,7 +461,8 @@ const handleExtractInfo = async () => {
       ].filter(v => v !== null && v !== undefined && String(v).trim() !== '').length
 
       if (totalFilled > 0) {
-        ElMessage.success(`已自动填充 ${totalFilled} 项信息，请检查并补全`)
+        const source = info.dataSource || '本地识别'
+        ElMessage.success(`已自动填充 ${totalFilled} 项信息（${source}），请检查并补全`)
         showPasteDialogVisible.value = false
       } else {
         ElMessage.warning('未能从文本中识别到关键信息，请检查粘贴内容')

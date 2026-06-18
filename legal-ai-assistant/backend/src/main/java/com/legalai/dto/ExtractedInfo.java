@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public class ExtractedInfo {
     private boolean success;
     private String errorMessage;
+    private String dataSource;
 
     private String plaintiffName;
     private String plaintiffAddress;
@@ -36,6 +37,14 @@ public class ExtractedInfo {
 
     public void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
+    }
+
+    public String getDataSource() {
+        return dataSource;
+    }
+
+    public void setDataSource(String dataSource) {
+        this.dataSource = dataSource;
     }
 
     public String getPlaintiffName() {
