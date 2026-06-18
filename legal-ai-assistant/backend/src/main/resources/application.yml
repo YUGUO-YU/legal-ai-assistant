@@ -43,6 +43,7 @@ ai:
   openclaw:
     url: http://localhost:19001
     token: my-secret-token
+    auto-start: true
   minimax:
     model: openclaw
     timeout: 120
