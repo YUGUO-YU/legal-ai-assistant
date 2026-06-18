@@ -28,6 +28,12 @@ public class PptService {
     @Autowired
     private PptxGenerator pptxGenerator;
 
+    @Autowired
+    private PPTGenerator pptGenerator;
+
+    @Autowired
+    private AIService aiService;
+
     private static final String INSERT_SQL = """
         INSERT INTO ppt_document (ppt_uuid, title, slides_json, template_id, user_id, status, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())
@@ -49,7 +55,7 @@ public class PptService {
         String uuid = "PPT-" + System.currentTimeMillis();
         String userId = request.getUserId() != null ? request.getUserId() : "default";
 
-        List<SlideDTO> slides = generateSlidesFromSearchResults(request);
+        List<SlideDTO> slides = pptGenerator.generate(request.getTitle(), request.getSearchResults());
 
         PptGenerateResponse response = new PptGenerateResponse();
         response.setId(uuid);
@@ -67,79 +73,6 @@ public class PptService {
         }
 
         return response;
-    }
-
-    private List<SlideDTO> generateSlidesFromSearchResults(PptGenerateRequest request) {
-        List<SlideDTO> slides = new ArrayList<>();
-
-        SlideDTO coverSlide = new SlideDTO();
-        coverSlide.setId(UUID.randomUUID().toString());
-        coverSlide.setLayout("title_only");
-        coverSlide.setTitle(request.getTitle());
-        coverSlide.setBulletPoints(Arrays.asList(
-                "基于法律AI助手的智能生成",
-                "整理自相关法规和案例检索结果"
-        ));
-        coverSlide.setNotes("封面幻灯片，介绍PPT主题和来源");
-        slides.add(coverSlide);
-
-        if (request.getSearchResults() != null && !request.getSearchResults().isEmpty()) {
-            SlideDTO summarySlide = new SlideDTO();
-            summarySlide.setId(UUID.randomUUID().toString());
-            summarySlide.setLayout("title_content");
-            summarySlide.setTitle("检索结果概述");
-            List<String> summaryPoints = new ArrayList<>();
-            summaryPoints.add("共检索到 " + request.getSearchResults().size() + " 条相关法规");
-            summaryPoints.add("涵盖以下法律领域：");
-            for (PptGenerateRequest.SearchResultItem item : request.getSearchResults().stream().limit(5).toList()) {
-                summaryPoints.add("- " + item.getLawTitle());
-            }
-            summarySlide.setBulletPoints(summaryPoints);
-            summarySlide.setNotes("概述检索到的法律信息");
-            slides.add(summarySlide);
-
-            for (int i = 0; i < Math.min(request.getSearchResults().size(), 5); i++) {
-                PptGenerateRequest.SearchResultItem item = request.getSearchResults().get(i);
-                SlideDTO lawSlide = new SlideDTO();
-                lawSlide.setId(UUID.randomUUID().toString());
-                lawSlide.setLayout("title_content");
-                lawSlide.setTitle(item.getTitle());
-                lawSlide.setBulletPoints(Arrays.asList(
-                        "法规来源：" + item.getLawTitle(),
-                        "条款编号：" + item.getArticleNo(),
-                        "内容摘要：" + (item.getContent() != null && item.getContent().length() > 200
-                                ? item.getContent().substring(0, 200) + "..."
-                                : item.getContent())
-                ));
-                lawSlide.setNotes("详细展示第" + (i + 1) + "条法规信息");
-                slides.add(lawSlide);
-            }
-        } else {
-            SlideDTO summarySlide = new SlideDTO();
-            summarySlide.setId(UUID.randomUUID().toString());
-            summarySlide.setLayout("title_content");
-            summarySlide.setTitle("相关法规参考");
-            summarySlide.setBulletPoints(Arrays.asList(
-                    "《中华人民共和国民法典》",
-                    "《中华人民共和国劳动合同法》",
-                    "《中华人民共和国公司法》"
-            ));
-            slides.add(summarySlide);
-        }
-
-        SlideDTO conclusionSlide = new SlideDTO();
-        conclusionSlide.setId(UUID.randomUUID().toString());
-        conclusionSlide.setLayout("title_content");
-        conclusionSlide.setTitle("总结与建议");
-        conclusionSlide.setBulletPoints(Arrays.asList(
-                "结合本案实际情况，综合考虑相关法律规定",
-                "建议咨询专业律师获取个性化法律意见",
-                "本PPT内容仅供参考，不构成法律建议"
-        ));
-        conclusionSlide.setNotes("结语幻灯片，包含法律免责声明");
-        slides.add(conclusionSlide);
-
-        return slides;
     }
 
     public PptDocumentDTO getById(Long id) {
@@ -232,5 +165,60 @@ public class PptService {
         }
 
         return dto;
+    }
+
+    /**
+     * AI 增强幻灯片内容：根据标题生成优化后的要点和备注。
+     */
+    public Map<String, Object> enhanceSlide(Map<String, Object> request) {
+        String title = (String) request.getOrDefault("title", "");
+        String layout = (String) request.getOrDefault("layout", "title_content");
+        @SuppressWarnings("unchecked")
+        List<String> currentBullets = (List<String>) request.get("currentBullets");
+
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("你是一位法律PPT设计专家。请为以下幻灯片标题生成优化的内容要点。\n\n");
+        prompt.append("幻灯片标题：").append(title).append("\n");
+        prompt.append("布局类型：").append(layout).append("\n");
+        if (currentBullets != null && !currentBullets.isEmpty()) {
+            prompt.append("当前要点（供参考）：\n");
+            for (String b : currentBullets) {
+                prompt.append("- ").append(b).append("\n");
+            }
+        }
+        prompt.append("\n返回JSON格式：\n");
+        prompt.append("{\"bulletPoints\":[\"要点1\",\"要点2\",\"要点3\"],\"notes\":\"演讲备注\"}\n");
+        prompt.append("\n要求：bulletPoints 每条约15-30字，共3-5条；notes 为一句完整的演讲提示。只返回JSON。");
+
+        Map<String, Object> result = new HashMap<>();
+        try {
+            String response = aiService.chatWithMessages(List.of(
+                Map.of("role", "system", "content", "你是法律PPT内容设计专家，返回简洁专业的JSON。"),
+                Map.of("role", "user", "content", prompt.toString())
+            ));
+
+            String json = response.trim();
+            int start = json.indexOf('{');
+            int end = json.lastIndexOf('}');
+            if (start >= 0 && end > start) {
+                json = json.substring(start, end + 1);
+            }
+            json = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");
+            json = json.replaceAll(",(\\s*[}\\]])", "$1");
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> aiResult = objectMapper.readValue(json, Map.class);
+            result.put("bulletPoints", aiResult.getOrDefault("bulletPoints",
+                currentBullets != null ? currentBullets : List.of(title)));
+            result.put("notes", aiResult.getOrDefault("notes", ""));
+        } catch (Exception e) {
+            if (currentBullets != null) {
+                result.put("bulletPoints", currentBullets);
+            } else {
+                result.put("bulletPoints", List.of(title));
+            }
+            result.put("notes", "AI增强失败，已保留原内容");
+        }
+        return result;
     }
 }

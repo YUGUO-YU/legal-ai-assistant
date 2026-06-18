@@ -84,4 +84,10 @@ public class PptController {
         List<PptTemplateDTO> templates = templateService.getAiRecommendedTemplates(scenario);
         return ResponseEntity.ok(templates);
     }
+
+    @PostMapping("/ai-enhance-slide")
+    public ResponseEntity<Map<String, Object>> enhanceSlide(@RequestBody Map<String, Object> request) {
+        Map<String, Object> result = pptService.enhanceSlide(request);
+        return ResponseEntity.ok(result);
+    }
 }

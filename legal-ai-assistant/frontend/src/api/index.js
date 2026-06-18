@@ -175,7 +175,8 @@ export default {
     delete: (id) => withRetry(() => api.delete(`/ppt/${id}`)),
     list: (userId) => withRetry(() => api.get('/ppt/list', { params: { userId } })),
     getTemplates: () => withRetry(() => api.get('/ppt/templates')),
-    recommendTemplates: (scenario) => withRetry(() => api.post('/ppt/templates/recommend', { scenario }))
+    recommendTemplates: (scenario) => withRetry(() => api.post('/ppt/templates/recommend', { scenario })),
+    enhanceSlide: (data) => withRetry(() => api.post('/ppt/ai-enhance-slide', data))
   },
   auth: {
     login: (data) => api.post('/auth/login', data),
