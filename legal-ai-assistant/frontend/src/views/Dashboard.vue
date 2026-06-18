@@ -154,13 +154,18 @@
                 <el-icon :size="24"><MagicStick /></el-icon>
               </div>
               <div class="ai-status-info">
-                <span class="ai-status-title">AI 服务状态</span>
+                <span class="ai-status-title">大模型状态</span>
                 <span class="ai-status-model">{{ aiStatusData.model }}</span>
               </div>
-              <el-tag :type="aiStatusData.status === 'online' ? 'success' : aiStatusData.status === 'degraded' ? 'warning' : 'danger'" size="small" effect="dark">
-                <span v-if="aiStatusData.status === 'online'" class="pulse"></span>
-                {{ aiStatusData.status === 'online' ? '在线' : aiStatusData.status === 'degraded' ? '异常' : 'error' === 'error' ? '错误' : '离线' }}
-              </el-tag>
+              <div class="ai-status-actions">
+                <div class="status-light" :class="lightClass" :title="lightTooltip">
+                  <span class="light-dot" :class="lightClass"></span>
+                  <span class="light-text">{{ lightText }}</span>
+                </div>
+                <el-button size="small" :loading="restarting" @click="restartOpenClaw" :icon="Refresh">
+                  重启 OpenClaw
+                </el-button>
+              </div>
             </div>
             <div class="ai-status-stats">
               <div class="status-item">
@@ -168,8 +173,12 @@
                 <span class="status-label">服务状态</span>
               </div>
               <div class="status-item">
-                <span class="status-value">{{ aiStatusData.status === 'checking' ? '...' : aiStatusData.message }}</span>
+                <span class="status-value">{{ aiStatusData.status === 'checking' ? '...' : (aiStatusData.openclawError || aiStatusData.message) }}</span>
                 <span class="status-label">详细信息</span>
+              </div>
+              <div class="status-item">
+                <span class="status-value">{{ openclawStateText }}</span>
+                <span class="status-label">OpenClaw 状态</span>
               </div>
             </div>
           </div>
@@ -275,6 +284,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import {
   Search,
   Files,
@@ -409,7 +419,59 @@ const tips = [
 const aiStatusData = ref({
   status: 'checking',
   model: 'MiniMax-M3',
-  message: '检测中...'
+  message: '检测中...',
+  openclawState: 'NOT_STARTED',
+  openclawError: null,
+  openclawBinary: null,
+  openclawLogFile: null
+})
+
+const restarting = ref(false)
+
+const lightClass = computed(() => {
+  if (aiStatusData.value.openclawState === 'RUNNING' && aiStatusData.value.status === 'online') {
+    return 'light-green'
+  }
+  if (aiStatusData.value.openclawState === 'FAILED' || aiStatusData.value.openclawState === 'STARTING') {
+    return 'light-orange'
+  }
+  return 'light-red'
+})
+
+const lightText = computed(() => {
+  if (aiStatusData.value.openclawState === 'RUNNING' && aiStatusData.value.status === 'online') {
+    return '绿灯 · 启动成功'
+  }
+  if (aiStatusData.value.openclawState === 'STARTING') {
+    return '橙灯 · 启动中'
+  }
+  if (aiStatusData.value.openclawState === 'FAILED') {
+    return '橙灯 · 启动失败'
+  }
+  if (aiStatusData.value.openclawState === 'NOT_STARTED' && aiStatusData.value.status === 'checking') {
+    return '检测中'
+  }
+  return '红灯 · 未启动'
+})
+
+const lightTooltip = computed(() => {
+  if (aiStatusData.value.openclawError) {
+    return aiStatusData.value.openclawError
+  }
+  if (aiStatusData.value.openclawState === 'RUNNING' && aiStatusData.value.status === 'online') {
+    return 'OpenClaw 网关运行中，AI 模型可正常调用'
+  }
+  return lightText.value
+})
+
+const openclawStateText = computed(() => {
+  const map = {
+    NOT_STARTED: '未启动',
+    STARTING: '启动中',
+    RUNNING: '运行中',
+    FAILED: '启动失败'
+  }
+  return map[aiStatusData.value.openclawState] || aiStatusData.value.openclawState
 })
 
 const detailDrawerVisible = ref(false)
@@ -630,36 +692,64 @@ const loadAiStatus = async () => {
   try {
     const res = await fetch('/api/v1/ai-status')
     const data = await res.json()
-    if (data.status === 'online') {
-      aiStatusData.value = {
-        status: 'online',
-        model: data.model || 'MiniMax-M3',
-        message: data.message || 'AI 服务正常运行'
-      }
-    } else if (data.status === 'degraded') {
-      aiStatusData.value = {
-        status: 'degraded',
-        model: data.model || 'MiniMax-M3',
-        message: data.message || 'AI 服务响应异常'
-      }
-    } else {
-      aiStatusData.value = {
-        status: 'offline',
-        model: data.model || 'MiniMax-M3',
-        message: data.message || 'AI 服务暂时不可用'
-      }
+    aiStatusData.value = {
+      status: data.status || 'offline',
+      model: data.model || 'MiniMax-M3',
+      message: data.message || 'AI 服务状态未知',
+      openclawState: data.openclawState || 'NOT_STARTED',
+      openclawError: data.openclawError || null,
+      openclawBinary: data.openclawBinary || null,
+      openclawLogFile: data.openclawLogFile || null
     }
   } catch (e) {
     aiStatusData.value = {
       status: 'error',
       model: 'MiniMax-M3',
-      message: '无法连接 AI 服务'
+      message: '无法连接 AI 服务',
+      openclawState: 'NOT_STARTED',
+      openclawError: e?.message || String(e),
+      openclawBinary: null,
+      openclawLogFile: null
     }
+  }
+}
+
+const restartOpenClaw = async () => {
+  if (restarting.value) return
+  restarting.value = true
+  aiStatusData.value = {
+    ...aiStatusData.value,
+    openclawState: 'STARTING',
+    openclawError: null,
+    message: '正在重启 OpenClaw ...'
+  }
+  try {
+    const res = await fetch('/api/v1/ai-status/restart', { method: 'POST' })
+    const data = await res.json().catch(() => ({}))
+    if (data && data.openclawState) {
+      aiStatusData.value = {
+        ...aiStatusData.value,
+        openclawState: data.openclawState,
+        openclawError: data.openclawError || null,
+        message: data.message || aiStatusData.value.message
+      }
+    }
+    if (data && data.success) {
+      ElMessage.success(data.message || 'OpenClaw 重启成功')
+    } else {
+      ElMessage.error(data?.message || 'OpenClaw 重启失败')
+    }
+    await loadAiStatus()
+  } catch (e) {
+    ElMessage.error('重启请求失败: ' + (e?.message || e))
+  } finally {
+    restarting.value = false
   }
 }
 
 onMounted(() => {
   loadAiStatus()
+  setInterval(loadAiStatus, 15000)
 })
 </script>
 
@@ -1366,20 +1456,53 @@ onMounted(() => {
         }
       }
 
+      .ai-status-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+      }
+
+      .status-light {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.9);
+        cursor: default;
+      }
+
+      .light-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        box-shadow: 0 0 0 0 currentColor;
+        animation: pulse 2s infinite;
+      }
+
+      .light-green { color: #10b981; }
+      .light-green .light-dot { background: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3); }
+
+      .light-red { color: #ef4444; }
+      .light-red .light-dot { background: #ef4444; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3); animation: none; }
+
+      .light-orange { color: #f59e0b; }
+      .light-orange .light-dot { background: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3); }
+
+      @keyframes pulse {
+        0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+        70%  { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+      }
+
       :deep(.el-tag) {
         background: rgba(16, 185, 129, 0.2);
         border-color: transparent;
         color: #10b981;
-
-        .pulse {
-          display: inline-block;
-          width: 6px;
-          height: 6px;
-          background: #10b981;
-          border-radius: 50%;
-          margin-right: 4px;
-          animation: pulse 2s infinite;
-        }
       }
     }
 

@@ -17,10 +17,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 public class OpenClawHealthCheck implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(OpenClawHealthCheck.class);
+
+    public enum State {
+        NOT_STARTED,
+        STARTING,
+        RUNNING,
+        FAILED
+    }
 
     @Value("${ai.openclaw.url:http://localhost:19001}")
     private String openClawUrl;
@@ -48,22 +56,74 @@ public class OpenClawHealthCheck implements ApplicationRunner {
             .readTimeout(30, TimeUnit.SECONDS)
             .build();
 
+    private final AtomicReference<State> state = new AtomicReference<>(State.NOT_STARTED);
+    private final AtomicReference<String> lastError = new AtomicReference<>(null);
+    private final AtomicReference<Process> currentProcess = new AtomicReference<>(null);
+    private final AtomicReference<String> currentBinary = new AtomicReference<>(null);
+    private final AtomicReference<String> currentLogFile = new AtomicReference<>(null);
+
+    public State getState() {
+        return state.get();
+    }
+
+    public String getLastError() {
+        return lastError.get();
+    }
+
+    public String getCurrentBinary() {
+        return currentBinary.get();
+    }
+
+    public String getCurrentLogFile() {
+        return currentLogFile.get();
+    }
+
+    public void setState(State newState, String reason) {
+        State previous = state.getAndSet(newState);
+        if (reason == null) {
+            lastError.set(null);
+        } else {
+            lastError.set(reason);
+        }
+        log.info("OpenClaw 状态变更: {} -> {} {}", previous, newState, reason == null ? "" : "(" + reason + ")");
+    }
+
     @Override
     public void run(ApplicationArguments args) {
         log.info("检查 OpenClaw Gateway 连接状态: {}", openClawUrl);
 
         if (checkOpenClaw()) {
+            setState(State.RUNNING, null);
             log.info("OpenClaw Gateway 已就绪，跳过自动启动");
             return;
         }
 
         if (!autoStartOpenClaw) {
+            setState(State.NOT_STARTED, "未配置自动启动 (ai.openclaw.auto-start=false)");
             log.warn("OpenClaw Gateway 未就绪且已禁用自动启动，请手动启动或设置 ai.openclaw.auto-start=true");
             return;
         }
 
-        log.info("OpenClaw Gateway 未就绪，尝试自动启动...");
-        startOpenClaw();
+        setState(State.STARTING, "应用启动时自动启动");
+        boolean ok = startOpenClaw();
+        if (ok) {
+            setState(State.RUNNING, null);
+        } else {
+            setState(State.FAILED, lastError.get() != null ? lastError.get() : "未知原因");
+        }
+    }
+
+    public synchronized boolean restart() {
+        log.info("收到 OpenClaw 重启请求");
+        stopCurrentProcess();
+        setState(State.STARTING, "用户触发重启");
+        boolean ok = startOpenClaw();
+        if (ok) {
+            setState(State.RUNNING, null);
+        } else {
+            setState(State.FAILED, lastError.get() != null ? lastError.get() : "未知原因");
+        }
+        return ok;
     }
 
     private boolean checkOpenClaw() {
@@ -83,16 +143,17 @@ public class OpenClawHealthCheck implements ApplicationRunner {
         }
     }
 
-    private void startOpenClaw() {
+    private boolean startOpenClaw() {
         String resolvedPath = resolveOpenClawBinary();
         if (resolvedPath == null) {
-            log.error("未找到 openclaw 可执行文件。请通过 ai.openclaw.binary-path 指定绝对路径，常见位置:");
-            log.error("  Linux/macOS: /usr/local/bin/openclaw, /opt/openclaw/bin/openclaw, ~/.openclaw/bin/openclaw");
-            log.error("  Windows:     C:\\\\openclaw\\\\openclaw.exe, %USERPROFILE%\\\\.openclaw\\\\bin\\\\openclaw.exe");
-            return;
+            String msg = "未找到 openclaw 可执行文件，请检查 ai.openclaw.binary-path 配置";
+            log.error(msg);
+            lastError.set(msg);
+            return false;
         }
 
         log.info("使用 openclaw 二进制: {}", resolvedPath);
+        currentBinary.set(resolvedPath);
 
         List<String> command = new ArrayList<>();
         command.add(resolvedPath);
@@ -101,12 +162,14 @@ public class OpenClawHealthCheck implements ApplicationRunner {
         }
 
         File logFile = resolveLogFile();
+        currentLogFile.set(logFile.getAbsolutePath());
         log.info("OpenClaw 日志文件: {}", logFile.getAbsolutePath());
 
         try {
             File parent = logFile.getParentFile();
             if (parent != null && !parent.exists() && !parent.mkdirs()) {
-                log.warn("无法创建日志目录: {}", parent.getAbsolutePath());
+                String warn = "无法创建日志目录: " + parent.getAbsolutePath();
+                log.warn(warn);
             }
 
             ProcessBuilder pb = new ProcessBuilder(command);
@@ -122,11 +185,40 @@ public class OpenClawHealthCheck implements ApplicationRunner {
                 }
             }
             Process p = pb.start();
+            currentProcess.set(p);
             log.info("OpenClaw Gateway 启动命令已执行，PID: {}", p.pid());
 
-            waitForReady(30);
+            boolean ready = waitForReady(30);
+            if (!ready) {
+                String msg = "OpenClaw Gateway 启动超时 (" + 30 + "s)，请检查日志: " + logFile.getAbsolutePath();
+                log.error(msg);
+                lastError.set(msg);
+                stopCurrentProcess();
+                return false;
+            }
+            lastError.set(null);
+            return true;
         } catch (IOException e) {
-            log.error("启动 OpenClaw Gateway 失败，命令={}, 原因={}", command, e.getMessage());
+            String msg = "启动 OpenClaw Gateway 失败: " + e.getMessage();
+            log.error(msg);
+            lastError.set(msg);
+            return false;
+        }
+    }
+
+    private void stopCurrentProcess() {
+        Process p = currentProcess.getAndSet(null);
+        if (p != null && p.isAlive()) {
+            log.info("停止 OpenClaw Gateway 进程 PID={}", p.pid());
+            try {
+                p.destroy();
+                if (!p.waitFor(5, TimeUnit.SECONDS)) {
+                    p.destroyForcibly();
+                }
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                p.destroyForcibly();
+            }
         }
     }
 
@@ -145,21 +237,26 @@ public class OpenClawHealthCheck implements ApplicationRunner {
         if (openClawBinaryPath != null && !openClawBinaryPath.trim().isEmpty()) {
             String configured = openClawBinaryPath.trim();
             if (looksLikeLogFile(configured)) {
-                log.error("ai.openclaw.binary-path 看起来是日志文件路径而不是可执行文件: {}", configured);
-                log.error("请将 ai.openclaw.binary-path 指向 openclaw/openclaw.exe，例如 /usr/local/bin/openclaw");
+                String msg = "ai.openclaw.binary-path 看起来是日志文件路径而不是可执行文件: " + configured;
+                log.error(msg);
+                log.error("请将 ai.openclaw.binary-path 指向 openclaw/openclaw.exe，例如 E:\\legal-ai-assistant\\legal-ai-assistant\\openclaw\\openclaw.exe");
+                lastError.set(msg);
                 return null;
             }
             Path configuredPath = Paths.get(configured);
             if (Files.isExecutable(configuredPath) || isExecutableBinary(configuredPath)) {
                 return configuredPath.toAbsolutePath().toString();
             }
+            String reason;
             if (Files.exists(configuredPath) && Files.isDirectory(configuredPath)) {
-                log.error("ai.openclaw.binary-path 指向的是目录而不是可执行文件: {}", configured);
+                reason = "ai.openclaw.binary-path 指向的是目录而不是可执行文件: " + configured;
             } else if (!Files.exists(configuredPath)) {
-                log.error("ai.openclaw.binary-path 指定的文件不存在: {}", configured);
+                reason = "ai.openclaw.binary-path 指定的文件不存在: " + configured;
             } else {
-                log.error("ai.openclaw.binary-path 指定的文件不可执行: {}", configured);
+                reason = "ai.openclaw.binary-path 指定的文件不可执行: " + configured;
             }
+            log.error(reason);
+            lastError.set(reason);
             return null;
         }
 
@@ -211,6 +308,8 @@ public class OpenClawHealthCheck implements ApplicationRunner {
             }
         }
 
+        String msg = "在常见目录与 PATH 中都未找到 openclaw 可执行文件";
+        lastError.set(msg);
         return null;
     }
 
@@ -228,19 +327,19 @@ public class OpenClawHealthCheck implements ApplicationRunner {
         return lower.endsWith(".log") || lower.endsWith(".txt") || lower.endsWith(".err");
     }
 
-    private void waitForReady(int maxSeconds) {
+    private boolean waitForReady(int maxSeconds) {
         for (int i = 0; i < maxSeconds; i++) {
             if (checkOpenClaw()) {
                 log.info("OpenClaw Gateway 自动启动成功 ({}s)", i);
-                return;
+                return true;
             }
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
-                return;
+                return false;
             }
         }
-        log.error("OpenClaw Gateway 自动启动超时，请检查日志: {}", resolveLogFile().getAbsolutePath());
+        return false;
     }
 }
