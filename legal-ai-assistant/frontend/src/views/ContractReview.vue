@@ -276,7 +276,11 @@
         </div>
         <p>{{ reviewResult.overallComment }}</p>
         <div class="actions">
-          <el-button type="primary" @click="exportReport">
+          <el-button type="primary" @click="goToDetail">
+            <el-icon><View /></el-icon>
+            查看详情页
+          </el-button>
+          <el-button @click="exportReport">
             <el-icon><Download /></el-icon>
             导出审查报告
           </el-button>
@@ -292,6 +296,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Document,
@@ -310,9 +315,12 @@ import {
   CircleCheck,
   ChatLineSquare,
   Download,
-  Folder
+  Folder,
+  View
 } from '@element-plus/icons-vue'
 import api from '../api'
+
+const router = useRouter()
 
 const inputMode = ref('paste')
 const contractText = ref('')
@@ -346,6 +354,14 @@ const handleReview = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const goToDetail = () => {
+  if (!reviewResult.value?.reviewUuid) {
+    ElMessage.warning('请先完成合同审查')
+    return
+  }
+  router.push(`/contract-risk/${reviewResult.value.reviewUuid}`)
 }
 
 const handleFileChange = (file) => {

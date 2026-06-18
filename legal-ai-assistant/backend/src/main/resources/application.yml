@@ -44,8 +44,16 @@ ai:
     url: http://localhost:19001
     token: my-secret-token
     auto-start: true
+    # 二进制可执行文件绝对路径，留空则自动在常见目录与 PATH 中查找
+    binary-path:
+    # 自定义配置文件路径，可选
+    config-path:
+    # 网关启动参数
+    gateway-args: gateway --allow-unconfigured
+    # 启动日志输出文件
+    log-path: /tmp/openclaw_stderr.log
   minimax:
-    model: openclaw
+    model: minimax/MiniMax-M3
     timeout: 120
 
 # Mock Mode (false = 使用MiniMax AI)

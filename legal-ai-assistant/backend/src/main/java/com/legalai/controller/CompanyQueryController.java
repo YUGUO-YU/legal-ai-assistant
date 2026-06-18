@@ -23,6 +23,20 @@ public class CompanyQueryController {
         return ApiResponse.success(response);
     }
 
+    @GetMapping("/queries/{uuid}")
+    public ApiResponse<CompanyQueryResponse> getQuery(@PathVariable String uuid) {
+        CompanyQueryResponse response = companyService.getQuery(uuid);
+        if (response == null) {
+            return ApiResponse.error(404, "查询记录不存在或已过期");
+        }
+        return ApiResponse.success(response);
+    }
+
+    @GetMapping("/queries")
+    public ApiResponse<List<CompanyQueryResponse>> listRecent(@RequestParam(defaultValue = "20") int limit) {
+        return ApiResponse.success(companyService.listRecent(Math.max(1, Math.min(limit, 100))));
+    }
+
     @GetMapping("/risk-levels")
     public ApiResponse<List<RiskLevelInfo>> getRiskLevels() {
         return ApiResponse.success(List.of(

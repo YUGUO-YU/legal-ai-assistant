@@ -135,10 +135,16 @@
               <div class="card-header">
                 <el-icon><User /></el-icon>
                 <span>股东信息</span>
+                <el-button type="primary" link size="small" @click="goCompanyDetail">查看详情</el-button>
               </div>
             </template>
             <div class="shareholder-list">
-              <div v-for="shareholder in companyInfo.shareholders" :key="shareholder.name" class="shareholder-item">
+              <div
+                v-for="shareholder in companyInfo.shareholders"
+                :key="shareholder.name"
+                class="shareholder-item"
+                @click="goShareholder(shareholder.name)"
+              >
                 <div class="shareholder-avatar">
                   <el-icon><UserFilled /></el-icon>
                 </div>
@@ -150,6 +156,7 @@
                     <span>{{ shareholder.ratio }}</span>
                   </div>
                 </div>
+                <el-icon class="shareholder-arrow"><Right /></el-icon>
               </div>
             </div>
           </el-card>
@@ -183,6 +190,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   OfficeBuilding,
@@ -193,16 +201,34 @@ import {
   InfoFilled,
   User,
   UserFilled,
-  Link
+  Link,
+  Right
 } from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 
+const router = useRouter()
 const companyName = ref('')
 const loading = ref(false)
 const companyInfo = ref(null)
 const hasSearched = ref(false)
+
+const goShareholder = (name) => {
+  if (!companyInfo.value?.queryUuid) {
+    ElMessage.warning('请先完成查询')
+    return
+  }
+  router.push(`/shareholder-detail/${companyInfo.value.queryUuid}/${encodeURIComponent(name)}`)
+}
+
+const goCompanyDetail = () => {
+  if (!companyInfo.value?.queryUuid) {
+    ElMessage.warning('请先完成查询')
+    return
+  }
+  router.push(`/company-detail/${companyInfo.value.queryUuid}`)
+}
 
 const handleQuery = async () => {
   if (!companyName.value.trim()) {
@@ -581,6 +607,23 @@ const getRiskItemClass = (level) => {
     padding: 12px;
     background: #f9fafb;
     border-radius: 12px;
+    cursor: pointer;
+    align-items: center;
+    transition: all 0.3s;
+
+    &:hover {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+      transform: translateX(2px);
+
+      .shareholder-arrow { color: #667eea; transform: translateX(0); opacity: 1; }
+    }
+
+    .shareholder-arrow {
+      color: #d1d5db;
+      opacity: 0;
+      transform: translateX(-4px);
+      transition: all 0.3s;
+    }
 
     .shareholder-avatar {
       width: 44px;

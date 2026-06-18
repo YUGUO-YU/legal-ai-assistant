@@ -234,20 +234,40 @@ public class DocumentService {
     }
 
     public ExtractedInfo extractInfoFromText(String text, String templateCode) {
-        log.info("从文本提取信息: text长度={}, templateCode={}", text.length(), templateCode);
+        log.info("从文本提取信息: text长度={}, templateCode={}", text == null ? 0 : text.length(), templateCode);
+
+        if (text == null || text.trim().isEmpty()) {
+            ExtractedInfo empty = new ExtractedInfo();
+            empty.setSuccess(false);
+            empty.setErrorMessage("待提取的文本为空");
+            return empty;
+        }
 
         String prompt = buildExtractionPrompt(text, templateCode);
 
+        ExtractedInfo llmResult = null;
         try {
             String aiResponse = aiService.chat(prompt);
-            return parseExtractedInfo(aiResponse);
+            llmResult = parseExtractedInfo(aiResponse);
         } catch (IOException e) {
-            log.error("AI信息提取失败: {}", e.getMessage());
-            ExtractedInfo fallback = new ExtractedInfo();
-            fallback.setSuccess(false);
-            fallback.setErrorMessage("信息提取失败: " + e.getMessage());
-            return fallback;
+            log.warn("AI信息提取失败，将使用本地正则后备: {}", e.getMessage());
+        } catch (Exception e) {
+            log.warn("AI信息提取异常，将使用本地正则后备: {}", e.getMessage());
         }
+
+        ExtractedInfo local = extractByRegex(text, templateCode);
+        local = mergeInfo(local, llmResult);
+
+        if (!hasAnyField(local)) {
+            local.setSuccess(false);
+            if (local.getErrorMessage() == null || local.getErrorMessage().isEmpty()) {
+                local.setErrorMessage("未能从文本中识别到任何关键信息，请补充当事人、金额或事实描述后重试");
+            }
+        } else {
+            local.setSuccess(true);
+            local.setErrorMessage(null);
+        }
+        return local;
     }
 
     private String buildExtractionPrompt(String text, String templateCode) {
@@ -256,7 +276,7 @@ public class DocumentService {
         sb.append("【待提取文本】\n").append(text).append("\n\n");
         sb.append("【文书模板类型】").append(templateCode).append("\n\n");
 
-        sb.append("请提取以下信息，返回JSON格式：\n\n");
+        sb.append("请提取以下信息，返回严格合法的JSON格式：\n\n");
 
         if (templateCode.startsWith("civil_") || templateCode.equals("civil_petition")) {
             sb.append("{\n");
@@ -289,19 +309,19 @@ public class DocumentService {
             sb.append("}\n");
         }
 
-        sb.append("\n只返回JSON，不要有其他解释性文字。如果某个字段无法提取，设置为空字符串或null。");
+        sb.append("\n要求：\n");
+        sb.append("1) 仅返回JSON，禁止任何解释、Markdown代码块或前后缀文字。\n");
+        sb.append("2) 金额字段使用阿拉伯数字（不要带\"元\"\"万元\"等）。\n");
+        sb.append("3) 如果某字段无法提取，输出空字符串或null。\n");
         return sb.toString();
     }
 
     private ExtractedInfo parseExtractedInfo(String aiResponse) {
         ExtractedInfo info = new ExtractedInfo();
-        info.setSuccess(true);
 
         String jsonContent = extractJsonFromResponse(aiResponse);
         if (jsonContent == null || jsonContent.isEmpty()) {
-            log.error("无法从AI响应中提取JSON内容");
-            info.setSuccess(false);
-            info.setErrorMessage("无法从AI响应中提取信息");
+            log.warn("无法从AI响应中提取JSON内容");
             return info;
         }
 
@@ -314,13 +334,16 @@ public class DocumentService {
             info.setDefendantName(getJsonText(node, "defendantName"));
             info.setDefendantAddress(getJsonText(node, "defendantAddress"));
 
-            if (node.has("claimAmount")) {
+            if (node.has("claimAmount") && !node.get("claimAmount").isNull()) {
                 if (node.get("claimAmount").isNumber()) {
                     info.setClaimAmount(node.get("claimAmount").decimalValue());
                 } else {
                     String amountStr = node.get("claimAmount").asText().replaceAll("[^0-9.]", "");
                     if (!amountStr.isEmpty()) {
-                        info.setClaimAmount(new BigDecimal(amountStr));
+                        try {
+                            info.setClaimAmount(new BigDecimal(amountStr));
+                        } catch (NumberFormatException ignore) {
+                        }
                     }
                 }
             }
@@ -334,15 +357,219 @@ public class DocumentService {
             info.setSalary(getJsonText(node, "salary"));
             info.setStartDate(getJsonText(node, "startDate"));
             info.setDisputeType(getJsonText(node, "disputeType"));
-
-            log.info("信息提取成功");
         } catch (Exception e) {
-            log.error("解析提取结果失败: {}", e.getMessage());
-            info.setSuccess(false);
-            info.setErrorMessage("解析失败: " + e.getMessage());
+            log.warn("解析AI提取JSON失败: {}", e.getMessage());
         }
 
         return info;
+    }
+
+    private ExtractedInfo mergeInfo(ExtractedInfo base, ExtractedInfo overlay) {
+        if (overlay == null) {
+            return base;
+        }
+        if (notEmpty(overlay.getPlaintiffName())) base.setPlaintiffName(overlay.getPlaintiffName());
+        if (notEmpty(overlay.getPlaintiffAddress())) base.setPlaintiffAddress(overlay.getPlaintiffAddress());
+        if (notEmpty(overlay.getDefendantName())) base.setDefendantName(overlay.getDefendantName());
+        if (notEmpty(overlay.getDefendantAddress())) base.setDefendantAddress(overlay.getDefendantAddress());
+        if (notEmpty(overlay.getClaimDescription())) base.setClaimDescription(overlay.getClaimDescription());
+        if (notEmpty(overlay.getFacts())) base.setFacts(overlay.getFacts());
+        if (notEmpty(overlay.getCourtName())) base.setCourtName(overlay.getCourtName());
+        if (notEmpty(overlay.getEmployerName())) base.setEmployerName(overlay.getEmployerName());
+        if (notEmpty(overlay.getEmployeeName())) base.setEmployeeName(overlay.getEmployeeName());
+        if (notEmpty(overlay.getWorkContent())) base.setWorkContent(overlay.getWorkContent());
+        if (notEmpty(overlay.getSalary())) base.setSalary(overlay.getSalary());
+        if (notEmpty(overlay.getStartDate())) base.setStartDate(overlay.getStartDate());
+        if (notEmpty(overlay.getDisputeType())) base.setDisputeType(overlay.getDisputeType());
+        if (overlay.getClaimAmount() != null && (base.getClaimAmount() == null || base.getClaimAmount().signum() == 0)) {
+            base.setClaimAmount(overlay.getClaimAmount());
+        }
+        return base;
+    }
+
+    private boolean notEmpty(String s) {
+        return s != null && !s.trim().isEmpty();
+    }
+
+    private boolean hasAnyField(ExtractedInfo info) {
+        if (info == null) return false;
+        return notEmpty(info.getPlaintiffName())
+            || notEmpty(info.getPlaintiffAddress())
+            || notEmpty(info.getDefendantName())
+            || notEmpty(info.getDefendantAddress())
+            || notEmpty(info.getClaimDescription())
+            || notEmpty(info.getFacts())
+            || notEmpty(info.getCourtName())
+            || notEmpty(info.getEmployerName())
+            || notEmpty(info.getEmployeeName())
+            || notEmpty(info.getWorkContent())
+            || notEmpty(info.getSalary())
+            || notEmpty(info.getStartDate())
+            || notEmpty(info.getDisputeType())
+            || (info.getClaimAmount() != null && info.getClaimAmount().signum() > 0);
+    }
+
+    private ExtractedInfo extractByRegex(String text, String templateCode) {
+        ExtractedInfo info = new ExtractedInfo();
+
+        try {
+            String plaintiff = firstMatch(text,
+                "原告[：:为]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})",
+                "原告[：:]?\\s*([\\S]{2,20})",
+                "申请执行人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})");
+            if (plaintiff != null) plaintiff = plaintiff.replaceAll("(住所|地址|住|男|女|族|身份证号|住址).*$", "").trim();
+            info.setPlaintiffName(cleanName(plaintiff));
+
+            String defendant = firstMatch(text,
+                "被告[：:为]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})",
+                "被告[：:]?\\s*([\\S]{2,20})",
+                "被执行人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})");
+            if (defendant != null) defendant = defendant.replaceAll("(住所|地址|住|男|女|族|身份证号|住址).*$", "").trim();
+            info.setDefendantName(cleanName(defendant));
+
+            String plaintiffAddr = firstMatch(text,
+                "原告[\\s\\S]{0,40}?(?:住|住所地|住所位于|地址)[\\s]*[：:]?\\s*([\\u4e00-\\u9fa5A-Za-z0-9省市区县路街道号弄室栋楼幢-—、]{4,80})");
+            info.setPlaintiffAddress(cleanAddress(plaintiffAddr));
+
+            String defendantAddr = firstMatch(text,
+                "被告[\\s\\S]{0,40}?(?:住|住所地|住所位于|地址)[\\s]*[：:]?\\s*([\\u4e00-\\u9fa5A-Za-z0-9省市区县路街道号弄室栋楼幢-—、]{4,80})");
+            info.setDefendantAddress(cleanAddress(defendantAddr));
+
+            String court = firstMatch(text,
+                "(?:管辖法院|受案法院|移送|由)\\s*([\\u4e00-\\u9fa5A-Za-z]{2,30}?(?:人民法院|法院))",
+                "([\\u4e00-\\u9fa5A-Za-z]{2,30}人民法院)");
+            info.setCourtName(cleanCourt(court));
+
+            BigDecimal amount = parseAmount(text);
+            if (amount != null) {
+                info.setClaimAmount(amount);
+            }
+
+            String claimDesc = firstMatch(text,
+                "诉讼请求[：:]\\s*([\\s\\S]{1,400}?)(?:事实|理由|此致|$)");
+            if (claimDesc == null) {
+                claimDesc = firstMatch(text,
+                    "请求[：:]\\s*([\\s\\S]{1,400}?)(?:事实|理由|此致|$)");
+            }
+            if (claimDesc == null) {
+                claimDesc = firstMatch(text,
+                    "仲裁请求[：:]\\s*([\\s\\S]{1,400}?)(?:事实|理由|此致|$)");
+            }
+            info.setClaimDescription(claimDesc == null ? "" : claimDesc.trim());
+
+            String facts = firstMatch(text,
+                "事实[与与]理由[：:]\\s*([\\s\\S]{1,800}?)(?:此致|此呈|人民法院|仲裁委员会|$)");
+            if (facts == null) {
+                facts = firstMatch(text,
+                    "事实[：:]\\s*([\\s\\S]{1,800}?)(?:此致|此呈|人民法院|仲裁委员会|$)");
+            }
+            if (facts == null) {
+                facts = firstMatch(text,
+                    "案情简介[：:]\\s*([\\s\\S]{1,800}?)(?:此致|此呈|$)");
+            }
+            info.setFacts(facts == null ? "" : facts.trim());
+
+            String employer = firstMatch(text,
+                "用人单位[：:]\\s*([\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{2,50})",
+                "被申请人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{2,50})");
+            info.setEmployerName(employer == null ? "" : employer.replaceAll("(住所|地址|统一社会信用代码).*$", "").trim());
+
+            String employee = firstMatch(text,
+                "劳动者[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})",
+                "申请人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})");
+            info.setEmployeeName(cleanName(employee));
+
+            String workContent = firstMatch(text,
+                "工作岗位[：:]\\s*([\\u4e00-\\u9fa5A-Za-z0-9、，,\\-\\s]{2,40})",
+                "从事[\\s]*([\\u4e00-\\u9fa5A-Za-z0-9、，,\\-\\s]{2,40}?)(?:工作|岗位|劳动)");
+            info.setWorkContent(workContent == null ? "" : workContent.trim());
+
+            String salary = firstMatch(text,
+                "月?工资[为于约]?\\s*([\\d,，\\.\\s]+(?:元|万元|块|人民币)?)",
+                "月薪[为于约]?\\s*([\\d,，\\.\\s]+(?:元|万元|块|人民币)?)");
+            info.setSalary(salary == null ? "" : salary.trim());
+
+            String startDate = firstMatch(text,
+                "(?:于|自)\\s*(\\d{4}\\s*年\\s*\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日?)(?:起)?(?:入?(?:职|厂|司))?",
+                "入职日期[：:]\\s*(\\d{4}[-/]\\d{1,2}[-/]\\d{1,2})",
+                "(?:于|自)\\s*(\\d{4}[-/]\\d{1,2}[-/]\\d{1,2})");
+            info.setStartDate(startDate == null ? "" : startDate.replaceAll("\\s+", "").trim());
+
+            String dispute = firstMatch(text,
+                "争议类型[：:]\\s*([\\u4e00-\\u9fa5A-Za-z]{2,30})",
+                "(劳动争议|工伤赔偿|工资争议|劳动合同纠纷|社会保险纠纷|经济补偿金纠纷|违法解除劳动合同)");
+            info.setDisputeType(dispute == null ? "" : dispute.trim());
+        } catch (Exception e) {
+            log.warn("本地正则提取异常: {}", e.getMessage());
+        }
+
+        return info;
+    }
+
+    private String firstMatch(String text, String... patterns) {
+        if (text == null) return null;
+        for (String p : patterns) {
+            if (p == null) continue;
+            try {
+                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(p);
+                java.util.regex.Matcher m = pattern.matcher(text);
+                if (m.find()) {
+                    String hit = m.group(1);
+                    if (hit != null) return hit;
+                }
+            } catch (Exception ignore) {
+            }
+        }
+        return null;
+    }
+
+    private BigDecimal parseAmount(String text) {
+        if (text == null || text.isEmpty()) return null;
+        String[] patterns = new String[] {
+            "(?:金额|诉请金额|诉讼请求金额|标的额|欠款|借款|本金|货款|赔偿金额)[为于约]?\\s*[人民币]?\\s*([\\d,，\\.]{1,15})(?:\\s*元)?",
+            "([\\d,，\\.]{1,15})\\s*万元",
+            "([\\d,，\\.]{1,15})\\s*元"
+        };
+        for (String p : patterns) {
+            try {
+                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(p);
+                java.util.regex.Matcher m = pattern.matcher(text);
+                if (m.find()) {
+                    String num = m.group(1);
+                    if (num == null) continue;
+                    num = num.replaceAll("[,，\\s]", "");
+                    if (num.isEmpty()) continue;
+                    BigDecimal bd = new BigDecimal(num);
+                    if (p.contains("万元")) {
+                        bd = bd.multiply(new BigDecimal("10000"));
+                    }
+                    if (bd.signum() > 0) return bd;
+                }
+            } catch (Exception ignore) {
+            }
+        }
+        return null;
+    }
+
+    private String cleanName(String s) {
+        if (s == null) return "";
+        s = s.replaceAll("[\\s　]+", "").trim();
+        if (s.length() > 30) s = s.substring(0, 30);
+        return s;
+    }
+
+    private String cleanAddress(String s) {
+        if (s == null) return "";
+        s = s.replaceAll("\\s+", " ").trim();
+        if (s.length() > 100) s = s.substring(0, 100);
+        return s;
+    }
+
+    private String cleanCourt(String s) {
+        if (s == null) return "";
+        s = s.replaceAll("\\s+", "").trim();
+        if (s.length() > 40) s = s.substring(0, 40);
+        return s;
     }
 
     private String getJsonText(com.fasterxml.jackson.databind.JsonNode node, String field) {
@@ -353,23 +580,27 @@ public class DocumentService {
         if (response == null || response.isEmpty()) {
             return null;
         }
-
         String trimmed = response.trim();
 
-        int jsonStart = trimmed.indexOf("[");
-        int jsonEnd = trimmed.lastIndexOf("]");
-        if (jsonStart == -1 || jsonEnd == -1 || jsonStart > jsonEnd) {
-            jsonStart = trimmed.indexOf("{");
-            jsonEnd = trimmed.lastIndexOf("}");
+        java.util.regex.Matcher fence = java.util.regex.Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)```").matcher(trimmed);
+        if (fence.find()) {
+            trimmed = fence.group(1).trim();
         }
 
+        int jsonStart = trimmed.indexOf("{");
+        int jsonEnd = trimmed.lastIndexOf("}");
+        if (jsonStart == -1 || jsonEnd == -1 || jsonStart >= jsonEnd) {
+            jsonStart = trimmed.indexOf("[");
+            jsonEnd = trimmed.lastIndexOf("]");
+        }
         if (jsonStart != -1 && jsonEnd != -1 && jsonStart < jsonEnd) {
             String json = trimmed.substring(jsonStart, jsonEnd + 1);
-            json = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");
+            json = json.replaceAll("/\\*[\\s\\S]*?\\*/", "");
+            json = json.replaceAll("(?m)^\\s*//.*$", "");
+            json = json.replaceAll(",\\s*([}\\]])", "$1");
             return json;
         }
-
-        return trimmed;
+        return null;
     }
 
     private void validateRequest(DocumentDraftRequest request) {

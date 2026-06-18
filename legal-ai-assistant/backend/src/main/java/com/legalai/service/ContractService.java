@@ -22,6 +22,9 @@ public class ContractService {
     @Autowired
     private AIService aiService;
 
+    @Autowired
+    private ContractReviewStore reviewStore;
+
     private static final Map<String, Integer> DIMENSION_WEIGHTS = Map.of(
         "SUBJECT_QUALIFICATION", 15,
         "CONTRACT_VALIDITY", 20,
@@ -43,11 +46,23 @@ public class ContractService {
 
         validateRequest(request);
 
+        ContractReviewResponse response;
         if (mockEnabled) {
-            return mockReviewContract(request);
+            response = mockReviewContract(request);
+        } else {
+            response = aiReviewContract(request);
         }
+        response.setCreatedAt(System.currentTimeMillis());
+        reviewStore.save(response);
+        return response;
+    }
 
-        return aiReviewContract(request);
+    public ContractReviewResponse getReview(String uuid) {
+        return reviewStore.get(uuid);
+    }
+
+    public List<ContractReviewResponse> listRecent(int limit) {
+        return reviewStore.listRecent(limit);
     }
 
     private void validateRequest(ContractReviewRequest request) {

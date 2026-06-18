@@ -142,11 +142,15 @@ export default {
   },
   company: {
     query: (data) => withRetry(() => api.post('/company/query', data)),
-    getRiskLevels: () => withRetry(() => api.get('/company/risk-levels'))
+    getRiskLevels: () => withRetry(() => api.get('/company/risk-levels')),
+    getQuery: (uuid) => withRetry(() => api.get(`/company/queries/${uuid}`)),
+    listQueries: (limit = 20) => withRetry(() => api.get('/company/queries', { params: { limit } }))
   },
   contract: {
     review: (data) => withRetry(() => api.post('/contract/review', data)),
-    getDimensions: () => withRetry(() => api.get('/contract/dimensions'))
+    getDimensions: () => withRetry(() => api.get('/contract/dimensions')),
+    getReview: (uuid) => withRetry(() => api.get(`/contract/reviews/${uuid}`)),
+    listReviews: (limit = 20) => withRetry(() => api.get('/contract/reviews', { params: { limit } }))
   },
   docQa: {
     ask: (data) => withRetry(() => api.post('/doc-qa/ask', data)),
@@ -159,7 +163,9 @@ export default {
     list: (params) => withRetry(() => api.get('/knowledge-base/list', { params })),
     create: (data) => withRetry(() => api.post('/knowledge-base/create', data)),
     delete: (id) => withRetry(() => api.delete(`/knowledge-base/${id}`)),
-    upload: (data) => withRetry(() => api.post('/knowledge-base/upload', data))
+    upload: (data) => withRetry(() => api.post('/knowledge-base/upload', data)),
+    detail: (id) => withRetry(() => api.get(`/knowledge-base/${id}`)),
+    chunks: (id) => withRetry(() => api.get(`/knowledge-base/${id}/chunks`))
   },
   ppt: {
     generate: (data) => withRetry(() => api.post('/ppt/generate', data)),

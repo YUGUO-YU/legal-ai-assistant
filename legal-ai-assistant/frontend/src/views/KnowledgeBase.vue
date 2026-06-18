@@ -92,9 +92,43 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="showManage" title="知识库管理" width="640px">
+      <div v-if="managingKb" class="manage-summary">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="知识库名称">{{ managingKb.name }}</el-descriptions-item>
+          <el-descriptions-item label="类型">{{ kbTypeLabel(managingKb.type) }}</el-descriptions-item>
+          <el-descriptions-item label="可见性">{{ managingKb.visibility ? '团队共享' : '仅个人' }}</el-descriptions-item>
+          <el-descriptions-item label="文档数">{{ managingKb.docCount }}</el-descriptions-item>
+          <el-descriptions-item label="总分块数">{{ managingKb.chunkCount }}</el-descriptions-item>
+          <el-descriptions-item label="总大小">{{ formatSize(managingKb.totalSize) }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ managingKb.createdAt }}</el-descriptions-item>
+          <el-descriptions-item label="更新时间">{{ managingKb.updatedAt }}</el-descriptions-item>
+          <el-descriptions-item label="描述" :span="2">{{ managingKb.description || '暂无描述' }}</el-descriptions-item>
+        </el-descriptions>
+        <div class="manage-actions">
+          <el-button type="primary" @click="goToDetail(managingKb); showManage = false">
+            <el-icon><View /></el-icon>进入详情
+          </el-button>
+          <el-button @click="goToDocQa(managingKb); showManage = false">
+            <el-icon><ChatLineRound /></el-icon>文档问答
+          </el-button>
+          <el-button @click="goToSearch(managingKb); showManage = false">
+            <el-icon><Search /></el-icon>语义检索
+          </el-button>
+          <el-button @click="goToUploadFromManage">
+            <el-icon><Upload /></el-icon>上传文档
+          </el-button>
+        </div>
+      </div>
+      <template #footer>
+        <el-button type="danger" @click="deleteKb">删除知识库</el-button>
+        <el-button @click="showManage = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
     <el-row :gutter="20" class="kb-grid">
       <el-col :span="8" v-for="kb in filteredKbList" :key="kb.id">
-        <el-card class="kb-card" :body-style="{ padding: '0px' }">
+        <el-card class="kb-card" :body-style="{ padding: '0px' }" @click="goToDetail(kb)">
           <div class="kb-header" :style="{ background: getKbColor(kb.type) }">
             <div class="kb-icon">
               <el-icon :size="32"><Folder /></el-icon>
@@ -103,6 +137,7 @@
               <h3>{{ kb.name }}</h3>
               <p>{{ kb.description || '暂无描述' }}</p>
             </div>
+            <el-icon class="detail-arrow"><Right /></el-icon>
           </div>
           <div class="kb-body">
             <div class="kb-stats">
@@ -160,7 +195,7 @@
 <script setup>
 import { ref, computed, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Upload,
   Plus,
@@ -169,13 +204,18 @@ import {
   User,
   Clock,
   ChatDotRound,
-  Setting
+  Setting,
+  Right,
+  View,
+  ChatLineRound
 } from '@element-plus/icons-vue'
 import EmptyState from '../components/EmptyState.vue'
 
 const router = useRouter()
 const showUpload = ref(false)
 const showCreateKb = ref(false)
+const showManage = ref(false)
+const managingKb = ref(null)
 const uploading = ref(false)
 const searchKeyword = ref('')
 const fileList = ref([])
@@ -330,7 +370,51 @@ const goToDocQa = (kb) => {
 }
 
 const manageKb = (kb) => {
-  ElMessage.info(`进入知识库管理：${kb.name}`)
+  managingKb.value = kb
+  showManage.value = true
+}
+
+const goToUploadFromManage = () => {
+  showManage.value = false
+  showUpload.value = true
+}
+
+const kbTypeLabel = (type) => {
+  return type === 'labor' ? '劳动法' : type === 'contract' ? '合同' : type === 'ip' ? '知识产权' : type === 'corporate' ? '公司法' : '通用'
+}
+
+const formatSize = (size) => {
+  if (!size && size !== 0) return '-'
+  if (size < 1024) return size + ' B'
+  if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB'
+  if (size < 1024 * 1024 * 1024) return (size / 1024 / 1024).toFixed(2) + ' MB'
+  return (size / 1024 / 1024 / 1024).toFixed(2) + ' GB'
+}
+
+const deleteKb = async () => {
+  if (!managingKb.value) return
+  try {
+    await ElMessageBox.confirm(
+      `确认删除知识库 "${managingKb.value.name}" 吗？该操作不可恢复。`,
+      '删除确认',
+      { type: 'warning' }
+    )
+    if (api.knowledgeBase && api.knowledgeBase.delete) {
+      await api.knowledgeBase.delete(managingKb.value.id)
+    } else {
+      knowledgeBases.value = knowledgeBases.value.filter(k => k.id !== managingKb.value.id)
+    }
+    ElMessage.success('知识库已删除')
+    showManage.value = false
+  } catch (e) {
+    if (e !== 'cancel') {
+      ElMessage.error('删除失败：' + (e?.message || e))
+    }
+  }
+}
+
+const goToDetail = (kb) => {
+  router.push(`/kb-detail/${kb.id}`)
 }
 </script>
 
@@ -416,6 +500,17 @@ const manageKb = (kb) => {
   }
 }
 
+.manage-summary {
+  .manage-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #ebeef5;
+  }
+}
+
 .kb-grid {
   .kb-card {
     margin-bottom: 16px;
@@ -438,6 +533,18 @@ const manageKb = (kb) => {
   display: flex;
   align-items: center;
   gap: 16px;
+  cursor: pointer;
+
+  .detail-arrow {
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: all 0.3s;
+  }
+
+  &:hover .detail-arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
 
   .kb-icon {
     width: 56px;

@@ -432,13 +432,17 @@ const handleExtractInfo = async () => {
   extracting.value = true
   try {
     const res = await api.document.extractInfo(pasteText.value, selectedTemplate.value)
-    if (res.code === 200 && res.data) {
+    const ok = (res.code === 200 || res.code === 0)
+    if (ok && res.data) {
       const info = res.data
       if (info.plaintiffName) formData.plaintiffName = info.plaintiffName
       if (info.plaintiffAddress) formData.plaintiffAddress = info.plaintiffAddress
       if (info.defendantName) formData.defendantName = info.defendantName
       if (info.defendantAddress) formData.defendantAddress = info.defendantAddress
-      if (info.claimAmount) formData.claimAmount = info.claimAmount
+      if (info.claimAmount !== null && info.claimAmount !== undefined && info.claimAmount !== '') {
+        const amt = Number(info.claimAmount)
+        if (!Number.isNaN(amt)) formData.claimAmount = amt
+      }
       if (info.claimDescription) formData.claimDescription = info.claimDescription
       if (info.facts) formData.facts = info.facts
       if (info.courtName) formData.courtName = info.courtName
@@ -449,8 +453,19 @@ const handleExtractInfo = async () => {
       if (info.startDate) formData.startDate = info.startDate
       if (info.disputeType) formData.disputeType = info.disputeType
 
-      ElMessage.success('信息提取成功，已自动填充表单')
-      showPasteDialogVisible.value = false
+      const totalFilled = [
+        info.plaintiffName, info.plaintiffAddress, info.defendantName, info.defendantAddress,
+        info.claimAmount, info.claimDescription, info.facts, info.courtName,
+        info.employerName, info.employeeName, info.workContent, info.salary,
+        info.startDate, info.disputeType
+      ].filter(v => v !== null && v !== undefined && String(v).trim() !== '').length
+
+      if (totalFilled > 0) {
+        ElMessage.success(`已自动填充 ${totalFilled} 项信息，请检查并补全`)
+        showPasteDialogVisible.value = false
+      } else {
+        ElMessage.warning('未能从文本中识别到关键信息，请检查粘贴内容')
+      }
     } else {
       ElMessage.error(res.message || '信息提取失败')
     }

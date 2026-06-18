@@ -82,4 +82,18 @@ public class KnowledgeBaseController {
             return ApiResponse.error(500, "文件解析失败: " + e.getMessage());
         }
     }
+
+    @GetMapping("/{id}")
+    public ApiResponse<KnowledgeBaseListResponse.KnowledgeBase> detail(@PathVariable Long id) {
+        KnowledgeBaseListResponse.KnowledgeBase kb = knowledgeBaseService.getKnowledgeBase(id);
+        if (kb == null) {
+            return ApiResponse.error(404, "知识库不存在");
+        }
+        return ApiResponse.success(kb);
+    }
+
+    @GetMapping("/{id}/chunks")
+    public ApiResponse<java.util.List<com.legalai.service.KnowledgeBaseService.DocumentChunk>> chunks(@PathVariable Long id) {
+        return ApiResponse.success(knowledgeBaseService.getDocumentChunks(id));
+    }
 }

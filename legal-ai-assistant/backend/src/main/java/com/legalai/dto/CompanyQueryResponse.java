@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public class CompanyQueryResponse {
+    private String queryUuid;
     private String companyName;
     private String unifiedSocialCreditCode;
     private String legalRepresentative;
@@ -17,6 +18,8 @@ public class CompanyQueryResponse {
     private String dataSource;
     private String queryTime;
 
+    public String getQueryUuid() { return queryUuid; }
+    public void setQueryUuid(String queryUuid) { this.queryUuid = queryUuid; }
     public String getCompanyName() { return companyName; }
     public void setCompanyName(String companyName) { this.companyName = companyName; }
     public String getUnifiedSocialCreditCode() { return unifiedSocialCreditCode; }

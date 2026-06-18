@@ -53,6 +53,23 @@ public class ContractReviewController {
         return info;
     }
 
+    @GetMapping("/reviews/{uuid}")
+    @Operation(summary = "获取合同审查详情", description = "根据审查UUID获取历史审查结果详情")
+    public com.legalai.dto.ApiResponse<ContractReviewResponse> getReview(@PathVariable String uuid) {
+        ContractReviewResponse response = contractService.getReview(uuid);
+        if (response == null) {
+            return com.legalai.dto.ApiResponse.error(404, "审查记录不存在或已过期");
+        }
+        return com.legalai.dto.ApiResponse.success(response);
+    }
+
+    @GetMapping("/reviews")
+    @Operation(summary = "获取最近审查记录", description = "获取最近的合同审查记录列表")
+    public com.legalai.dto.ApiResponse<List<ContractReviewResponse>> listRecent(
+            @RequestParam(defaultValue = "20") int limit) {
+        return com.legalai.dto.ApiResponse.success(contractService.listRecent(Math.max(1, Math.min(limit, 100))));
+    }
+
     static class DimensionInfo {
         private String dimensionCode;
         private String dimensionName;

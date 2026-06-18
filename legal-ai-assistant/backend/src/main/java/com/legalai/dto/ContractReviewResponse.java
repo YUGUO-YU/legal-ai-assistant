@@ -3,6 +3,7 @@ package com.legalai.dto;
 import java.util.List;
 
 public class ContractReviewResponse {
+    private String reviewUuid;
     private String contractName;
     private String contractType;
     private Integer totalScore;
@@ -12,7 +13,10 @@ public class ContractReviewResponse {
     private List<RiskItem> mediumRiskItems;
     private List<RiskItem> lowRiskItems;
     private String overallComment;
+    private Long createdAt;
 
+    public String getReviewUuid() { return reviewUuid; }
+    public void setReviewUuid(String reviewUuid) { this.reviewUuid = reviewUuid; }
     public String getContractName() { return contractName; }
     public void setContractName(String contractName) { this.contractName = contractName; }
     public String getContractType() { return contractType; }
@@ -31,6 +35,8 @@ public class ContractReviewResponse {
     public void setLowRiskItems(List<RiskItem> lowRiskItems) { this.lowRiskItems = lowRiskItems; }
     public String getOverallComment() { return overallComment; }
     public void setOverallComment(String overallComment) { this.overallComment = overallComment; }
+    public Long getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Long createdAt) { this.createdAt = createdAt; }
 
     public static class DimensionReview {
         private String dimensionCode;

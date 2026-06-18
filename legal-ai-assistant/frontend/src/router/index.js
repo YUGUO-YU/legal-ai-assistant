@@ -40,6 +40,16 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/company-detail/:companyUuid',
+    component: () => import('../views/CompanyDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/shareholder-detail/:companyUuid/:shareholderName',
+    component: () => import('../views/ShareholderDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/case-search',
     component: () => import('../views/CaseSearch.vue'),
     meta: { requiresAuth: true }
@@ -65,13 +75,28 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/contract-risk/:reviewUuid',
+    component: () => import('../views/ContractRiskDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/knowledge-base',
     component: () => import('../views/KnowledgeBase.vue'),
     meta: { requiresAuth: true }
   },
   {
+    path: '/kb-detail/:kbId',
+    component: () => import('../views/KbDocumentDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/doc-qa',
     component: () => import('../views/DocQa.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/qa-session/:sessionId',
+    component: () => import('../views/SessionDetail.vue'),
     meta: { requiresAuth: true }
   },
   {

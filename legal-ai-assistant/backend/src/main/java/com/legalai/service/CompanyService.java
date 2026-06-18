@@ -23,16 +23,30 @@ public class CompanyService {
     @Autowired
     private AIService aiService;
 
+    @Autowired
+    private CompanyQueryStore queryStore;
+
     public CompanyQueryResponse queryCompany(CompanyQueryRequest request) {
         log.info("企业查询请求: companyName={}", request.getCompanyName());
 
         validateRequest(request);
 
+        CompanyQueryResponse response;
         if (mockEnabled) {
-            return mockQueryCompany(request);
+            response = mockQueryCompany(request);
+        } else {
+            response = realQueryCompany(request);
         }
+        queryStore.save(response);
+        return response;
+    }
 
-        return realQueryCompany(request);
+    public CompanyQueryResponse getQuery(String uuid) {
+        return queryStore.get(uuid);
+    }
+
+    public List<CompanyQueryResponse> listRecent(int limit) {
+        return queryStore.listRecent(limit);
     }
 
     private void validateRequest(CompanyQueryRequest request) {

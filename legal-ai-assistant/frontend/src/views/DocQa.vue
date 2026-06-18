@@ -173,6 +173,9 @@
                   <span class="session-title">{{ s.title }}</span>
                   <span class="session-date">{{ s.date }}</span>
                 </div>
+                <el-icon class="session-detail-btn" @click.stop="goSessionDetail(s)" title="查看详情">
+                  <View />
+                </el-icon>
                 <el-icon class="session-arrow"><Right /></el-icon>
               </div>
             </div>
@@ -217,25 +220,33 @@
 
 <script setup>
 import { ref, nextTick, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
+  Search,
   ChatDotRound,
-  UserFilled,
-  MagicStick,
+  ChatLineRound,
+  User,
   Promotion,
-  Delete,
   Document,
+  Delete,
+  Loading,
+  CopyDocument,
+  Refresh,
+  Download,
   Collection,
+  Link,
   ChatLineSquare,
   Right,
   QuestionFilled,
   InfoFilled,
   Switch,
-  Key
+  Key,
+  View
 } from '@element-plus/icons-vue'
 import api from '../api'
 
+const router = useRouter()
 const route = useRoute()
 const question = ref('')
 const messages = ref([])
@@ -431,6 +442,15 @@ const scrollToCitation = (c) => {
     }
     ElMessage.info(`正在定位文档: ${kbMap[c.documentId] || c.documentId}`)
   }
+}
+
+const goSessionDetail = (s) => {
+  const id = s.sessionUuid || s.id
+  if (!id) {
+    ElMessage.warning('该会话没有可用的ID')
+    return
+  }
+  router.push(`/qa-session/${id}`)
 }
 
 onMounted(() => {
@@ -929,6 +949,20 @@ onMounted(() => {
         color: #fff;
       }
     }
+
+    .session-detail-btn {
+      padding: 4px;
+      border-radius: 6px;
+      color: #9ca3af;
+      cursor: pointer;
+      transition: all 0.2s;
+      &:hover {
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+      }
+    }
+    &.active .session-detail-btn { color: #fff; }
+    &.active .session-detail-btn:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
 
     .session-icon {
       width: 36px;

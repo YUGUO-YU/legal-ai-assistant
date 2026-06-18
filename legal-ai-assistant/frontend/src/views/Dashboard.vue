@@ -19,7 +19,7 @@
 
     <el-row :gutter="24" class="stats-row">
       <el-col :span="6" v-for="(stat, index) in statsData" :key="index">
-        <el-card class="stat-card" :class="stat.class">
+        <el-card class="stat-card" :class="stat.class" @click="goTo(stat.path)">
           <div class="stat-content">
             <div class="stat-icon" :style="{ background: stat.gradient }">
               <el-icon :size="24"><component :is="stat.icon" /></el-icon>
@@ -33,6 +33,7 @@
                 <span>{{ Math.abs(stat.trend) }}%</span>
               </div>
             </div>
+            <el-icon class="stat-arrow"><Right /></el-icon>
           </div>
         </el-card>
       </el-col>
@@ -158,7 +159,7 @@
               </div>
               <el-tag :type="aiStatusData.status === 'online' ? 'success' : aiStatusData.status === 'degraded' ? 'warning' : 'danger'" size="small" effect="dark">
                 <span v-if="aiStatusData.status === 'online'" class="pulse"></span>
-                {{ aiStatusData.status === 'online' ? '在线' : aiStatusData.status === 'degraded' ? '异常' : aiStatusData.status === 'error' ? '错误' : '离线' }}
+                {{ aiStatusData.status === 'online' ? '在线' : aiStatusData.status === 'degraded' ? '异常' : 'error' === 'error' ? '错误' : '离线' }}
               </el-tag>
             </div>
             <div class="ai-status-stats">
@@ -175,11 +176,105 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <el-card class="detail-cards-row" style="margin-top: 24px">
+      <template #header>
+        <div class="card-header">
+          <div class="header-title">
+            <el-icon><DataBoard /></el-icon>
+            <span>功能详情卡</span>
+          </div>
+          <el-tag type="info" size="small">点击查看详情</el-tag>
+        </div>
+      </template>
+      <el-row :gutter="20">
+        <el-col :span="6" v-for="card in detailCards" :key="card.key">
+          <div class="detail-card" :class="card.class" @click="openDetail(card)">
+            <div class="detail-card-header">
+              <div class="detail-card-icon" :style="{ background: card.gradient }">
+                <el-icon :size="22"><component :is="card.icon" /></el-icon>
+              </div>
+              <el-tag size="small" :type="card.tagType" effect="plain">{{ card.status }}</el-tag>
+            </div>
+            <div class="detail-card-body">
+              <span class="detail-card-title">{{ card.title }}</span>
+              <span class="detail-card-desc">{{ card.desc }}</span>
+            </div>
+            <div class="detail-card-footer">
+              <span class="detail-card-meta">{{ card.meta }}</span>
+              <el-icon class="detail-card-arrow"><Right /></el-icon>
+            </div>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
+
+    <el-drawer
+      v-model="detailDrawerVisible"
+      :title="activeDetailCard?.title"
+      direction="rtl"
+      size="560px"
+      :destroy-on-close="true"
+    >
+      <div v-if="activeDetailCard" class="detail-drawer">
+        <div class="drawer-banner" :style="{ background: activeDetailCard.gradient }">
+          <el-icon :size="40"><component :is="activeDetailCard.icon" /></el-icon>
+          <div>
+            <h3>{{ activeDetailCard.title }}</h3>
+            <p>{{ activeDetailCard.desc }}</p>
+          </div>
+        </div>
+        <div class="drawer-section">
+          <h4>运行指标</h4>
+          <el-row :gutter="12">
+            <el-col :span="8" v-for="m in activeDetailCard.metrics" :key="m.label">
+              <div class="metric-card">
+                <span class="metric-value">{{ m.value }}</span>
+                <span class="metric-label">{{ m.label }}</span>
+              </div>
+            </el-col>
+          </el-row>
+        </div>
+        <div class="drawer-section">
+          <h4>最新动态</h4>
+          <el-timeline>
+            <el-timeline-item
+              v-for="(event, idx) in activeDetailCard.events"
+              :key="idx"
+              :timestamp="event.time"
+              :type="event.type"
+              :hollow="idx !== 0"
+              placement="top"
+            >
+              <div class="event-card">
+                <strong>{{ event.title }}</strong>
+                <p>{{ event.desc }}</p>
+              </div>
+            </el-timeline-item>
+          </el-timeline>
+        </div>
+        <div class="drawer-section">
+          <h4>快捷操作</h4>
+          <div class="drawer-actions">
+            <el-button
+              v-for="(action, idx) in activeDetailCard.actions"
+              :key="idx"
+              :type="action.primary ? 'primary' : 'default'"
+              :icon="action.icon"
+              @click="onDrawerAction(action)"
+            >
+              {{ action.label }}
+            </el-button>
+          </div>
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   Search,
   Files,
@@ -202,7 +297,13 @@ import {
   Box,
   QuestionFilled,
   ChatLineSquare,
-  Coin
+  Coin,
+  DataBoard,
+  DataAnalysis,
+  FolderOpened,
+  EditPen,
+  View,
+  Refresh
 } from '@element-plus/icons-vue'
 
 const statsData = reactive([
@@ -213,7 +314,8 @@ const statsData = reactive([
     trend: 12,
     gradient: 'linear-gradient(135deg, #667eea, #764ba2)',
     shadow: '0 8px 20px rgba(102, 126, 234, 0.35)',
-    class: 'stat-purple'
+    class: 'stat-purple',
+    path: '/'
   },
   {
     icon: 'Connection',
@@ -222,7 +324,8 @@ const statsData = reactive([
     trend: 8,
     gradient: 'linear-gradient(135deg, #f093fb, #f5576c)',
     shadow: '0 8px 20px rgba(245, 87, 108, 0.35)',
-    class: 'stat-pink'
+    class: 'stat-pink',
+    path: '/case-similar'
   },
   {
     icon: 'DocumentCopy',
@@ -231,7 +334,8 @@ const statsData = reactive([
     trend: -3,
     gradient: 'linear-gradient(135deg, #4facfe, #00f2fe)',
     shadow: '0 8px 20px rgba(79, 172, 254, 0.35)',
-    class: 'stat-blue'
+    class: 'stat-blue',
+    path: '/document'
   },
   {
     icon: 'ChatDotRound',
@@ -240,7 +344,8 @@ const statsData = reactive([
     trend: 25,
     gradient: 'linear-gradient(135deg, #43e97b, #38f9d7)',
     shadow: '0 8px 20px rgba(67, 233, 123, 0.35)',
-    class: 'stat-green'
+    class: 'stat-green',
+    path: '/doc-qa'
   }
 ])
 
@@ -306,6 +411,216 @@ const aiStatusData = ref({
   model: 'MiniMax-M3',
   message: '检测中...'
 })
+
+const detailDrawerVisible = ref(false)
+const activeDetailCard = ref(null)
+
+const detailCards = [
+  {
+    key: 'legal-search',
+    title: 'AI 搜法',
+    desc: '法规检索与引用溯源',
+    status: '运行中',
+    tagType: 'success',
+    meta: '本周 156 次检索',
+    icon: 'Search',
+    gradient: 'linear-gradient(135deg, #667eea, #764ba2)',
+    class: 'card-purple',
+    metrics: [
+      { label: '本月检索', value: '632' },
+      { label: '引用次数', value: '1,284' },
+      { label: '平均耗时', value: '1.2s' }
+    ],
+    events: [
+      { time: '刚刚', title: '检索"合同欺诈认定"', desc: '找到 12 条法规，3 个相关案例', type: 'primary' },
+      { time: '2 小时前', title: '新增民法典司法解释 4 条', desc: '系统已自动更新索引', type: 'success' },
+      { time: '昨天', title: '引用溯源升级', desc: '支持多层级跳转', type: 'info' }
+    ],
+    actions: [
+      { label: '立即检索', icon: 'Search', primary: true, path: '/' },
+      { label: '查看历史', icon: 'Clock', path: '/dashboard' }
+    ]
+  },
+  {
+    key: 'case-similar',
+    title: 'AI 类案',
+    desc: '相似案例智能匹配',
+    status: '运行中',
+    tagType: 'success',
+    meta: '本周 89 次分析',
+    icon: 'Connection',
+    gradient: 'linear-gradient(135deg, #f093fb, #f5576c)',
+    class: 'card-pink',
+    metrics: [
+      { label: '类案匹配', value: '89' },
+      { label: '要素提取', value: '320 条' },
+      { label: '准确率', value: '92%' }
+    ],
+    events: [
+      { time: '30 分钟前', title: '类案检索"装修合同纠纷"', desc: '匹配到 5 个高度相似案例', type: 'primary' },
+      { time: '昨天', title: '新增 1.2 万条判例数据', desc: '覆盖 2024 年新案件', type: 'success' }
+    ],
+    actions: [
+      { label: '类案检索', icon: 'Connection', primary: true, path: '/case-similar' },
+      { label: '判例查询', icon: 'Files', path: '/case-search' }
+    ]
+  },
+  {
+    key: 'document',
+    title: 'AI 文书起草',
+    desc: '法律文书智能生成',
+    status: '运行中',
+    tagType: 'success',
+    meta: '本周 45 份文书',
+    icon: 'DocumentCopy',
+    gradient: 'linear-gradient(135deg, #4facfe, #00f2fe)',
+    class: 'card-blue',
+    metrics: [
+      { label: '本周起草', value: '45' },
+      { label: '模板数量', value: '20' },
+      { label: '采纳率', value: '87%' }
+    ],
+    events: [
+      { time: '1 小时前', title: '起草"民事起诉状"', desc: '已生成 4 段待编辑内容', type: 'primary' },
+      { time: '昨天', title: '新增 3 个文书模板', desc: '劳动仲裁、证据清单、答辩状', type: 'success' }
+    ],
+    actions: [
+      { label: '起草文书', icon: 'EditPen', primary: true, path: '/document' },
+      { label: '查看模板', icon: 'Files', path: '/document' }
+    ]
+  },
+  {
+    key: 'contract-review',
+    title: 'AI 合同审查',
+    desc: '8 维度风险评估',
+    status: '运行中',
+    tagType: 'success',
+    meta: '本周 28 份合同',
+    icon: 'Stamp',
+    gradient: 'linear-gradient(135deg, #a18cd1, #fbc2eb)',
+    class: 'card-violet',
+    metrics: [
+      { label: '本月审查', value: '108' },
+      { label: '高风险', value: '17 项' },
+      { label: '平均分', value: '76' }
+    ],
+    events: [
+      { time: '3 小时前', title: '审查"采购合同"', desc: '识别 3 处高风险条款', type: 'danger' },
+      { time: '昨天', title: '维度模型升级', desc: '新增个人信息审查维度', type: 'success' }
+    ],
+    actions: [
+      { label: '开始审查', icon: 'Stamp', primary: true, path: '/contract-review' }
+    ]
+  },
+  {
+    key: 'company',
+    title: '企业查询',
+    desc: '工商/股东/风险',
+    status: '运行中',
+    tagType: 'success',
+    meta: '本周 64 次查询',
+    icon: 'OfficeBuilding',
+    gradient: 'linear-gradient(135deg, #fa709a, #fee140)',
+    class: 'card-orange',
+    metrics: [
+      { label: '本月查询', value: '264' },
+      { label: '风险预警', value: '18' },
+      { label: '数据源', value: '3' }
+    ],
+    events: [
+      { time: '2 小时前', title: '查询"北京某科技公司"', desc: '风险等级：中等', type: 'warning' }
+    ],
+    actions: [
+      { label: '立即查询', icon: 'OfficeBuilding', primary: true, path: '/company' }
+    ]
+  },
+  {
+    key: 'knowledge-base',
+    title: '案例法规库',
+    desc: '团队共享知识管理',
+    status: '运行中',
+    tagType: 'success',
+    meta: '已上传 32 份文档',
+    icon: 'Box',
+    gradient: 'linear-gradient(135deg, #43e97b, #38f9d7)',
+    class: 'card-green',
+    metrics: [
+      { label: '知识库', value: '5' },
+      { label: '文档', value: '32' },
+      { label: '问答', value: '128' }
+    ],
+    events: [
+      { time: '昨天', title: '上传《劳动争议司法解释》', desc: '已分块 142 段、向量化完成', type: 'success' }
+    ],
+    actions: [
+      { label: '进入知识库', icon: 'Box', primary: true, path: '/knowledge-base' },
+      { label: '文件问答', icon: 'ChatDotRound', path: '/doc-qa' }
+    ]
+  },
+  {
+    key: 'legal-research',
+    title: 'AI 法律研究',
+    desc: '结构化研究报告',
+    status: '运行中',
+    tagType: 'success',
+    meta: '本周 12 篇报告',
+    icon: 'TrendCharts',
+    gradient: 'linear-gradient(135deg, #ff9a56, #ff6a00)',
+    class: 'card-deeporange',
+    metrics: [
+      { label: '本月报告', value: '47' },
+      { label: '平均字数', value: '2,800' },
+      { label: '引用条数', value: '38' }
+    ],
+    events: [
+      { time: '4 小时前', title: '研究"工期延误索赔"', desc: '6 段式报告已生成', type: 'primary' }
+    ],
+    actions: [
+      { label: '开始研究', icon: 'TrendCharts', primary: true, path: '/legal-research' }
+    ]
+  },
+  {
+    key: 'ppt',
+    title: 'PPT 演讲稿',
+    desc: '一键生成法律 PPT',
+    status: '运行中',
+    tagType: 'success',
+    meta: '已生成 8 个 PPT',
+    icon: 'Memo',
+    gradient: 'linear-gradient(135deg, #5ee7df, #b490ca)',
+    class: 'card-cyan',
+    metrics: [
+      { label: '本月生成', value: '24' },
+      { label: '模板数量', value: '6' },
+      { label: '下载次数', value: '76' }
+    ],
+    events: [
+      { time: '昨天', title: '生成"建设工程纠纷"PPT', desc: '18 页，模板：商务蓝', type: 'success' }
+    ],
+    actions: [
+      { label: '新建 PPT', icon: 'EditPen', primary: true, path: '/ppt-editor' },
+      { label: '文件管理', icon: 'FolderOpened', path: '/ppt-files' }
+    ]
+  }
+]
+
+const router = useRouter()
+
+const goTo = (path) => {
+  if (path) router.push(path)
+}
+
+const openDetail = (card) => {
+  activeDetailCard.value = card
+  detailDrawerVisible.value = true
+}
+
+const onDrawerAction = (action) => {
+  if (action.path) {
+    detailDrawerVisible.value = false
+    router.push(action.path)
+  }
+}
 
 const loadMore = () => {
   console.log('load more activities')
@@ -426,10 +741,17 @@ onMounted(() => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   transition: all 0.3s;
   overflow: hidden;
+  cursor: pointer;
 
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+
+    .stat-arrow {
+      opacity: 1;
+      transform: translateX(0);
+      color: #667eea;
+    }
   }
 
   :deep(.el-card__body) {
@@ -486,6 +808,216 @@ onMounted(() => {
         color: #ef4444;
       }
     }
+  }
+
+  .stat-arrow {
+    color: #d1d5db;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: all 0.3s;
+  }
+}
+
+.detail-cards-row {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+
+  :deep(.el-card__header) {
+    padding: 20px 24px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  :deep(.el-card__body) {
+    padding: 20px 24px 24px;
+  }
+
+  .detail-card {
+    background: #fff;
+    border: 1px solid #f3f4f6;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, #667eea, #764ba2);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+      border-color: rgba(102, 126, 234, 0.3);
+
+      &::before {
+        opacity: 1;
+      }
+
+      .detail-card-arrow {
+        color: #667eea;
+        transform: translateX(0);
+      }
+    }
+
+    .detail-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .detail-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    .detail-card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .detail-card-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1f2937;
+      }
+
+      .detail-card-desc {
+        font-size: 12px;
+        color: #9ca3af;
+      }
+    }
+
+    .detail-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px dashed #f3f4f6;
+
+      .detail-card-meta {
+        font-size: 12px;
+        color: #6b7280;
+      }
+
+      .detail-card-arrow {
+        color: #d1d5db;
+        transform: translateX(-4px);
+        transition: all 0.3s;
+      }
+    }
+  }
+}
+
+.detail-drawer {
+  padding: 0 8px 24px;
+
+  .drawer-banner {
+    border-radius: 16px;
+    color: #fff;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+
+    h3 {
+      margin: 0 0 4px 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    p {
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+  }
+
+  .drawer-section {
+    margin-bottom: 24px;
+
+    h4 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      &::before {
+        content: '';
+        width: 3px;
+        height: 14px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-radius: 2px;
+      }
+    }
+
+    .metric-card {
+      background: #f9fafb;
+      border-radius: 10px;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 8px;
+
+      .metric-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1f2937;
+      }
+
+      .metric-label {
+        font-size: 12px;
+        color: #6b7280;
+      }
+    }
+
+    .event-card {
+      background: #f9fafb;
+      padding: 10px 14px;
+      border-radius: 8px;
+
+      strong {
+        font-size: 13px;
+        color: #1f2937;
+      }
+
+      p {
+        margin: 4px 0 0 0;
+        font-size: 12px;
+        color: #6b7280;
+      }
+    }
+  }
+
+  .drawer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 }
 

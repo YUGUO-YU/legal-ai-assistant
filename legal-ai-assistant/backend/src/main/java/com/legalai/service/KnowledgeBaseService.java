@@ -228,6 +228,15 @@ public class KnowledgeBaseService {
         return textSearchChunks(chunks, query, topK);
     }
 
+    public KnowledgeBaseListResponse.KnowledgeBase getKnowledgeBase(Long id) {
+        return id == null ? null : kbStore.get(id);
+    }
+
+    public List<DocumentChunk> getDocumentChunks(Long kbId) {
+        return kbId == null ? Collections.emptyList() :
+            chunkStore.getOrDefault(kbId, Collections.emptyList());
+    }
+
     public List<LegalSearchResponse.SearchResultItem> searchInKnowledgeBase(String kbId, String query, int topK) {
         log.info("知识库内搜索: kbId={}, query={}", kbId, query);
 
