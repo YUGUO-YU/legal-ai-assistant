@@ -41,7 +41,8 @@ else
   COMMIT_MSG="$TITLE"
 fi
 
-# 4. 提交
+# 4. 提交（设置 AUTO_COMMIT_PUSH=1 让 post-commit hook 跳过，避免重复 push）
+export AUTO_COMMIT_PUSH=1
 git commit -m "$COMMIT_MSG" >/dev/null
 COMMIT_SHA=$(git rev-parse --short HEAD)
 echo "[auto-commit-push] 已提交 ${COMMIT_SHA}: ${TITLE}"
@@ -55,3 +56,4 @@ else
   echo "[auto-commit-push] 推送失败 (exit=$PUSH_EXIT)，请检查网络/冲突/权限" >&2
   exit $PUSH_EXIT
 fi
+
