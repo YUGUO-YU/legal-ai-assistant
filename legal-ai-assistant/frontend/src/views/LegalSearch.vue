@@ -106,12 +106,12 @@
               <div class="result-score">
                 <el-progress
                   type="circle"
-                  :percentage="item.score > 1 ? item.score : ((item.score || 0) * 100)"
+                  :percentage="Math.round(item.score || 0)"
                   :width="32"
                   :stroke-width="3"
                   :show-text="false"
                 />
-                <span class="score-text">匹配度 {{ (item.score > 1 ? item.score : ((item.score || 0) * 100)).toFixed(0) }}%</span>
+                <span class="score-text">匹配度 {{ Math.round(item.score || 0) }}%</span>
               </div>
             </div>
           </div>

@@ -157,6 +157,7 @@ public class LegalSearchService {
             fusedResults = aiGenerateSearchResults(request, topK);
         }
 
+        normalizeScores(fusedResults);
         return buildResponse(request, fusedResults, startTime);
     }
 
@@ -243,6 +244,7 @@ public class LegalSearchService {
             log.info("ES结果为空，使用AI生成检索结果");
             esResults = aiGenerateSearchResults(request, request.getPageSize() * 5);
         }
+        normalizeScores(esResults);
         return buildResponse(request, esResults, startTime);
     }
 
@@ -267,6 +269,42 @@ public class LegalSearchService {
         response.setRelatedCases(relatedCases);
 
         return response;
+    }
+
+    /**
+     * 将所有搜索结果的 score 统一归一化到 0-100 区间。
+     * 严格按相对匹配度排序：最高分结果 → 100%，其他按比例缩放。
+     * 处理三种 score 来源：
+     *   RRF 融合 (0.01-0.03) → /max*100
+     *   BM25 ES score (0-20+) → /max*100
+     *   Mock score (4-18)     → /max*100
+     *   AI score (0-1)        → *100
+     */
+    private void normalizeScores(List<LegalSearchResponse.SearchResultItem> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+
+        double maxScore = 0;
+        for (LegalSearchResponse.SearchResultItem item : items) {
+            Double s = item.getScore();
+            if (s != null && s > maxScore) {
+                maxScore = s;
+            }
+        }
+
+        if (maxScore <= 0) {
+            return;
+        }
+
+        for (LegalSearchResponse.SearchResultItem item : items) {
+            Double s = item.getScore();
+            double normalized = s != null ? (s / maxScore) * 100.0 : 0;
+            item.setScore(Math.min(normalized, 100.0));
+        }
+
+        log.debug("Score 归一化完成: maxRaw={}, topScore={}", maxScore,
+            items.get(0).getScore());
     }
 
     private Map<String, Object> buildFilters(LegalSearchRequest request) {
@@ -421,6 +459,8 @@ public class LegalSearchService {
         if (Boolean.TRUE.equals(request.getIncludeCases()) && !items.isEmpty()) {
             relatedCases = generateRelatedCases(items.get(0).getTitle());
         }
+
+        normalizeScores(items);
 
         LegalSearchResponse response = new LegalSearchResponse();
         response.setTotal((long) items.size());

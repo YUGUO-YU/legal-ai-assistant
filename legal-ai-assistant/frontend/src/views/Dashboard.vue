@@ -455,6 +455,11 @@ const loadAiStatus = async () => {
   }
 }
 
+onMounted(() => {
+  loadAiStatus()
+  setInterval(loadAiStatus, 15000)
+})
+
 const detailDrawerVisible = ref(false)
 const activeDetailCard = ref(null)
 
@@ -668,31 +673,6 @@ const onDrawerAction = (action) => {
 const loadMore = () => {
   console.log('load more activities')
 }
-
-const loadAiStatus = async () => {
-  try {
-    const res = await fetch('/api/v1/ai-status')
-    const data = await res.json()
-    aiStatusData.value = {
-      status: data.status || 'offline',
-      model: data.model || 'MiniMax-M3',
-      baseUrl: data.baseUrl || '',
-      message: data.message || 'AI 服务状态未知'
-    }
-  } catch (e) {
-    aiStatusData.value = {
-      status: 'error',
-      model: 'MiniMax-M3',
-      baseUrl: '',
-      message: '无法连接 AI 服务: ' + (e?.message || e)
-    }
-  }
-}
-
-onMounted(() => {
-  loadAiStatus()
-  setInterval(loadAiStatus, 15000)
-})
 </script>
 
 <style lang="scss" scoped>
