@@ -19,7 +19,7 @@ public class CompanyQueryStore {
         if (response == null) {
             return null;
         }
-        String uuid = IdGenerator.generateUuid();
+        String uuid = IdGenerator.generateUUID();
         response.setQueryUuid(uuid);
         store.put(uuid, response);
         return uuid;

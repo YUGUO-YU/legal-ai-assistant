@@ -19,7 +19,7 @@ public class ContractReviewStore {
         if (response == null) {
             return null;
         }
-        String uuid = IdGenerator.generateUuid();
+        String uuid = IdGenerator.generateUUID();
         response.setReviewUuid(uuid);
         store.put(uuid, response);
         return uuid;
