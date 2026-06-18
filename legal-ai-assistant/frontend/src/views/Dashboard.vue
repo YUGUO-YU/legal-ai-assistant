@@ -166,7 +166,7 @@
             </div>
             <div class="ai-status-stats">
               <div class="status-item">
-                <span class="status-value">{{ aiStatusData.status === 'online' ? '正常' : aiStatusData.status === 'degraded' ? '降级' : '不可用' }}</span>
+                <span class="status-value">{{ aiStatusData.status === 'online' ? '正常' : '不可用' }}</span>
                 <span class="status-label">服务状态</span>
               </div>
               <div class="status-item">
@@ -420,22 +420,40 @@ const aiStatusData = ref({
 })
 
 const lightClass = computed(() => {
-  if (aiStatusData.value.status === 'online') return 'light-green'
-  if (aiStatusData.value.status === 'degraded') return 'light-orange'
-  if (aiStatusData.value.status === 'checking') return 'light-orange'
-  return 'light-red'
+  return aiStatusData.value.status === 'online' ? 'light-green' : 'light-red'
 })
 
 const lightText = computed(() => {
-  if (aiStatusData.value.status === 'online') return '绿灯 · 在线'
-  if (aiStatusData.value.status === 'degraded') return '橙灯 · 异常'
-  if (aiStatusData.value.status === 'checking') return '检测中'
-  return '红灯 · 离线'
+  return aiStatusData.value.status === 'online' ? '在线' : '离线'
 })
 
 const lightTooltip = computed(() => {
-  return aiStatusData.value.message || lightText.value
+  const m = aiStatusData.value.message || lightText.value
+  return `状态: ${lightText.value}\n${m}\n接入: ${aiStatusData.value.baseUrl || '-'}\n模型: ${aiStatusData.value.model}`
 })
+
+const loadAiStatus = async () => {
+  try {
+    const res = await fetch('/api/v1/ai-status')
+    const data = await res.json()
+    const status = data.status === 'online' ? 'online' : 'offline'
+    aiStatusData.value = {
+      status,
+      model: data.model || 'MiniMax-M3',
+      baseUrl: data.baseUrl || '',
+      message: data.message || (status === 'online' ? 'AI 服务在线' : 'AI 服务离线')
+    }
+    console.log('[AI Status]', aiStatusData.value)
+  } catch (e) {
+    aiStatusData.value = {
+      status: 'offline',
+      model: 'MiniMax-M3',
+      baseUrl: '',
+      message: '无法连接后端: ' + (e?.message || e)
+    }
+    console.warn('[AI Status] 请求失败', e)
+  }
+}
 
 const detailDrawerVisible = ref(false)
 const activeDetailCard = ref(null)
@@ -1413,9 +1431,6 @@ onMounted(() => {
 
       .light-red { color: #ef4444; }
       .light-red .light-dot { background: #ef4444; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3); animation: none; }
-
-      .light-orange { color: #f59e0b; }
-      .light-orange .light-dot { background: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3); }
 
       @keyframes pulse {
         0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }

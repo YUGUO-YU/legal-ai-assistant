@@ -1,94 +1,33 @@
 #!/bin/bash
 # Legal AI Assistant 一键启动脚本
+# 后端直接接入 MiniMax-M3 (OpenAI 兼容协议)。
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-OPENCLAW_TOKEN="my-secret-token"
-OPENCLAW_CHECK_INTERVAL=30
-MAX_RESTART_ATTEMPTS=3
-
 echo "=== 启动 Legal AI Assistant ==="
+echo "AI 接入: MiniMax-M3 (OpenAI 兼容协议)"
+echo "API Key 读取: 环境变量 MINIMAX_API_KEY"
 
-# 启动 OpenClaw Gateway
-start_openclaw() {
-    echo "启动 OpenClaw Gateway..."
-    pkill -f openclaw 2>/dev/null || true
-    nohup openclaw gateway > /tmp/openclaw.log 2>&1 &
-    echo "OpenClaw 进程已启动，PID: $!"
-}
-
-# 检查 OpenClaw 是否就绪
-check_openclaw() {
-    curl -s -m 3 http://localhost:19001/v1/models -H "Authorization: Bearer $OPENCLAW_TOKEN" > /dev/null 2>&1
-    return $?
-}
-
-# 等待 OpenClaw 就绪
-wait_for_openclaw() {
-    echo "等待 OpenClaw 启动..."
-    for i in {1..60}; do
-        if check_openclaw; then
-            echo "OpenClaw Gateway 已就绪"
-            return 0
-        fi
-        sleep 1
-    done
-    return 1
-}
-
-# 1. 启动 OpenClaw Gateway
-start_openclaw
-if ! wait_for_openclaw; then
-    echo "警告: OpenClaw 启动超时，尝试重启..."
-    pkill -f openclaw 2>/dev/null || true
-    sleep 2
-    start_openclaw
-    if ! wait_for_openclaw; then
-        echo "错误: OpenClaw 启动失败，请检查日志 /tmp/openclaw.log"
-        exit 1
+# 0. 检查 MiniMax API Key 是否配置
+if [ -z "$MINIMAX_API_KEY" ]; then
+    if [ -f "$SCRIPT_DIR/backend/.env" ]; then
+        export $(grep -v '^#' "$SCRIPT_DIR/backend/.env" | xargs)
     fi
 fi
+if [ -z "$MINIMAX_API_KEY" ]; then
+    echo "警告: 未设置 MINIMAX_API_KEY，请配置后重启，否则 AI 调用会失败"
+fi
 
-# 启动 OpenClaw 健康检查守护进程
-start_openclaw_monitor() {
-    echo "启动 OpenClaw 健康检查守护进程..."
-    (
-        restart_count=0
-        while true; do
-            sleep $OPENCLAW_CHECK_INTERVAL
-            if ! check_openclaw; then
-                echo "[$(date)] OpenClaw 连接失败，尝试重启..." >> /tmp/openclaw_monitor.log
-                pkill -f openclaw 2>/dev/null || true
-                sleep 2
-                start_openclaw
-                if wait_for_openclaw; then
-                    echo "[$(date)] OpenClaw 重启成功" >> /tmp/openclaw_monitor.log
-                    restart_count=0
-                else
-                    restart_count=$((restart_count + 1))
-                    echo "[$(date)] OpenClaw 重启失败 (尝试 $restart_count/$MAX_RESTART_ATTEMPTS)" >> /tmp/openclaw_monitor.log
-                    if [ $restart_count -ge $MAX_RESTART_ATTEMPTS ]; then
-                        echo "[$(date)] 达到最大重启次数，停止监控" >> /tmp/openclaw_monitor.log
-                        break
-                    fi
-                fi
-            fi
-        done
-    ) &
-    echo "OpenClaw 健康检查守护进程已启动，PID: $!"
-}
-
-start_openclaw_monitor
-
-# 2. 启动后端
-echo "[2/3] 启动后端服务..."
+# 1. 启动后端
+echo "[1/2] 启动后端服务..."
 cd "$SCRIPT_DIR/backend"
 nohup ./mvnw spring-boot:run -DskipTests > /tmp/backend.log 2>&1 &
+BACKEND_PID=$!
+echo "后端进程已启动，PID: $BACKEND_PID"
 
-# 等待后端就绪
 echo "等待后端服务启动..."
 for i in {1..90}; do
     if curl -s -m 2 http://localhost:3001/api/v1/health > /dev/null 2>&1; then
@@ -96,25 +35,27 @@ for i in {1..90}; do
         break
     fi
     if [ $i -eq 90 ]; then
-        echo "警告: 后端服务启动超时，继续..."
+        echo "警告: 后端服务启动超时，继续启动前端..."
     fi
     sleep 1
 done
 
-# 3. 启动前端
-echo "[3/3] 启动前端服务..."
+# 2. 启动前端
+echo "[2/2] 启动前端服务..."
 cd "$SCRIPT_DIR/frontend"
 
-# 检查是否需要安装依赖
 if [ ! -d "node_modules" ]; then
     echo "安装前端依赖..."
     npm install
 fi
 
 nohup npm run dev > /tmp/frontend.log 2>&1 &
+FRONTEND_PID=$!
+echo "前端进程已启动，PID: $FRONTEND_PID"
 
 echo "=== 启动完成 ==="
-echo "OpenClaw: http://localhost:19001"
 echo "后端API:  http://localhost:3001"
+echo "AI 状态:  http://localhost:3001/api/v1/ai-status"
 echo "前端:     请查看 /tmp/frontend.log 中的访问地址"
-echo "OpenClaw 监控日志: /tmp/openclaw_monitor.log"
+echo "后端日志: /tmp/backend.log"
+echo "前端日志: /tmp/frontend.log"

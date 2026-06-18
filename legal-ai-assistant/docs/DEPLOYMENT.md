@@ -198,12 +198,12 @@ server:
   port: 3001
 
 ai:
-  openclaw:
-    url: http://localhost:19001
-    token: your_openclaw_token
   minimax:
-    model: openclaw
+    base-url: https://api.minimax.chat/v1
+    api-key: ${MINIMAX_API_KEY:your_minimax_api_key}
+    model: MiniMax-M3
     timeout: 120
+    embedding-model: embo-01
 
 # Mock模式：生产环境设为false
 mock:
@@ -225,27 +225,24 @@ milvus:
   enabled: false
 ```
 
-### 步骤5：配置 OpenClaw/MiniMax AI
+### 步骤5：配置 MiniMax AI
 
-编辑 `~/.openclaw/openclaw.json`:
+设置环境变量 `MINIMAX_API_KEY`（生产环境）：
 
-```json
-{
-  "openclaw": {
-    "url": "http://localhost:19001",
-    "token": "your-token-here"
-  },
-  "model": "openclaw"
-}
+```bash
+export MINIMAX_API_KEY=sk-cp-...
 ```
 
-或在 `application.yml` 中配置：
+或在 `application.yml` 中配置（开发环境）：
 
 ```yaml
 ai:
-  openclaw:
-    url: http://localhost:19001
-    token: your_openclaw_token
+  minimax:
+    base-url: https://api.minimax.chat/v1
+    api-key: ${MINIMAX_API_KEY:sk-cp-...}
+    model: MiniMax-M3
+    timeout: 120
+    embedding-model: embo-01
 ```
 
 ### 步骤6：构建并启动后端
@@ -586,7 +583,7 @@ const api = axios.create({
 # application.yml
 mock:
   enabled: true   # 使用模拟数据
-  # enabled: false  # 使用真实OpenClaw API
+  # enabled: false  # 使用真实 MiniMax API
 ```
 
 ### 6. 内存不足

@@ -17,8 +17,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * 直接调用 MiniMax-M3 (兼容 OpenAI Chat Completions 协议) 的客户端，
- * 不再依赖 OpenClaw 网关。
+ * 直接调用 MiniMax-M3 (OpenAI 兼容 Chat Completions 协议) 的客户端。
  *
  * 配置项 (application.yml):
  *   ai.minimax.base-url       默认 https://api.minimax.chat/v1
@@ -47,6 +46,12 @@ public class LLMClient {
     @Value("${ai.minimax.embedding-model:embo-01}")
     private String embeddingModel;
 
+    @Value("${ai.minimax.health-endpoint:/models}")
+    private String healthEndpoint;
+
+    @Value("${ai.minimax.health-timeout:5}")
+    private int healthTimeout;
+
     private final OkHttpClient client;
     private final ObjectMapper objectMapper;
 
@@ -57,6 +62,14 @@ public class LLMClient {
             .writeTimeout(timeout, TimeUnit.SECONDS)
             .build();
         this.objectMapper = new ObjectMapper();
+    }
+
+    private OkHttpClient healthClient() {
+        return client.newBuilder()
+            .connectTimeout(healthTimeout, TimeUnit.SECONDS)
+            .readTimeout(healthTimeout, TimeUnit.SECONDS)
+            .writeTimeout(healthTimeout, TimeUnit.SECONDS)
+            .build();
     }
 
     public String getModel() {
@@ -226,20 +239,30 @@ public class LLMClient {
     }
 
     /**
-     * 探测模型是否可访问（用于健康检查）
+     * 探测模型是否可访问（用于健康检查）。
+     * 严格判定：只有 HTTP 2xx 才算在线；401/403/网络异常/超时都算离线。
      */
     public boolean ping() {
+        if (apiKey == null || apiKey.isEmpty()) {
+            log.warn("MiniMax 健康检查失败: api-key 未配置");
+            return false;
+        }
         try {
             Request request = new Request.Builder()
-                .url(baseUrl + "/models")
+                .url(baseUrl + healthEndpoint)
                 .addHeader("Authorization", "Bearer " + apiKey)
                 .get()
                 .build();
-            try (Response response = client.newCall(request).execute()) {
-                return response.isSuccessful();
+            try (Response response = healthClient().newCall(request).execute()) {
+                boolean ok = response.isSuccessful();
+                if (!ok) {
+                    log.warn("MiniMax 健康检查失败: code={}, message={}",
+                        response.code(), response.message());
+                }
+                return ok;
             }
         } catch (Exception e) {
-            log.debug("MiniMax 健康检查失败: {}", e.getMessage());
+            log.warn("MiniMax 健康检查失败: {}", e.getMessage());
             return false;
         }
     }
@@ -248,13 +271,16 @@ public class LLMClient {
      * 探测第一个可用模型名（用于 ai-status 展示）
      */
     public String firstModel() {
+        if (apiKey == null || apiKey.isEmpty()) {
+            return model;
+        }
         try {
             Request request = new Request.Builder()
-                .url(baseUrl + "/models")
+                .url(baseUrl + healthEndpoint)
                 .addHeader("Authorization", "Bearer " + apiKey)
                 .get()
                 .build();
-            try (Response response = client.newCall(request).execute()) {
+            try (Response response = healthClient().newCall(request).execute()) {
                 if (!response.isSuccessful() || response.body() == null) {
                     return model;
                 }

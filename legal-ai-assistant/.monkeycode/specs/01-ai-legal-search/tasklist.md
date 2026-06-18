@@ -30,7 +30,7 @@
   - [x] 3.10 实现Rerank重排序
 
 - [x] 4. AI增强功能
-  - [x] 4.1 配置OpenClaw/MiniMax API
+  - [x] 4.1 配置 MiniMax-M3 API
   - [x] 4.2 实现System Prompt注入
   - [x] 4.3 实现答案生成
   - [x] 4.4 实现引用溯源标注

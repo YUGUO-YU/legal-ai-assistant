@@ -25,7 +25,7 @@ graph TB
     end
 
     subgraph External
-        AIService[OpenClaw/MiniMax AI]
+        AIService[MiniMax-M3 AI]
         FileSystem[Local File Storage]
     end
 

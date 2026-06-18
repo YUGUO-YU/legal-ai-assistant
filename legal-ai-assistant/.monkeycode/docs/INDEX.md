@@ -12,7 +12,7 @@
 - **缓存**: Redis 7.x
 - **搜索引擎**: Elasticsearch 8.x
 - **向量数据库**: Milvus 2.4
-- **AI**: MiniMax MoE-8x22B (OpenClaw)
+- **AI**: MiniMax-M3 (OpenAI 兼容协议)
 
 ### 前端
 - **框架**: Vue 3.4+

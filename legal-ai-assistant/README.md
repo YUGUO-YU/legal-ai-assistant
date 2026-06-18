@@ -25,7 +25,7 @@
 - **缓存**: Redis 7.x
 - **搜索引擎**: Elasticsearch 8.x
 - **向量数据库**: Milvus 2.4
-- **AI**: OpenClaw (Minimax MoE 8x22B)
+- **AI**: MiniMax-M3 (OpenAI 兼容协议直连)
 
 ### 前端
 - **框架**: Vue 3.4+
@@ -412,10 +412,12 @@ spring:
     uris: http://localhost:9200
 
 ai:
-  openclaw:
-    api-url: https://api.openclaw.com
-    api-key: your_api_key
-    model: MoE-8x22B
+  minimax:
+    base-url: https://api.minimax.chat/v1
+    api-key: ${MINIMAX_API_KEY:your_api_key}
+    model: MiniMax-M3
+    timeout: 120
+    embedding-model: embo-01
 
 mock:
   enabled: true  # 设为 false 使用真实API

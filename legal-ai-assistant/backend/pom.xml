@@ -69,9 +69,6 @@
             <artifactId>commons-pool2</artifactId>
         </dependency>
 
-        <!-- AI Client (OpenClaw/Minimax) - Using OkHttp directly -->
-        <!-- OpenClaw SDK removed - using OkHttp for API calls -->
-
         <!-- LLM OkHttp -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>

@@ -16,7 +16,7 @@ graph TB
         Service["Business Services"]
         Repository["Data Repositories"]
         Cache["Redis Cache"]
-        AI["OpenClaw/MiniMax AI"]
+        AI["MiniMax-M3 AI"]
     end
 
     subgraph DataLayer["数据层"]
@@ -165,7 +165,7 @@ graph TB
 ```
 用户输入查询 → Query理解 → 意图识别 →
 ES BM25检索 + Milvus ANN检索 → RRF融合 →
-Rerank重排序 → OpenClaw生成回答 → 引用溯源 → 返回结果
+Rerank重排序 → MiniMax-M3生成回答 → 引用溯源 → 返回结果
 ```
 
 ### AI类案流程
@@ -184,7 +184,7 @@ Rerank重排序 → 裁判要点生成 → 返回类案列表
 ### 文档问答流程
 ```
 用户提问 → 混合检索 → RRF融合 →
-上下文构建 → OpenClaw生成答案 → 引用溯源 → 返回结果
+上下文构建 → MiniMax-M3生成答案 → 引用溯源 → 返回结果
 ```
 
 ## 安全架构

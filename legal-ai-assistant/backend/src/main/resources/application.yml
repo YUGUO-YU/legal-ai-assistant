@@ -38,8 +38,7 @@ mybatis-plus:
 server:
   port: 3001
 
-# AI Configuration - 直接接入 MiniMax-M3
-# 不再经过 OpenClaw 网关；使用 OpenAI 兼容协议
+# AI Configuration - 直接接入 MiniMax-M3 (OpenAI 兼容协议)
 ai:
   minimax:
     # MiniMax OpenAI 兼容接口
@@ -52,6 +51,10 @@ ai:
     timeout: 120
     # Embedding 模型
     embedding-model: embo-01
+    # 健康检查端点（用于 Dashboard 状态灯）
+    health-endpoint: /models
+    # 健康检查超时（秒）—— 网络抖动时快速判离线
+    health-timeout: 5
 
 # Mock Mode (false = 使用MiniMax AI)
 mock:
