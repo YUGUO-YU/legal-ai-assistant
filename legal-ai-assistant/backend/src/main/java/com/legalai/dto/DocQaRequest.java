@@ -4,7 +4,7 @@ import java.util.List;
 
 public class DocQaRequest {
     private String knowledgeBaseId;
-    private Long kbId;
+    private String kbId;
     private String question;
     private String sessionId;
     private List<String> documentIds;
@@ -12,8 +12,8 @@ public class DocQaRequest {
 
     public String getKnowledgeBaseId() { return knowledgeBaseId; }
     public void setKnowledgeBaseId(String knowledgeBaseId) { this.knowledgeBaseId = knowledgeBaseId; }
-    public Long getKbId() { return kbId; }
-    public void setKbId(Long kbId) { this.kbId = kbId; }
+    public String getKbId() { return kbId; }
+    public void setKbId(String kbId) { this.kbId = kbId; }
     public String getQuestion() { return question; }
     public void setQuestion(String question) { this.question = question; }
     public String getSessionId() { return sessionId; }

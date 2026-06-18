@@ -468,7 +468,7 @@ public class DocQaService {
                         title = title.substring(0, 30) + "...";
                     }
                     session.put("title", title);
-                    session.put("date", formatDate((java.sql.Timestamp) session.get("lastMessage")));
+                    session.put("date", formatDate((java.time.LocalDateTime) session.get("lastMessage")));
                 }
             }
 
@@ -487,9 +487,8 @@ public class DocQaService {
         return result;
     }
 
-    private String formatDate(java.sql.Timestamp timestamp) {
-        if (timestamp == null) return "";
-        java.time.LocalDateTime dateTime = timestamp.toLocalDateTime();
+    private String formatDate(java.time.LocalDateTime dateTime) {
+        if (dateTime == null) return "";
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("MM月dd日");
 
