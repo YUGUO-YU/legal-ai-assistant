@@ -50,8 +50,8 @@ ai:
     config-path:
     # 网关启动参数
     gateway-args: gateway --allow-unconfigured
-    # 启动日志输出文件
-    log-path: /tmp/openclaw_stderr.log
+    # 启动日志输出文件，留空则使用 java.io.tmpdir/openclaw_stderr.log
+    log-path:
   minimax:
     model: minimax/MiniMax-M3
     timeout: 120

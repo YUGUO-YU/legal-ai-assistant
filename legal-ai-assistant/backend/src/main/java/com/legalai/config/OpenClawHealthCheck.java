@@ -37,7 +37,7 @@ public class OpenClawHealthCheck implements ApplicationRunner {
     @Value("${ai.openclaw.config-path:}")
     private String openClawConfigPath;
 
-    @Value("${ai.openclaw.log-path:/tmp/openclaw_stderr.log}")
+    @Value("${ai.openclaw.log-path:}")
     private String openClawLogPath;
 
     @Value("${ai.openclaw.gateway-args:gateway --allow-unconfigured}")
@@ -86,8 +86,9 @@ public class OpenClawHealthCheck implements ApplicationRunner {
     private void startOpenClaw() {
         String resolvedPath = resolveOpenClawBinary();
         if (resolvedPath == null) {
-            log.error("未找到 openclaw 可执行文件，请通过 ai.openclaw.binary-path 指定路径或将 openclaw 放入 PATH");
-            log.error("  常见安装位置: /usr/local/bin/openclaw, /opt/openclaw/bin/openclaw, ~/.openclaw/bin/openclaw");
+            log.error("未找到 openclaw 可执行文件。请通过 ai.openclaw.binary-path 指定绝对路径，常见位置:");
+            log.error("  Linux/macOS: /usr/local/bin/openclaw, /opt/openclaw/bin/openclaw, ~/.openclaw/bin/openclaw");
+            log.error("  Windows:     C:\\\\openclaw\\\\openclaw.exe, %USERPROFILE%\\\\.openclaw\\\\bin\\\\openclaw.exe");
             return;
         }
 
@@ -99,8 +100,10 @@ public class OpenClawHealthCheck implements ApplicationRunner {
             command.addAll(Arrays.asList(openClawGatewayArgs.trim().split("\\s+")));
         }
 
+        File logFile = resolveLogFile();
+        log.info("OpenClaw 日志文件: {}", logFile.getAbsolutePath());
+
         try {
-            File logFile = new File(openClawLogPath);
             File parent = logFile.getParentFile();
             if (parent != null && !parent.exists() && !parent.mkdirs()) {
                 log.warn("无法创建日志目录: {}", parent.getAbsolutePath());
@@ -120,29 +123,62 @@ public class OpenClawHealthCheck implements ApplicationRunner {
             }
             Process p = pb.start();
             log.info("OpenClaw Gateway 启动命令已执行，PID: {}", p.pid());
-            log.info("日志文件: {}", logFile.getAbsolutePath());
 
             waitForReady(30);
         } catch (IOException e) {
-            log.error("启动 OpenClaw Gateway 失败: {}", e.getMessage(), e);
+            log.error("启动 OpenClaw Gateway 失败，命令={}, 原因={}", command, e.getMessage());
         }
+    }
+
+    private File resolveLogFile() {
+        String configured = (openClawLogPath == null) ? "" : openClawLogPath.trim();
+        if (!configured.isEmpty()) {
+            return new File(configured);
+        }
+        String os = System.getProperty("os.name").toLowerCase();
+        String tmpDir = System.getProperty("java.io.tmpdir");
+        String name = os.contains("win") ? "openclaw_stderr.log" : "openclaw_stderr.log";
+        return new File(tmpDir, name);
     }
 
     private String resolveOpenClawBinary() {
         if (openClawBinaryPath != null && !openClawBinaryPath.trim().isEmpty()) {
-            Path configured = Paths.get(openClawBinaryPath.trim());
-            if (Files.isExecutable(configured)) {
-                return configured.toAbsolutePath().toString();
+            String configured = openClawBinaryPath.trim();
+            if (looksLikeLogFile(configured)) {
+                log.error("ai.openclaw.binary-path 看起来是日志文件路径而不是可执行文件: {}", configured);
+                log.error("请将 ai.openclaw.binary-path 指向 openclaw/openclaw.exe，例如 /usr/local/bin/openclaw");
+                return null;
             }
-            log.warn("配置的 ai.openclaw.binary-path 不可执行: {}", openClawBinaryPath);
+            Path configuredPath = Paths.get(configured);
+            if (Files.isExecutable(configuredPath)) {
+                return configuredPath.toAbsolutePath().toString();
+            }
+            if (Files.exists(configuredPath) && Files.isDirectory(configuredPath)) {
+                log.error("ai.openclaw.binary-path 指向的是目录而不是可执行文件: {}", configured);
+            } else {
+                log.error("ai.openclaw.binary-path 指定的文件不存在或不可执行: {}", configured);
+            }
+            return null;
         }
 
         String os = System.getProperty("os.name").toLowerCase();
         String[] candidateDirs = os.contains("win")
-                ? new String[]{"C:\\\\Program Files\\\\openclaw", "C:\\\\openclaw", System.getProperty("user.home") + "\\\\.openclaw"}
-                : new String[]{"/usr/local/bin", "/usr/bin", "/opt/openclaw/bin", System.getProperty("user.home") + "/.openclaw/bin"};
+                ? new String[]{
+                    "C:\\openclaw\\bin",
+                    "C:\\Program Files\\openclaw\\bin",
+                    System.getProperty("user.home") + "\\.openclaw\\bin",
+                    System.getProperty("user.home") + "\\.openclaw"
+                }
+                : new String[]{
+                    "/usr/local/bin",
+                    "/usr/bin",
+                    "/opt/openclaw/bin",
+                    System.getProperty("user.home") + "/.openclaw/bin"
+                };
 
-        String[] candidateNames = os.contains("win") ? new String[]{"openclaw.exe", "openclaw.cmd"} : new String[]{"openclaw"};
+        String[] candidateNames = os.contains("win")
+                ? new String[]{"openclaw.exe", "openclaw.cmd", "openclaw.bat"}
+                : new String[]{"openclaw"};
 
         for (String dir : candidateDirs) {
             for (String name : candidateNames) {
@@ -170,6 +206,12 @@ public class OpenClawHealthCheck implements ApplicationRunner {
         return null;
     }
 
+    private boolean looksLikeLogFile(String path) {
+        if (path == null) return false;
+        String lower = path.toLowerCase();
+        return lower.endsWith(".log") || lower.endsWith(".txt") || lower.endsWith(".err");
+    }
+
     private void waitForReady(int maxSeconds) {
         for (int i = 0; i < maxSeconds; i++) {
             if (checkOpenClaw()) {
@@ -183,6 +225,6 @@ public class OpenClawHealthCheck implements ApplicationRunner {
                 return;
             }
         }
-        log.error("OpenClaw Gateway 自动启动超时，请检查日志: {}", openClawLogPath);
+        log.error("OpenClaw Gateway 自动启动超时，请检查日志: {}", resolveLogFile().getAbsolutePath());
     }
 }
