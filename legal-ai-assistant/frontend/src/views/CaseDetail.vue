@@ -158,6 +158,8 @@
       action-text="返回列表"
       @action="goBack"
     />
+
+    <case-analysis-dialog v-model="showAnalysisDialog" :case-uuid="caseUuid" />
   </div>
 </template>
 
@@ -179,16 +181,20 @@ import {
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
+import CaseAnalysisDialog from '../components/CaseAnalysisDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
 
 const loading = ref(true)
 const caseData = ref(null)
+const caseUuid = ref('')
+const showAnalysisDialog = ref(false)
 
 const loadCaseDetail = async () => {
-  const caseUuid = route.params.caseUuid
-  if (!caseUuid) {
+  const uuid = route.params.caseUuid
+  caseUuid.value = uuid
+  if (!uuid) {
     ElMessage.error('案例ID不能为空')
     router.back()
     return
@@ -196,7 +202,7 @@ const loadCaseDetail = async () => {
 
   loading.value = true
   try {
-    const res = await api.caseSearch.getCaseDetail(caseUuid)
+    const res = await api.caseSearch.getCaseDetail(uuid)
     if (res.data) {
       caseData.value = res.data
     } else {
@@ -275,7 +281,11 @@ const copyCaseNo = () => {
 }
 
 const generateAnalysis = () => {
-  ElMessage.info('AI案情分析功能开发中...')
+  if (!caseUuid.value) {
+    ElMessage.warning('请先加载案例')
+    return
+  }
+  showAnalysisDialog.value = true
 }
 
 const generatePpt = () => {

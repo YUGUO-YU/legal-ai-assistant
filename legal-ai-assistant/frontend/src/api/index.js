@@ -121,7 +121,8 @@ export default {
   },
   caseSearch: {
     search: (data) => withRetry(() => api.post('/case-search/search', data)),
-    getCaseDetail: (uuid) => withRetry(() => api.get(`/case-search/cases/${uuid}`))
+    getCaseDetail: (uuid) => withRetry(() => api.get(`/case-search/cases/${uuid}`)),
+    analyzeCase: (uuid) => withRetry(() => api.get(`/case-search/cases/${uuid}/analysis`))
   },
   lawSearch: {
     search: (data) => withRetry(() => api.post('/law-search/search', data)),
