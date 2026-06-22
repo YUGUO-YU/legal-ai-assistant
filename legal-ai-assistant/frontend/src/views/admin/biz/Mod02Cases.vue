@@ -1,25 +1,169 @@
 <template>
-  <AdminListPage
-    title="案件主数据"
-    subtitle="MOD-02 AI 类案 · 案件库"
-    domain="数据资产域"
-    domainType="success"
-    api-path="/admin/biz/mod02/cases"
-    :columns="columns"
-  />
+  <div class="cases-page">
+    <div class="page-header">
+      <div class="header-content">
+        <h2>案件主数据管理</h2>
+        <p>MOD-02 · 案由 / 法院 / 裁判结果 · 多维筛选 + 详情查看</p>
+      </div>
+      <div class="header-actions">
+        <el-button :icon="Refresh" @click="load">刷新</el-button>
+      </div>
+    </div>
+
+    <el-card class="filter-card">
+      <el-form inline :model="filter">
+        <el-form-item label="案由">
+          <el-input v-model="filter.cause" placeholder="案由关键词" clearable style="width:160px" @keyup.enter="load" />
+        </el-form-item>
+        <el-form-item label="案件类型">
+          <el-select v-model="filter.type" clearable placeholder="全部" style="width:120px">
+            <el-option label="民事" :value="1" />
+            <el-option label="刑事" :value="2" />
+            <el-option label="行政" :value="3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="裁判结果">
+          <el-select v-model="filter.result" clearable placeholder="全部" style="width:130px">
+            <el-option label="全部支持" :value="1" />
+            <el-option label="部分支持" :value="2" />
+            <el-option label="驳回" :value="3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="load">查询</el-button>
+          <el-button @click="reset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-row :gutter="16" style="margin-bottom:16px">
+      <el-col :span="6">
+        <div class="kpi-card" style="border-left:4px solid #6366f1"><div class="kpi-label">案件总数</div><div class="kpi-value">{{ stats.total }}</div></div>
+      </el-col>
+      <el-col :span="6">
+        <div class="kpi-card" style="border-left:4px solid #10b981"><div class="kpi-label">民事</div><div class="kpi-value">{{ stats.civil }}</div></div>
+      </el-col>
+      <el-col :span="6">
+        <div class="kpi-card" style="border-left:4px solid #f59e0b"><div class="kpi-label">刑事</div><div class="kpi-value">{{ stats.criminal }}</div></div>
+      </el-col>
+      <el-col :span="6">
+        <div class="kpi-card" style="border-left:4px solid #06b6d4"><div class="kpi-label">行政</div><div class="kpi-value">{{ stats.admin }}</div></div>
+      </el-col>
+    </el-row>
+
+    <el-card>
+      <el-table :data="rows" v-loading="loading" stripe border>
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="case_no" label="案号" width="180" show-overflow-tooltip />
+        <el-table-column prop="case_name" label="案件名称" min-width="240" show-overflow-tooltip />
+        <el-table-column label="类型" width="80">
+          <template #default="{ row }">
+            <el-tag size="small" :type="typeTag(row.case_type)">{{ typeLabel(row.case_type) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="case_cause" label="案由" width="120" show-overflow-tooltip />
+        <el-table-column prop="court_name" label="法院" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="judge_date" label="裁判日期" width="110" />
+        <el-table-column label="结果" width="90">
+          <template #default="{ row }">
+            <el-tag size="small" :type="resultTag(row.judgment_result)">{{ resultLabel(row.judgment_result) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="金额" width="120">
+          <template #default="{ row }">
+            <span v-if="row.litigation_amount" class="mono">¥{{ Number(row.litigation_amount).toLocaleString() }}</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="created_at" label="入库时间" width="170" />
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="openDetail(row)">详情</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-pagination
+        v-model:current-page="page" v-model:page-size="pageSize" :total="total"
+        layout="total, sizes, prev, pager, next" :page-sizes="[10,20,50]"
+        class="pager"
+      />
+    </el-card>
+
+    <el-drawer v-model="showDetail" title="案件详情" size="55%" direction="rtl">
+      <el-descriptions v-if="detail" :column="1" border>
+        <el-descriptions-item label="ID">{{ detail.id }}</el-descriptions-item>
+        <el-descriptions-item label="案号">{{ detail.case_no }}</el-descriptions-item>
+        <el-descriptions-item label="案件名称">{{ detail.case_name }}</el-descriptions-item>
+        <el-descriptions-item label="类型">{{ typeLabel(detail.case_type) }}</el-descriptions-item>
+        <el-descriptions-item label="案由">{{ detail.case_cause }}</el-descriptions-item>
+        <el-descriptions-item label="法院">{{ detail.court_name }}</el-descriptions-item>
+        <el-descriptions-item label="审理程序">{{ detail.trial_procedure }}</el-descriptions-item>
+        <el-descriptions-item label="裁判日期">{{ detail.judge_date }}</el-descriptions-item>
+        <el-descriptions-item label="裁判结果">{{ resultLabel(detail.judgment_result) }}</el-descriptions-item>
+        <el-descriptions-item label="诉讼金额">¥{{ Number(detail.litigation_amount || 0).toLocaleString() }}</el-descriptions-item>
+        <el-descriptions-item label="原告">{{ detail.plaintiff || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="被告">{{ detail.defendant || '-' }}</el-descriptions-item>
+      </el-descriptions>
+      <h4 style="margin-top:16px">关键事实</h4>
+      <pre class="content-preview">{{ detail.key_facts || '-' }}</pre>
+      <h4 style="margin-top:16px">裁判摘要</h4>
+      <pre class="content-preview">{{ detail.judgment_summary || '-' }}</pre>
+    </el-drawer>
+  </div>
 </template>
 
 <script setup>
-import AdminListPage from '../AdminListPage.vue'
+import { ref, reactive, watch, computed, onMounted } from 'vue'
+import { Refresh } from '@element-plus/icons-vue'
+import api from '../../api'
 
-const columns = [
-  { prop: 'id', label: 'ID', width: 70 },
-  { prop: 'case_uuid', label: 'UUID', width: 200 },
-  { prop: 'case_title', label: '案件标题', width: 300 },
-  { prop: 'case_cause', label: '案由', width: 160 },
-  { prop: 'court_name', label: '审理法院', width: 200 },
-  { prop: 'judge_date', label: '判决日期', width: 130 },
-  { prop: 'case_type', label: '案件类型', width: 120 },
-  { prop: 'view_count', label: '浏览量', width: 90 }
-]
+const rows = ref([])
+const total = ref(0)
+const loading = ref(false)
+const page = ref(1)
+const pageSize = ref(20)
+const filter = reactive({ cause: '', type: '', result: '' })
+const showDetail = ref(false)
+const detail = ref(null)
+
+const stats = reactive({ total: 0, civil: 0, criminal: 0, admin: 0 })
+
+function typeLabel(t) { return ({ 1: '民事', 2: '刑事', 3: '行政' }[t] || t) }
+function typeTag(t) { return ({ 1: 'primary', 2: 'danger', 3: 'warning' }[t] || '') }
+function resultLabel(r) { return ({ 1: '全部支持', 2: '部分支持', 3: '驳回' }[r] || r) }
+function resultTag(r) { return ({ 1: 'success', 2: 'warning', 3: 'danger' }[r] || '') }
+
+async function load() {
+  loading.value = true
+  try {
+    const res = await api.get('/admin/biz/mod02/cases', { params: { page: page.value, pageSize: pageSize.value, cause: filter.cause || undefined } })
+    const list = res.data?.list || []
+    rows.value = list
+    total.value = res.data?.total || list.length
+    stats.civil = list.filter(r => r.case_type === 1).length
+    stats.criminal = list.filter(r => r.case_type === 2).length
+    stats.admin = list.filter(r => r.case_type === 3).length
+    stats.total = list.length
+  } catch (e) { rows.value = []; total.value = 0 }
+  finally { loading.value = false }
+}
+
+function openDetail(row) { detail.value = row; showDetail.value = true }
+function reset() { filter.cause = ''; filter.type = ''; filter.result = ''; load() }
+watch([page, pageSize], load)
+onMounted(load)
 </script>
+
+<style lang="scss" scoped>
+.cases-page { animation: fadeIn 0.4s ease; padding: 0 4px; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
+.header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
+.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-actions { display:flex; gap:8px; align-items:center; }
+.filter-card { margin-bottom:16px; }
+.kpi-card { background:#fff; border-radius:10px; padding:16px; border:1px solid #e2e8f0; .kpi-label { font-size:12px; color:#64748b; margin-bottom:6px; } .kpi-value { font-size:22px; font-weight:700; color:#0f172a; } }
+.mono { font-family:'Cascadia Code','Consolas',monospace; font-size:13px; }
+.pager { margin-top:14px; justify-content:flex-end; display:flex; }
+.content-preview { background:#f8fafc; padding:16px; border-radius:8px; white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.6; border:1px solid #e2e8f0; max-height:30vh; overflow-y:auto; }
+</style>
