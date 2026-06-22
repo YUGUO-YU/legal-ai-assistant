@@ -81,6 +81,13 @@
         <el-link type="primary">立即注册</el-link>
       </div>
 
+      <div class="admin-quick-link">
+        <el-link type="info" :underline="false" @click="goAdmin">
+          <el-icon><Setting /></el-icon>
+          管理员登录
+        </el-link>
+      </div>
+
       <div class="demo-accounts">
         <el-divider>
           <span class="demo-divider-text">演示账号</span>
@@ -426,6 +433,24 @@ const goAdmin = () => {
   margin-top: 20px;
   color: #6b7280;
   font-size: 14px;
+}
+
+.admin-quick-link {
+  text-align: center;
+  margin-top: 12px;
+
+  :deep(.el-link) {
+    color: #9ca3af;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.3s;
+
+    &:hover {
+      color: #667eea;
+    }
+  }
 }
 
 .demo-accounts {
