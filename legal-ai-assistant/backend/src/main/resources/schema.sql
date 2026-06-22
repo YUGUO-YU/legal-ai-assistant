@@ -102,6 +102,27 @@ CREATE TABLE IF NOT EXISTS tb_case_element (
     INDEX idx_case_id (case_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='案例要素表';
 
+-- 法规导入历史表
+CREATE TABLE IF NOT EXISTS law_import_history (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    task_uuid       VARCHAR(64) NOT NULL UNIQUE COMMENT '任务UUID',
+    law_name        VARCHAR(500) NOT NULL COMMENT '法律名称',
+    source          VARCHAR(20) NOT NULL COMMENT '数据源: web_search/upload/preset',
+    status          VARCHAR(20) NOT NULL DEFAULT 'running' COMMENT '状态: running/success/failed',
+    total_articles  INT DEFAULT 0 COMMENT '拉取条款数',
+    inserted_articles INT DEFAULT 0 COMMENT '新增条款数',
+    updated_articles INT DEFAULT 0 COMMENT '更新条款数',
+    mysql_ok        TINYINT DEFAULT 0 COMMENT 'MySQL 写入是否成功',
+    es_ok           TINYINT DEFAULT 0 COMMENT 'Elasticsearch 写入是否成功',
+    milvus_ok       TINYINT DEFAULT 0 COMMENT 'Milvus 写入是否成功',
+    error_message   TEXT COMMENT '错误信息',
+    operator        VARCHAR(64) DEFAULT 'system' COMMENT '操作者',
+    started_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    finished_at     DATETIME,
+    INDEX idx_status (status),
+    INDEX idx_started (started_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='法规导入历史表';
+
 -- 搜索日志表
 CREATE TABLE IF NOT EXISTS search_log (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,

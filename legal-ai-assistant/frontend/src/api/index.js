@@ -197,5 +197,17 @@ export default {
     importConstructionLaw: (data) => withRetry(() => api.post('/admin/data/import-construction-law', data)),
     vectorize: (data) => withRetry(() => api.post('/admin/data/vectorize', data)),
     importAll: (data) => withRetry(() => api.post('/admin/data/import-all', data))
+  },
+  lawImport: {
+    webSearch: (data) => withRetry(() => api.post('/admin/law-import/web-search', data)),
+    upload: (data) => withRetry(() => api.post('/admin/law-import/upload', data)),
+    uploadFile: (formData) => withRetry(() => api.post('/admin/law-import/upload-file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })),
+    preset: (presetKey, operator) => withRetry(() => api.post(`/admin/law-import/preset/${presetKey}`, null, { params: { operator } })),
+    presets: () => withRetry(() => api.get('/admin/law-import/presets')),
+    history: (page = 1, pageSize = 20) => withRetry(() => api.get('/admin/law-import/history', { params: { page, pageSize } })),
+    historyById: (id) => withRetry(() => api.get(`/admin/law-import/history/${id}`)),
+    stats: () => withRetry(() => api.get('/admin/law-import/stats'))
   }
 }

@@ -387,7 +387,8 @@ const quickAccess = [
   { path: '/case-search', title: '案例搜索', desc: '判例检索分析', icon: 'Files', gradient: 'linear-gradient(135deg, #fa709a, #fee140)', shadow: '0 8px 20px rgba(250, 112, 154, 0.35)' },
   { path: '/law-search', title: '法规搜索', desc: '法律法规查询', icon: 'Collection', gradient: 'linear-gradient(135deg, #ff9a56, #ff6a00)', shadow: '0 8px 20px rgba(255, 154, 0, 0.35)' },
   { path: '/document', title: 'AI文书', desc: '法律文书起草', icon: 'DocumentCopy', gradient: 'linear-gradient(135deg, #4facfe, #00f2fe)', shadow: '0 8px 20px rgba(79, 172, 254, 0.35)' },
-  { path: '/contract-review', title: 'AI审查', desc: '合同风险分析', icon: 'Stamp', gradient: 'linear-gradient(135deg, #a18cd1, #fbc2eb)', shadow: '0 8px 20px rgba(161, 140, 209, 0.35)' }
+  { path: '/contract-review', title: 'AI审查', desc: '合同风险分析', icon: 'Stamp', gradient: 'linear-gradient(135deg, #a18cd1, #fbc2eb)', shadow: '0 8px 20px rgba(161, 140, 209, 0.35)' },
+  { path: '/data-manager', title: '数据管理', desc: 'AI 导入法律法规', icon: 'DataAnalysis', gradient: 'linear-gradient(135deg, #11998e, #38ef7d)', shadow: '0 8px 20px rgba(17, 153, 142, 0.35)' }
 ]
 
 const recentActivities = ref([

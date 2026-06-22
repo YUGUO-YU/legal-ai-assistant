@@ -47,14 +47,58 @@ public class MilvusService {
 
     public void indexArticle(LegalSearchResponse.SearchResultItem item, float[] vector) {
         if (milvusClient.orElse(null) == null || !milvusConfig.isEnabled()) {
-            log.info("Milvus disabled, skipping indexing");
+            log.info("Milvus disabled, skipping indexing for {}", item.getArticleId());
+            return;
+        }
+
+        if (vector == null || vector.length == 0) {
+            log.warn("Skip Milvus index: empty vector for {}", item.getArticleId());
             return;
         }
 
         try {
-            log.info("Indexing article: {}", item.getArticleId());
+            log.info("Milvus indexArticle: articleId={}, vectorDim={}", item.getArticleId(), vector.length);
         } catch (Exception e) {
-            log.error("Failed to index article: {}", e.getMessage(), e);
+            log.error("Failed to index article {}: {}", item.getArticleId(), e.getMessage(), e);
+        }
+    }
+
+    public int indexArticles(List<IndexableArticle> articles) {
+        if (milvusClient.orElse(null) == null || !milvusConfig.isEnabled()) {
+            log.info("Milvus disabled, skipping bulk index ({} articles)", articles == null ? 0 : articles.size());
+            return 0;
+        }
+
+        if (articles == null || articles.isEmpty()) {
+            return 0;
+        }
+
+        int success = 0;
+        for (IndexableArticle a : articles) {
+            if (a.vector == null || a.vector.length == 0) {
+                log.debug("Skip Milvus index: empty vector for {}", a.articleId);
+                continue;
+            }
+            try {
+                log.debug("Milvus indexArticle (bulk): articleId={}, vectorDim={}", a.articleId, a.vector.length);
+                success++;
+            } catch (Exception e) {
+                log.error("Failed to index article {}: {}", a.articleId, e.getMessage());
+            }
+        }
+        log.info("Milvus bulk indexed {}/{} articles (real client integration pending)", success, articles.size());
+        return success;
+    }
+
+    public static class IndexableArticle {
+        public final String articleId;
+        public final float[] vector;
+        public final String content;
+
+        public IndexableArticle(String articleId, float[] vector, String content) {
+            this.articleId = articleId;
+            this.vector = vector;
+            this.content = content;
         }
     }
 

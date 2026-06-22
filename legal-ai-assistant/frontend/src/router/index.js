@@ -110,6 +110,11 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/data-manager',
+    component: () => import('../views/DataManager.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/profile',
     component: () => import('../views/Profile.vue'),
     meta: { requiresAuth: true }

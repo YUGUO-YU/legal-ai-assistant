@@ -187,4 +187,68 @@ public class ElasticsearchService {
             String sourceUrl,
             String sourceName
     ) {}
+
+    public int bulkIndexArticles(List<LawArticleDocument> docs) {
+        if (client.orElse(null) == null || !esConfig.isEnabled()) {
+            log.info("Elasticsearch disabled, skipping bulk index");
+            return 0;
+        }
+
+        if (docs == null || docs.isEmpty()) {
+            return 0;
+        }
+
+        try {
+            String indexName = esConfig.getIndexName();
+            boolean exists = client.get().indices().exists(e -> e.index(indexName)).value();
+            if (!exists) {
+                client.get().indices().create(c -> c
+                    .index(indexName)
+                    .mappings(m -> m
+                        .properties("articleId", p -> p.keyword(k -> k))
+                        .properties("lawId", p -> p.keyword(k -> k))
+                        .properties("lawTitle", p -> p.text(t -> t))
+                        .properties("articleNo", p -> p.keyword(k -> k))
+                        .properties("title", p -> p.text(t -> t))
+                        .properties("content", p -> p.text(t -> t))
+                        .properties("categoryL1", p -> p.keyword(k -> k))
+                        .properties("categoryL2", p -> p.keyword(k -> k))
+                        .properties("sourceUrl", p -> p.keyword(k -> k))
+                        .properties("sourceName", p -> p.keyword(k -> k))
+                    )
+                );
+                log.info("Created ES index: {}", indexName);
+            }
+
+            var bulkRequest = new co.elastic.clients.elasticsearch.core.BulkRequest.Builder();
+            for (LawArticleDocument doc : docs) {
+                bulkRequest.operations(op -> op
+                    .index(idx -> idx
+                        .index(indexName)
+                        .id(doc.articleId())
+                        .document(doc)
+                    )
+                );
+            }
+
+            var bulkResponse = client.get().bulk(bulkRequest.build());
+            if (bulkResponse.errors()) {
+                int failed = 0;
+                for (var item : bulkResponse.items()) {
+                    if (item.error() != null) {
+                        failed++;
+                        log.warn("ES bulk index error for {}: {}", item.id(), item.error().reason());
+                    }
+                }
+                log.warn("ES bulk indexed {}/{} docs, {} failed", docs.size() - failed, docs.size(), failed);
+                return docs.size() - failed;
+            }
+
+            log.info("ES bulk indexed {} articles", docs.size());
+            return docs.size();
+        } catch (IOException e) {
+            log.error("ES bulk index failed: {}", e.getMessage(), e);
+            return 0;
+        }
+    }
 }
