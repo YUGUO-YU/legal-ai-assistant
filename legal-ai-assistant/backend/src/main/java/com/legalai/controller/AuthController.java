@@ -21,6 +21,12 @@ public class AuthController {
         return ApiResponse.success(response);
     }
 
+    @PostMapping("/login")
+    public ApiResponse<LoginResponse> login(@RequestBody LoginRequest request) {
+        LoginResponse response = authService.login(request);
+        return ApiResponse.success(response);
+    }
+
     @PostMapping("/refresh")
     public ApiResponse<LoginResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
         LoginResponse response = authService.refreshToken(request.getRefreshToken());
