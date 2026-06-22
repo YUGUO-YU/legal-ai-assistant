@@ -123,7 +123,13 @@ public class LawImportService {
      * 三入口之一：联网搜索导入。AI 拉取数据，结构化后入库。
      */
     public LawImportJob importByWebSearch(String lawName, String operator) {
-        return runImport(lawName, "web_search", operator, () -> fetchByWebSearch(lawName));
+        return runImport(lawName, "web_search", operator, () -> {
+            try {
+                return fetchByWebSearch(lawName);
+            } catch (IOException e) {
+                throw new RuntimeException("联网搜索失败: " + e.getMessage(), e);
+            }
+        });
     }
 
     /**
