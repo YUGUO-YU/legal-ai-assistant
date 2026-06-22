@@ -1,7 +1,10 @@
 package com.legalai.service;
 
+import com.legalai.dto.ForgotPasswordResponse;
 import com.legalai.dto.LoginRequest;
 import com.legalai.dto.LoginResponse;
+import com.legalai.dto.RegisterRequest;
+import com.legalai.dto.ResetPasswordRequest;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -18,9 +22,12 @@ public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final long TOKEN_EXPIRE_MS = 7 * 24 * 3600 * 1000L;
     private static final long REFRESH_TOKEN_EXPIRE_MS = 30 * 24 * 3600 * 1000L;
+    private static final long RESET_CODE_EXPIRE_MS = 10 * 60 * 1000L;
 
     private final Map<String, TokenInfo> tokenStore = new ConcurrentHashMap<>();
+    private final Map<String, ResetCodeInfo> resetCodeStore = new ConcurrentHashMap<>();
     private final JdbcTemplate jdbc;
+    private final Random random = new Random();
 
     public AuthService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
@@ -193,6 +200,91 @@ public class AuthService {
 
     private String generateMockToken() {
         return "mock_token_" + UUID.randomUUID().toString().replace("-", "");
+    }
+
+    public void register(RegisterRequest request) {
+        String username = request.getUsername().trim();
+        String password = request.getPassword();
+        String realName = request.getRealName() != null ? request.getRealName().trim() : null;
+        String email = request.getEmail() != null ? request.getEmail().trim() : null;
+
+        if (username.length() < 3 || username.length() > 32) {
+            throw new RuntimeException("用户名长度需在3-32个字符之间");
+        }
+        if (password.length() < 6 || password.length() > 32) {
+            throw new RuntimeException("密码长度需在6-32个字符之间");
+        }
+
+        var existing = jdbc.queryForList(
+            "SELECT id FROM frontend_user WHERE username = ?", username);
+        if (!existing.isEmpty()) {
+            throw new RuntimeException("用户名已被注册");
+        }
+
+        if (email != null && !email.isEmpty()) {
+            var existingEmail = jdbc.queryForList(
+                "SELECT id FROM frontend_user WHERE email = ?", email);
+            if (!existingEmail.isEmpty()) {
+                throw new RuntimeException("邮箱已被注册");
+            }
+        }
+
+        String userId = "u-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        String hashedPassword = DigestUtils.sha256Hex(password.getBytes(StandardCharsets.UTF_8));
+
+        jdbc.update(
+            "INSERT INTO frontend_user (id, username, password, real_name, email, status) VALUES (?, ?, ?, ?, ?, 1)",
+            userId, username, hashedPassword, realName, email);
+
+        log.info("新用户注册成功: username={}, userId={}", username, userId);
+    }
+
+    public ForgotPasswordResponse sendResetCode(String username) {
+        var rows = jdbc.queryForList(
+            "SELECT id FROM frontend_user WHERE username = ?", username);
+        if (rows.isEmpty()) {
+            throw new RuntimeException("该用户名不存在");
+        }
+
+        String code = String.format("%06d", random.nextInt(1000000));
+        resetCodeStore.put(username, new ResetCodeInfo(code, System.currentTimeMillis() + RESET_CODE_EXPIRE_MS));
+
+        log.info("密码重置码已生成: username={}, code={}", username, code);
+        return new ForgotPasswordResponse(code, "验证码已生成，请查看后端日志");
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        String username = request.getUsername().trim();
+        String code = request.getCode().trim();
+        String newPassword = request.getNewPassword();
+
+        if (newPassword.length() < 6 || newPassword.length() > 32) {
+            throw new RuntimeException("密码长度需在6-32个字符之间");
+        }
+
+        ResetCodeInfo info = resetCodeStore.get(username);
+        if (info == null || !info.code.equals(code)) {
+            throw new RuntimeException("验证码错误");
+        }
+        if (System.currentTimeMillis() > info.expireTime) {
+            resetCodeStore.remove(username);
+            throw new RuntimeException("验证码已过期，请重新获取");
+        }
+
+        String hashedPassword = DigestUtils.sha256Hex(newPassword.getBytes(StandardCharsets.UTF_8));
+        jdbc.update("UPDATE frontend_user SET password = ? WHERE username = ?", hashedPassword, username);
+        resetCodeStore.remove(username);
+
+        log.info("密码重置成功: username={}", username);
+    }
+
+    private static class ResetCodeInfo {
+        String code;
+        long expireTime;
+        ResetCodeInfo(String code, long expireTime) {
+            this.code = code;
+            this.expireTime = expireTime;
+        }
     }
 
     private static class TokenInfo {

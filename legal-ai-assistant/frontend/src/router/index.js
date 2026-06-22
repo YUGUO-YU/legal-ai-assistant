@@ -10,6 +10,14 @@ const routes = [
     component: () => import('../views/Login.vue')
   },
   {
+    path: '/register',
+    component: () => import('../views/Register.vue')
+  },
+  {
+    path: '/forgot-password',
+    component: () => import('../views/ForgotPassword.vue')
+  },
+  {
     path: '/dashboard',
     component: () => import('../views/Dashboard.vue'),
     meta: { requiresAuth: true }

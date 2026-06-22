@@ -15,6 +15,24 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @PostMapping("/register")
+    public ApiResponse<Void> register(@RequestBody RegisterRequest request) {
+        authService.register(request);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<ForgotPasswordResponse> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        ForgotPasswordResponse response = authService.sendResetCode(request.getUsername());
+        return ApiResponse.success(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ApiResponse.success(null);
+    }
+
     @PostMapping("/admin/login")
     public ApiResponse<LoginResponse> adminLogin(@RequestBody LoginRequest request) {
         LoginResponse response = authService.adminLogin(request);
