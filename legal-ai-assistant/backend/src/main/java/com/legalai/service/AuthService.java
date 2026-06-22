@@ -30,11 +30,37 @@ public class AuthService {
     public LoginResponse login(LoginRequest request) {
         log.info("用户登录请求: username={}", request.getUsername());
 
+        var rows = jdbc.queryForList(
+            "SELECT id, username, password, real_name, email, status FROM frontend_user WHERE username = ?",
+            request.getUsername());
+
+        if (rows.isEmpty()) {
+            log.warn("用户不存在: {}", request.getUsername());
+            throw new RuntimeException("账号或密码错误");
+        }
+
+        Map<String, Object> user = rows.get(0);
+        Integer status = (Integer) user.get("status");
+        if (status == null || status != 1) {
+            log.warn("用户已停用: {}", request.getUsername());
+            throw new RuntimeException("账号已被停用");
+        }
+
+        String dbPassword = (String) user.get("password");
+        if (dbPassword == null || !passwordEncoder.matches(request.getPassword(), dbPassword)) {
+            log.warn("用户密码错误: {}", request.getUsername());
+            throw new RuntimeException("账号或密码错误");
+        }
+
+        String userId = (String) user.get("id");
+        String realName = (String) user.get("real_name");
+        String email = (String) user.get("email");
+
         String accessToken = generateMockToken();
         String refreshToken = generateMockToken();
 
         TokenInfo tokenInfo = new TokenInfo();
-        tokenInfo.setUserId(1L);
+        tokenInfo.setUserIdStr(userId);
         tokenInfo.setUsername(request.getUsername());
         tokenInfo.setExpireTime(System.currentTimeMillis() + TOKEN_EXPIRE_MS);
         tokenInfo.setRefreshExpireTime(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRE_MS);
@@ -46,14 +72,15 @@ public class AuthService {
         response.setExpireTime(tokenInfo.getExpireTime());
 
         LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo();
-        userInfo.setUserId(1L);
+        userInfo.setUserIdStr(userId);
         userInfo.setUsername(request.getUsername());
-        userInfo.setNickname("法律用户");
-        userInfo.setEmail(request.getUsername() + "@example.com");
+        userInfo.setNickname(realName != null ? realName : "法律用户");
+        userInfo.setEmail(email != null ? email : request.getUsername() + "@example.com");
         userInfo.setAvatar("");
         userInfo.setRole("lawyer");
         response.setUserInfo(userInfo);
 
+        log.info("用户登录成功: username={}, userId={}", request.getUsername(), userId);
         return response;
     }
 
@@ -142,6 +169,7 @@ public class AuthService {
 
         LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo();
         userInfo.setUserId(tokenInfo.getUserId());
+        userInfo.setUserIdStr(tokenInfo.getUserIdStr());
         userInfo.setUsername(tokenInfo.getUsername());
         userInfo.setNickname("法律用户");
         userInfo.setEmail(tokenInfo.getUsername() + "@example.com");
@@ -156,12 +184,15 @@ public class AuthService {
 
     private static class TokenInfo {
         private Long userId;
+        private String userIdStr;
         private String username;
         private long expireTime;
         private long refreshExpireTime;
 
         public Long getUserId() { return userId; }
         public void setUserId(Long userId) { this.userId = userId; }
+        public String getUserIdStr() { return userIdStr; }
+        public void setUserIdStr(String userIdStr) { this.userIdStr = userIdStr; }
         public String getUsername() { return username; }
         public void setUsername(String username) { this.username = username; }
         public long getExpireTime() { return expireTime; }

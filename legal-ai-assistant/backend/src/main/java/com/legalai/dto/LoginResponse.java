@@ -17,6 +17,7 @@ public class LoginResponse {
 
     public static class UserInfo {
         private Long userId;
+        private String userIdStr;
         private String username;
         private String nickname;
         private String email;
@@ -25,6 +26,8 @@ public class LoginResponse {
 
         public Long getUserId() { return userId; }
         public void setUserId(Long userId) { this.userId = userId; }
+        public String getUserIdStr() { return userIdStr; }
+        public void setUserIdStr(String userIdStr) { this.userIdStr = userIdStr; }
         public String getUsername() { return username; }
         public void setUsername(String username) { this.username = username; }
         public String getNickname() { return nickname; }

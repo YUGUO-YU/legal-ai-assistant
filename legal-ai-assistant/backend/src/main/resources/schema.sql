@@ -284,6 +284,22 @@ CREATE TABLE IF NOT EXISTS admin_user (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '后台用户';
 
+CREATE TABLE IF NOT EXISTS frontend_user (
+    id              VARCHAR(64) PRIMARY KEY,
+    username        VARCHAR(64) NOT NULL UNIQUE,
+    password        VARCHAR(128) COMMENT 'BCrypt 加密',
+    real_name       VARCHAR(64),
+    email           VARCHAR(128),
+    avatar          VARCHAR(500),
+    status          TINYINT DEFAULT 1 COMMENT '1启用 0停用',
+    last_login_at   DATETIME,
+    last_login_ip   VARCHAR(64),
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_username (username),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '前端用户';
+
 CREATE TABLE IF NOT EXISTS admin_role (
     id          BIGINT PRIMARY KEY AUTO_INCREMENT,
     role_code   VARCHAR(64) NOT NULL UNIQUE,
@@ -643,6 +659,9 @@ CREATE TABLE IF NOT EXISTS qa_session (
 -- ===== 默认数据 =====
 INSERT IGNORE INTO admin_user (id, username, password, real_name, status) VALUES
 (1, 'admin', '$2b$10$L/aF0vqigVCUeNnOeMmQBOoEp.XI6vvXGAmFCd7fQ2FPhEU/JWpbS', '超级管理员', 1);
+
+INSERT IGNORE INTO frontend_user (id, username, password, real_name, email, status) VALUES
+('u-001', 'demo', '$2b$10$6dFrbFXMUxtk/ECPqTN0jOD6cQDtg/TUA9BI4SpiJ5ohWXU1fHXOC', '演示用户', 'demo@legal-ai.local', 1);
 
 INSERT IGNORE INTO admin_role (id, role_code, role_name, data_scope, status, remark) VALUES
 (1, 'SUPER_ADMIN', '超级管理员', 4, 1, '全部权限'),
