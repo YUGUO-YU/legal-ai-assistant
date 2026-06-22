@@ -7,6 +7,7 @@ public class DocumentDraftResponse {
     private String riskPrompt;
     private String disclaimer;
     private List<String> referencedLaws;
+    private String contentSource;
 
     public String getDocumentContent() { return documentContent; }
     public void setDocumentContent(String documentContent) { this.documentContent = documentContent; }
@@ -16,4 +17,6 @@ public class DocumentDraftResponse {
     public void setDisclaimer(String disclaimer) { this.disclaimer = disclaimer; }
     public List<String> getReferencedLaws() { return referencedLaws; }
     public void setReferencedLaws(List<String> referencedLaws) { this.referencedLaws = referencedLaws; }
+    public String getContentSource() { return contentSource; }
+    public void setContentSource(String contentSource) { this.contentSource = contentSource; }
 }

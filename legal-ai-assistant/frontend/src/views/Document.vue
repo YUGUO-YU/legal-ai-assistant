@@ -185,6 +185,12 @@
 
     <el-drawer v-model="showResult" title="生成结果" size="60%" direction="rtl">
       <div v-if="draftResult" class="result-content">
+        <div class="source-banner" v-if="draftResult.contentSource">
+          <el-tag :type="draftResult.contentSource.includes('AI') && !draftResult.contentSource.includes('回退') ? 'success' : 'info'" size="small">
+            <el-icon><MagicStick v-if="draftResult.contentSource.includes('AI') && !draftResult.contentSource.includes('回退')" /><Document v-else /></el-icon>
+            {{ draftResult.contentSource }}
+          </el-tag>
+        </div>
         <el-tabs v-model="activeTab">
           <el-tab-pane label="文书正文" name="content">
             <pre class="document-content">{{ draftResult.documentContent }}</pre>
@@ -271,7 +277,8 @@ import {
   Download,
   Printer,
   Search,
-  DocumentCopy
+  DocumentCopy,
+  MagicStick
 } from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
@@ -674,6 +681,19 @@ onMounted(() => {
 
 .result-content {
   padding: 8px;
+
+  .source-banner {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .el-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
 
   .document-content {
     background: linear-gradient(135deg, #f8fafc, #f1f5f9);

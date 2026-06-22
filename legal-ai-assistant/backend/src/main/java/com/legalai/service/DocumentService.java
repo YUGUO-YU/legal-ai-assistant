@@ -1,10 +1,15 @@
 package com.legalai.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.dto.*;
+import com.legalai.llm.LLMClient;
 import com.legalai.util.IdGenerator;
 import com.legalai.util.ValidationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -15,6 +20,8 @@ import java.util.*;
 @Service
 public class DocumentService {
     private static final Logger log = LoggerFactory.getLogger(DocumentService.class);
+
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private static final Map<String, DocumentTemplate> TEMPLATES = new HashMap<>();
 
@@ -191,8 +198,14 @@ public class DocumentService {
         ));
     }
 
+    @Autowired(required = false)
+    private LLMClient llmClient;
+
+    @Value("${mock.enabled:true}")
+    private boolean mockEnabled;
+
     public DocumentDraftResponse draftDocument(DocumentDraftRequest request) {
-        log.info("文书起草请求: templateCode={}", request.getTemplateCode());
+        log.info("文书起草请求: templateCode={}, mock={}", request.getTemplateCode(), mockEnabled);
 
         validateRequest(request);
 
@@ -201,7 +214,28 @@ public class DocumentService {
             throw new IllegalArgumentException("不支持的文书模板: " + request.getTemplateCode());
         }
 
-        String content = generateDocumentContent(template, request);
+        String content;
+        String contentSource;
+        if (mockEnabled || llmClient == null) {
+            content = generateDocumentContent(template, request);
+            contentSource = "本地模板生成";
+        } else {
+            try {
+                String aiContent = generateDocumentContentByLLM(template, request);
+                if (aiContent != null && !aiContent.trim().isEmpty()) {
+                    content = aiContent;
+                    contentSource = "AI 智能生成";
+                } else {
+                    content = generateDocumentContent(template, request);
+                    contentSource = "AI 兜底回退到本地模板";
+                }
+            } catch (Exception e) {
+                log.warn("[Document] LLM 生成失败，回退本地模板: {}", e.getMessage());
+                content = generateDocumentContent(template, request);
+                contentSource = "AI 失败回退到本地模板";
+            }
+        }
+
         String riskPrompt = generateRiskPrompt(template, request);
         String disclaimer = generateDisclaimer(template, request.getCaseData());
 
@@ -210,8 +244,40 @@ public class DocumentService {
         response.setRiskPrompt(riskPrompt);
         response.setDisclaimer(disclaimer);
         response.setReferencedLaws(template.referencedLaws);
+        response.setContentSource(contentSource);
 
         return response;
+    }
+
+    private String generateDocumentContentByLLM(DocumentTemplate template, DocumentDraftRequest request) throws Exception {
+        DocumentDraftRequest.DocumentData data = request.getCaseData();
+        StringBuilder facts = new StringBuilder();
+        if (data != null) {
+            if (notEmpty(data.getPlaintiffName())) facts.append("原告：").append(data.getPlaintiffName()).append("\n");
+            if (notEmpty(data.getPlaintiffAddress())) facts.append("原告地址：").append(data.getPlaintiffAddress()).append("\n");
+            if (notEmpty(data.getDefendantName())) facts.append("被告：").append(data.getDefendantName()).append("\n");
+            if (notEmpty(data.getDefendantAddress())) facts.append("被告地址：").append(data.getDefendantAddress()).append("\n");
+            if (data.getClaimAmount() != null) facts.append("诉讼金额：").append(data.getClaimAmount()).append(" 元\n");
+            if (notEmpty(data.getClaimDescription())) facts.append("诉讼请求：").append(data.getClaimDescription()).append("\n");
+            if (data.getFacts() != null) {
+                List<String> list = data.getFacts();
+                if (list != null && !list.isEmpty()) facts.append("事实与理由：\n").append(String.join("\n", list)).append("\n");
+            }
+            if (notEmpty(data.getCourtName())) facts.append("管辖法院：").append(data.getCourtName()).append("\n");
+            if (notEmpty(data.getDefendantCompany())) facts.append("被告单位：").append(data.getDefendantCompany()).append("\n");
+        }
+
+        String prompt = "你是一名资深中国律师。请根据以下案件信息起草一份「" + template.name + "」。\n"
+            + "要求：\n"
+            + "1. 严格使用中国大陆法律文书标准格式；\n"
+            + "2. 完整包含当事人信息（姓名/地址/单位等）、诉讼请求、事实与理由、此致法院、具状人、日期；\n"
+            + "3. 引用相关法条（参考：" + String.join("、", template.referencedLaws) + "）；\n"
+            + "4. 语言严谨规范，体现专业法律素养；\n"
+            + "5. 直接输出文书正文，不要任何解释或 Markdown 包裹。\n\n"
+            + "案件信息：\n" + facts.toString();
+
+        log.info("[Document] 调 LLM 起草 {} 文书，prompt 长度={}", template.name, prompt.length());
+        return llmClient.chat(prompt);
     }
 
     public List<TemplateInfo> getTemplates() {
@@ -229,7 +295,7 @@ public class DocumentService {
     }
 
     public ExtractedInfo extractInfoFromText(String text, String templateCode) {
-        log.info("本地正则提取信息: text长度={}, templateCode={}", text == null ? 0 : text.length(), templateCode);
+        log.info("提取信息: text长度={}, templateCode={}, mock={}", text == null ? 0 : text.length(), templateCode, mockEnabled);
 
         if (text == null || text.trim().isEmpty()) {
             ExtractedInfo empty = new ExtractedInfo();
@@ -240,18 +306,176 @@ public class DocumentService {
         }
 
         ExtractedInfo local = extractByRegex(text, templateCode);
-        local.setDataSource("本地正则识别");
+        int localFilled = countFilledFields(local);
+        log.info("[Document] 本地正则识别填充字段数={}", localFilled);
+
+        if (localFilled >= 3) {
+            local.setDataSource("本地正则识别");
+            local.setSuccess(true);
+            local.setErrorMessage(null);
+            return local;
+        }
+
+        if (mockEnabled || llmClient == null) {
+            if (!hasAnyField(local)) {
+                local.setSuccess(false);
+                if (local.getErrorMessage() == null || local.getErrorMessage().isEmpty()) {
+                    local.setErrorMessage("未能从文本中识别到任何关键信息，请补充当事人、金额或事实描述后重试");
+                }
+                local.setDataSource("本地正则识别");
+            } else {
+                local.setSuccess(true);
+                local.setErrorMessage(null);
+                local.setDataSource("本地正则识别");
+            }
+            return local;
+        }
+
+        try {
+            ExtractedInfo ai = extractByLLM(text, templateCode);
+            if (ai != null && countFilledFields(ai) > localFilled) {
+                ai.setDataSource("AI 智能识别");
+                ai.setSuccess(true);
+                if (ai.getErrorMessage() == null) ai.setErrorMessage(null);
+                return mergeExtractedInfo(ai, local);
+            }
+        } catch (Exception e) {
+            log.warn("[Document] LLM 提取失败: {}", e.getMessage());
+        }
 
         if (!hasAnyField(local)) {
             local.setSuccess(false);
             if (local.getErrorMessage() == null || local.getErrorMessage().isEmpty()) {
                 local.setErrorMessage("未能从文本中识别到任何关键信息，请补充当事人、金额或事实描述后重试");
             }
+            local.setDataSource("本地正则识别");
         } else {
             local.setSuccess(true);
             local.setErrorMessage(null);
+            local.setDataSource("本地正则识别");
         }
         return local;
+    }
+
+    private ExtractedInfo mergeExtractedInfo(ExtractedInfo primary, ExtractedInfo fallback) {
+        ExtractedInfo merged = new ExtractedInfo();
+        merged.setPlaintiffName(coalesce(primary.getPlaintiffName(), fallback.getPlaintiffName()));
+        merged.setPlaintiffAddress(coalesce(primary.getPlaintiffAddress(), fallback.getPlaintiffAddress()));
+        merged.setDefendantName(coalesce(primary.getDefendantName(), fallback.getDefendantName()));
+        merged.setDefendantAddress(coalesce(primary.getDefendantAddress(), fallback.getDefendantAddress()));
+        merged.setClaimAmount(primary.getClaimAmount() != null ? primary.getClaimAmount() : fallback.getClaimAmount());
+        merged.setClaimDescription(coalesce(primary.getClaimDescription(), fallback.getClaimDescription()));
+        merged.setFacts(coalesce(primary.getFacts(), fallback.getFacts()));
+        merged.setCourtName(coalesce(primary.getCourtName(), fallback.getCourtName()));
+        merged.setEmployerName(coalesce(primary.getEmployerName(), fallback.getEmployerName()));
+        merged.setEmployeeName(coalesce(primary.getEmployeeName(), fallback.getEmployeeName()));
+        merged.setWorkContent(coalesce(primary.getWorkContent(), fallback.getWorkContent()));
+        merged.setSalary(coalesce(primary.getSalary(), fallback.getSalary()));
+        merged.setStartDate(coalesce(primary.getStartDate(), fallback.getStartDate()));
+        merged.setDisputeType(coalesce(primary.getDisputeType(), fallback.getDisputeType()));
+        merged.setSuccess(true);
+        merged.setErrorMessage(null);
+        merged.setDataSource(primary.getDataSource() != null ? primary.getDataSource() : "AI 智能识别");
+        return merged;
+    }
+
+    private String coalesce(String a, String b) {
+        if (a == null || a.trim().isEmpty()) return b;
+        return a;
+    }
+
+    private int countFilledFields(ExtractedInfo info) {
+        if (info == null) return 0;
+        int c = 0;
+        if (notEmpty(info.getPlaintiffName())) c++;
+        if (notEmpty(info.getPlaintiffAddress())) c++;
+        if (notEmpty(info.getDefendantName())) c++;
+        if (notEmpty(info.getDefendantAddress())) c++;
+        if (info.getClaimAmount() != null && info.getClaimAmount().signum() > 0) c++;
+        if (notEmpty(info.getClaimDescription())) c++;
+        if (notEmpty(info.getFacts())) c++;
+        if (notEmpty(info.getCourtName())) c++;
+        if (notEmpty(info.getEmployerName())) c++;
+        if (notEmpty(info.getEmployeeName())) c++;
+        if (notEmpty(info.getWorkContent())) c++;
+        if (notEmpty(info.getSalary())) c++;
+        if (notEmpty(info.getStartDate())) c++;
+        if (notEmpty(info.getDisputeType())) c++;
+        return c;
+    }
+
+    private ExtractedInfo extractByLLM(String text, String templateCode) throws Exception {
+        String prompt = "你是法律文本关键信息抽取助手。请从以下案件相关文本中抽取关键字段，以 JSON 格式返回。\n"
+            + "JSON 字段（缺失填空字符串或 null）：\n"
+            + "plaintiffName（原告/申请人姓名）\n"
+            + "plaintiffAddress（原告地址）\n"
+            + "defendantName（被告/被申请人姓名/单位名称）\n"
+            + "defendantAddress（被告地址）\n"
+            + "claimAmount（诉讼金额，数字，单位元，不要带\"元\"字符）\n"
+            + "claimDescription（诉讼请求/仲裁请求描述）\n"
+            + "facts（事实与理由概述）\n"
+            + "courtName（管辖法院）\n"
+            + "employerName（用人单位）\n"
+            + "employeeName（劳动者/员工姓名）\n"
+            + "workContent（工作岗位/工作内容）\n"
+            + "salary（月薪/工资数字与单位）\n"
+            + "startDate（入职/起始日期）\n"
+            + "disputeType（争议类型）\n\n"
+            + "仅输出 JSON，不要解释：\n\n"
+            + "原文：\n" + text;
+        if (templateCode != null && !templateCode.isEmpty()) {
+            prompt += "\n\n参考文书类型：" + templateCode;
+        }
+
+        String raw = llmClient.chat(prompt);
+        log.info("[Document] LLM 抽取原始返回长度={}", raw == null ? 0 : raw.length());
+        if (raw == null) return null;
+
+        String json = extractJsonBlock(raw);
+        if (json == null) return null;
+
+        JsonNode node = JSON.readTree(json);
+        ExtractedInfo info = new ExtractedInfo();
+        info.setPlaintiffName(textOrEmpty(node, "plaintiffName"));
+        info.setPlaintiffAddress(textOrEmpty(node, "plaintiffAddress"));
+        info.setDefendantName(textOrEmpty(node, "defendantName"));
+        info.setDefendantAddress(textOrEmpty(node, "defendantAddress"));
+        info.setClaimDescription(textOrEmpty(node, "claimDescription"));
+        info.setFacts(textOrEmpty(node, "facts"));
+        info.setCourtName(textOrEmpty(node, "courtName"));
+        info.setEmployerName(textOrEmpty(node, "employerName"));
+        info.setEmployeeName(textOrEmpty(node, "employeeName"));
+        info.setWorkContent(textOrEmpty(node, "workContent"));
+        info.setSalary(textOrEmpty(node, "salary"));
+        info.setStartDate(textOrEmpty(node, "startDate"));
+        info.setDisputeType(textOrEmpty(node, "disputeType"));
+        String amt = textOrEmpty(node, "claimAmount");
+        if (!amt.isEmpty()) {
+            try {
+                info.setClaimAmount(new BigDecimal(amt.replaceAll("[,\\s]", "")));
+            } catch (Exception ignore) {
+            }
+        }
+        return info;
+    }
+
+    private String extractJsonBlock(String raw) {
+        if (raw == null) return null;
+        String trimmed = raw.trim();
+        int start = trimmed.indexOf('{');
+        int end = trimmed.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            return trimmed.substring(start, end + 1);
+        }
+        return null;
+    }
+
+    private String textOrEmpty(JsonNode node, String field) {
+        if (node == null) return "";
+        JsonNode v = node.get(field);
+        if (v == null || v.isNull()) return "";
+        String s = v.asText("").trim();
+        return s;
     }
 
     private boolean notEmpty(String s) {
