@@ -96,15 +96,41 @@
           </div>
         </div>
       </div>
+
+      <div class="admin-entry">
+        <el-divider>
+          <span class="admin-divider-text">快速入口</span>
+        </el-divider>
+        <div class="entry-buttons">
+          <el-button
+            v-if="isLoggedIn"
+            type="primary"
+            size="large"
+            class="entry-btn dashboard-btn"
+            @click="goDashboard"
+          >
+            <el-icon><Odometer /></el-icon>
+            <span>进入工作台</span>
+          </el-button>
+          <el-button
+            size="large"
+            class="entry-btn admin-btn"
+            @click="goAdmin"
+          >
+            <el-icon><Setting /></el-icon>
+            <span>后台管理</span>
+          </el-button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, CircleCheck, Sunny } from '@element-plus/icons-vue'
+import { User, Lock, CircleCheck, Sunny, Setting, Odometer } from '@element-plus/icons-vue'
 import api from '../api'
 
 const router = useRouter()
@@ -112,6 +138,8 @@ const loginFormRef = ref(null)
 const loading = ref(false)
 const rememberMe = ref(false)
 const captchaText = ref('')
+
+const isLoggedIn = computed(() => !!localStorage.getItem('token'))
 
 const loginForm = reactive({
   username: '',
@@ -183,6 +211,14 @@ const handleLogin = async () => {
 onMounted(() => {
   refreshCaptcha()
 })
+
+const goDashboard = () => {
+  router.push('/dashboard')
+}
+
+const goAdmin = () => {
+  router.push('/admin')
+}
 </script>
 
 <style lang="scss" scoped>
@@ -418,6 +454,67 @@ onMounted(() => {
       font-family: 'JetBrains Mono', monospace;
       color: #4b5563;
       font-weight: 500;
+    }
+  }
+}
+
+.admin-entry {
+  margin-top: 24px;
+
+  :deep(.el-divider) {
+    margin: 16px 0;
+
+    .el-divider__text {
+      background: #fff;
+      color: #9ca3af;
+      font-size: 12px;
+      padding: 0 12px;
+    }
+  }
+
+  .entry-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .entry-btn {
+    height: 44px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 24px;
+    transition: all 0.3s;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  .dashboard-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    color: #fff;
+
+    &:hover {
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    }
+  }
+
+  .admin-btn {
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    color: #4b5563;
+
+    &:hover {
+      border-color: #667eea;
+      color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
     }
   }
 }

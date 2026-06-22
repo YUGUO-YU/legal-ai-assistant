@@ -32,7 +32,7 @@
                   <span>核心功能</span>
                 </el-divider>
 
-                <el-menu-item index="/">
+                <el-menu-item index="/legal-search">
                   <el-icon><Search /></el-icon>
                   <template #title>
                     <span>AI搜法</span>

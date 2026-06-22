@@ -3,6 +3,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/login',
+    redirect: '/'
+  },
+  {
+    path: '/',
     component: () => import('../views/Login.vue')
   },
   {
@@ -11,13 +15,9 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/',
+    path: '/legal-search',
     component: () => import('../views/LegalSearch.vue'),
     meta: { requiresAuth: true }
-  },
-  {
-    path: '/legal-search',
-    redirect: '/'
   },
   {
     path: '/case-similar',
@@ -179,9 +179,7 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   if (to.meta.requiresAuth && !token) {
-    next('/login')
-  } else if (to.path === '/login' && token) {
-    next('/dashboard')
+    next('/')
   } else {
     next()
   }
