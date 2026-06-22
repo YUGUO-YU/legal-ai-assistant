@@ -7,9 +7,10 @@ import com.legalai.dto.*;
 import com.legalai.model.PptDocument;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -21,9 +22,6 @@ public class PptService {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
-    private MockDataService mockDataService;
 
     @Autowired
     private PptxGenerator pptxGenerator;
@@ -58,7 +56,6 @@ public class PptService {
         List<SlideDTO> slides = pptGenerator.generate(request.getTitle(), request.getSearchResults());
 
         PptGenerateResponse response = new PptGenerateResponse();
-        response.setId(uuid);
         response.setTitle(request.getTitle());
         response.setSlides(slides);
         response.setTemplateId(request.getTemplateId() != null ? request.getTemplateId() : "legal-blue");
@@ -66,8 +63,21 @@ public class PptService {
 
         try {
             String slidesJson = objectMapper.writeValueAsString(slides);
-            jdbcTemplate.update(INSERT_SQL, uuid, request.getTitle(), slidesJson,
-                    response.getTemplateId(), userId);
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbcTemplate.update(connection -> {
+                var ps = connection.prepareStatement(INSERT_SQL, java.sql.Statement.RETURN_GENERATED_KEYS);
+                ps.setString(1, uuid);
+                ps.setString(2, request.getTitle());
+                ps.setString(3, slidesJson);
+                ps.setString(4, response.getTemplateId());
+                ps.setString(5, userId);
+                return ps;
+            }, keyHolder);
+            Number generatedId = keyHolder.getKey();
+            if (generatedId != null) {
+                response.setId(String.valueOf(generatedId.longValue()));
+            }
+            response.setUuid(uuid);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize slides", e);
         }
@@ -77,7 +87,7 @@ public class PptService {
 
     public PptDocumentDTO getById(Long id) {
         List<PptDocument> results = jdbcTemplate.query(SELECT_BY_ID,
-                (rs, rowNum) -> mapRow(rs));
+                (rs, rowNum) -> mapRow(rs), id);
         if (results.isEmpty()) {
             throw new RuntimeException("PPT not found: " + id);
         }

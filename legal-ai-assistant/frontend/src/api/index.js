@@ -23,9 +23,15 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => {
     const res = response.data
-    if (res.code !== 200) {
-      console.error('API Error:', res.message)
-      return Promise.reject(new Error(res.message || '请求失败'))
+    if (response.config?.responseType === 'blob' || response.config?.responseType === 'arraybuffer') {
+      return response
+    }
+    if (res && typeof res === 'object' && 'code' in res) {
+      if (res.code !== 200) {
+        console.error('API Error:', res.message)
+        return Promise.reject(new Error(res.message || '请求失败'))
+      }
+      return res
     }
     return res
   },
@@ -171,7 +177,7 @@ export default {
   ppt: {
     generate: (data) => withRetry(() => api.post('/ppt/generate', data)),
     getById: (id) => withRetry(() => api.get(`/ppt/${id}`)),
-    getByUuid: (id, uuid) => withRetry(() => api.get(`/ppt/${id}/uuid/${uuid}`)),
+    getByUuid: (uuid) => withRetry(() => api.get(`/ppt/uuid/${uuid}`)),
     update: (id, data) => withRetry(() => api.put(`/ppt/${id}`, data)),
     delete: (id) => withRetry(() => api.delete(`/ppt/${id}`)),
     list: (userId) => withRetry(() => api.get('/ppt/list', { params: { userId } })),

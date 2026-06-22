@@ -295,7 +295,7 @@ const generatePpt = async () => {
     })
     pptProgressRef.value?.markComplete()
     setTimeout(() => {
-      router.push(`/ppt-editor?id=${response.id}&title=${encodeURIComponent(title)}&searchResults=${encodeURIComponent(JSON.stringify(searchResults))}`)
+      router.push({ path: '/ppt-editor', query: { id: response.data.id, title } })
     }, 400)
   } catch (error) {
     pptProgressRef.value?.markError(2)

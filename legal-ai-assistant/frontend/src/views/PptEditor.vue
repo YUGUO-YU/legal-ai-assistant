@@ -177,10 +177,8 @@ const downloadPpt = async () => {
   if (!pptStore.currentDocument) return
   downloading.value = true
   try {
-    const response = await api.get(`/ppt/${pptStore.currentDocument.id}/download`, {
-      responseType: 'blob'
-    })
-    const url = window.URL.createObjectURL(new Blob([response]))
+    const blob = await pptStore.downloadPpt(pptStore.currentDocument.id)
+    const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.download = `${documentTitle.value || 'PPT演示文稿'}.pptx`
@@ -213,10 +211,11 @@ const aiEnhanceSlide = async () => {
       layout: slide.layout,
       currentBullets: slide.bulletPoints || []
     })
-    if (response && response.bulletPoints) {
+    const data = response?.data || response
+    if (data && data.bulletPoints) {
       pptStore.updateSlide(currentSlideIndex.value, {
-        bulletPoints: response.bulletPoints,
-        notes: response.notes || slide.notes
+        bulletPoints: data.bulletPoints,
+        notes: data.notes || slide.notes
       })
       ElMessage.success('AI已优化当前幻灯片内容')
     }
@@ -235,16 +234,7 @@ onMounted(async () => {
     documentTitle.value = pptStore.currentDocument?.title || ''
   } else if (route.query.title) {
     documentTitle.value = route.query.title
-    if (route.query.searchResults) {
-      try {
-        const results = JSON.parse(route.query.searchResults)
-        pptStore.generating = true
-        await pptStore.generatePpt(documentTitle.value, results)
-        documentTitle.value = pptStore.currentDocument?.title || ''
-      } catch {
-        ElMessage.error('生成PPT失败')
-      }
-    }
+    ElMessage.warning('未指定文档ID，请先通过搜索结果生成PPT')
   }
 })
 </script>

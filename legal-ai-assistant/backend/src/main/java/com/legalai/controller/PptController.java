@@ -23,39 +23,39 @@ public class PptController {
     private PptTemplateService templateService;
 
     @PostMapping("/generate")
-    public ResponseEntity<PptGenerateResponse> generate(@RequestBody PptGenerateRequest request) {
+    public ApiResponse<PptGenerateResponse> generate(@RequestBody PptGenerateRequest request) {
         PptGenerateResponse response = pptService.generatePpt(request);
-        return ResponseEntity.ok(response);
+        return ApiResponse.success(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PptDocumentDTO> getById(@PathVariable Long id) {
+    public ApiResponse<PptDocumentDTO> getById(@PathVariable Long id) {
         PptDocumentDTO document = pptService.getById(id);
-        return ResponseEntity.ok(document);
+        return ApiResponse.success(document);
     }
 
-    @GetMapping("/{id}/uuid/{uuid}")
-    public ResponseEntity<PptDocumentDTO> getByUuid(@PathVariable Long id, @PathVariable String uuid) {
+    @GetMapping("/uuid/{uuid}")
+    public ApiResponse<PptDocumentDTO> getByUuid(@PathVariable String uuid) {
         PptDocumentDTO document = pptService.getByUuid(uuid);
-        return ResponseEntity.ok(document);
+        return ApiResponse.success(document);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PptDocumentDTO> update(@PathVariable Long id, @RequestBody PptUpdateRequest request) {
+    public ApiResponse<PptDocumentDTO> update(@PathVariable Long id, @RequestBody PptUpdateRequest request) {
         PptDocumentDTO document = pptService.update(id, request);
-        return ResponseEntity.ok(document);
+        return ApiResponse.success(document);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Boolean>> delete(@PathVariable Long id) {
+    public ApiResponse<Map<String, Boolean>> delete(@PathVariable Long id) {
         boolean success = pptService.delete(id);
-        return ResponseEntity.ok(Map.of("success", success));
+        return ApiResponse.success(Map.of("success", success));
     }
 
     @GetMapping("/list")
-    public ResponseEntity<List<PptDocumentDTO>> list(@RequestParam(required = false) String userId) {
+    public ApiResponse<List<PptDocumentDTO>> list(@RequestParam(required = false) String userId) {
         List<PptDocumentDTO> documents = pptService.list(userId);
-        return ResponseEntity.ok(documents);
+        return ApiResponse.success(documents);
     }
 
     @GetMapping("/{id}/download")
@@ -73,21 +73,21 @@ public class PptController {
     }
 
     @GetMapping("/templates")
-    public ResponseEntity<List<PptTemplateDTO>> getTemplates() {
+    public ApiResponse<List<PptTemplateDTO>> getTemplates() {
         List<PptTemplateDTO> templates = templateService.getTemplates();
-        return ResponseEntity.ok(templates);
+        return ApiResponse.success(templates);
     }
 
     @PostMapping("/templates/recommend")
-    public ResponseEntity<List<PptTemplateDTO>> recommendTemplates(@RequestBody Map<String, String> request) {
+    public ApiResponse<List<PptTemplateDTO>> recommendTemplates(@RequestBody Map<String, String> request) {
         String scenario = request.get("scenario");
         List<PptTemplateDTO> templates = templateService.getAiRecommendedTemplates(scenario);
-        return ResponseEntity.ok(templates);
+        return ApiResponse.success(templates);
     }
 
     @PostMapping("/ai-enhance-slide")
-    public ResponseEntity<Map<String, Object>> enhanceSlide(@RequestBody Map<String, Object> request) {
+    public ApiResponse<Map<String, Object>> enhanceSlide(@RequestBody Map<String, Object> request) {
         Map<String, Object> result = pptService.enhanceSlide(request);
-        return ResponseEntity.ok(result);
+        return ApiResponse.success(result);
     }
 }

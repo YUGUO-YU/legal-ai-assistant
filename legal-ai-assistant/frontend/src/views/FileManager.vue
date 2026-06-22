@@ -146,10 +146,8 @@ const openDocument = (doc) => {
 
 const downloadDocument = async (doc) => {
   try {
-    const response = await api.get(`/ppt/${doc.id}/download`, {
-      responseType: 'blob'
-    })
-    const url = window.URL.createObjectURL(new Blob([response]))
+    const blob = await pptStore.downloadPpt(doc.id)
+    const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.download = `${doc.title || 'PPT演示文稿'}.pptx`
@@ -188,7 +186,7 @@ const loadDocuments = async () => {
   loading.value = true
   try {
     const response = await api.ppt.list()
-    documents.value = response
+    documents.value = response.data || []
   } catch (error) {
     ElMessage.error('加载失败')
   } finally {
