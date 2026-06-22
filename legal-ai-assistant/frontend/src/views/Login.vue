@@ -82,7 +82,7 @@
       </div>
 
       <div class="admin-quick-link">
-        <el-link type="info" :underline="false" @click="goAdmin">
+        <el-link type="info" underline="never" @click="goAdmin">
           <el-icon><Setting /></el-icon>
           管理员登录
         </el-link>

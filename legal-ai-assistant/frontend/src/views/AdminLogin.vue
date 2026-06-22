@@ -58,7 +58,7 @@
       </el-form>
 
       <div class="card-footer">
-        <el-link type="info" :underline="false" @click="$router.push('/')">
+        <el-link type="info" underline="never" @click="$router.push('/')">
           <el-icon><ArrowLeft /></el-icon>
           返回首页
         </el-link>
