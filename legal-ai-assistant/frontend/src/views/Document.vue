@@ -439,6 +439,7 @@ const handleExtractInfo = async () => {
   extracting.value = true
   try {
     const res = await api.document.extractInfo(pasteText.value, selectedTemplate.value)
+    console.log('[Document.extractInfo] raw response:', JSON.stringify(res, null, 2))
     if (res.data) {
       const info = res.data
       if (info.plaintiffName) formData.plaintiffName = info.plaintiffName

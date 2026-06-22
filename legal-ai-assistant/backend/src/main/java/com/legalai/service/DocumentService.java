@@ -309,38 +309,28 @@ public class DocumentService {
         int localFilled = countFilledFields(local);
         log.info("[Document] 本地正则识别填充字段数={}", localFilled);
 
-        if (localFilled >= 3) {
+        if (localFilled >= 5 && hasCoreFields(local)) {
             local.setDataSource("本地正则识别");
             local.setSuccess(true);
             local.setErrorMessage(null);
             return local;
         }
 
-        if (mockEnabled || llmClient == null) {
-            if (!hasAnyField(local)) {
-                local.setSuccess(false);
-                if (local.getErrorMessage() == null || local.getErrorMessage().isEmpty()) {
-                    local.setErrorMessage("未能从文本中识别到任何关键信息，请补充当事人、金额或事实描述后重试");
+        if (llmClient != null) {
+            try {
+                ExtractedInfo ai = extractByLLM(text, templateCode);
+                int aiFilled = countFilledFields(ai);
+                log.info("[Document] LLM 识别填充字段数={}", aiFilled);
+                if (ai != null && aiFilled > 0) {
+                    ExtractedInfo merged = mergeExtractedInfo(ai, local);
+                    merged.setDataSource("AI 智能识别");
+                    merged.setSuccess(true);
+                    merged.setErrorMessage(null);
+                    return merged;
                 }
-                local.setDataSource("本地正则识别");
-            } else {
-                local.setSuccess(true);
-                local.setErrorMessage(null);
-                local.setDataSource("本地正则识别");
+            } catch (Exception e) {
+                log.warn("[Document] LLM 提取失败: {}", e.getMessage());
             }
-            return local;
-        }
-
-        try {
-            ExtractedInfo ai = extractByLLM(text, templateCode);
-            if (ai != null && countFilledFields(ai) > localFilled) {
-                ai.setDataSource("AI 智能识别");
-                ai.setSuccess(true);
-                if (ai.getErrorMessage() == null) ai.setErrorMessage(null);
-                return mergeExtractedInfo(ai, local);
-            }
-        } catch (Exception e) {
-            log.warn("[Document] LLM 提取失败: {}", e.getMessage());
         }
 
         if (!hasAnyField(local)) {
@@ -355,6 +345,17 @@ public class DocumentService {
             local.setDataSource("本地正则识别");
         }
         return local;
+    }
+
+    private boolean hasCoreFields(ExtractedInfo info) {
+        if (info == null) return false;
+        int core = 0;
+        if (notEmpty(info.getPlaintiffName())) core++;
+        if (notEmpty(info.getDefendantName())) core++;
+        if (info.getClaimAmount() != null && info.getClaimAmount().signum() > 0) core++;
+        if (notEmpty(info.getFacts())) core++;
+        if (notEmpty(info.getClaimDescription())) core++;
+        return core >= 2;
     }
 
     private ExtractedInfo mergeExtractedInfo(ExtractedInfo primary, ExtractedInfo fallback) {
@@ -506,24 +507,34 @@ public class DocumentService {
         try {
             String plaintiff = firstMatch(text,
                 "原告[：:为]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})",
-                "原告[：:]?\\s*([\\S]{2,20})",
-                "申请执行人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})");
-            if (plaintiff != null) plaintiff = plaintiff.replaceAll("(住所|地址|住|男|女|族|身份证号|住址).*$", "").trim();
+                "原告[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})",
+                "原告[，,]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})",
+                "原告\\s+([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30}?)(?:[，,\\s]|$)",
+                "申请执行人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.（\\)\\()]{2,40})",
+                "申请人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]+\\s*[（\\(]?\\s*[\\u4e00-\\u9fa5A-Za-z0-9]{0,40}[）\\)]?)",
+                "委托代理人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})");
+            if (plaintiff != null) plaintiff = plaintiff.replaceAll("(住所|地址|住|男|女|族|身份证号|住址|出生|汉族|公司|有限).*$", "").trim();
             info.setPlaintiffName(cleanName(plaintiff));
 
             String defendant = firstMatch(text,
                 "被告[：:为]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})",
-                "被告[：:]?\\s*([\\S]{2,20})",
-                "被执行人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})");
-            if (defendant != null) defendant = defendant.replaceAll("(住所|地址|住|男|女|族|身份证号|住址).*$", "").trim();
+                "被告[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})",
+                "被告[，,]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})",
+                "被告\\s+([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30}?)(?:[，,\\s]|$)",
+                "被执行人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.（\\)\\()]{2,40})",
+                "被申请人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})",
+                "被诉人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})");
+            if (defendant != null) defendant = defendant.replaceAll("(住所|地址|住|男|女|族|身份证号|住址|出生|汉族|公司|有限).*$", "").trim();
             info.setDefendantName(cleanName(defendant));
 
             String plaintiffAddr = firstMatch(text,
-                "原告[\\s\\S]{0,40}?(?:住|住所地|住所位于|地址)[\\s]*[：:]?\\s*([\\u4e00-\\u9fa5A-Za-z0-9省市区县路街道号弄室栋楼幢-—、]{4,80})");
+                "原告[\\s\\S]{0,40}?(?:住|住所地|住所位于|地址)[\\s]*[：:]?\\s*([\\u4e00-\\u9fa5A-Za-z0-9省市区县路街道号弄室栋楼幢-—、]{4,80})",
+                "原告[：:,，]\\s*([^，,\\n。；;]{4,80}?(?:省|市|区|县|路|街|道|镇|乡))");
             info.setPlaintiffAddress(cleanAddress(plaintiffAddr));
 
             String defendantAddr = firstMatch(text,
-                "被告[\\s\\S]{0,40}?(?:住|住所地|住所位于|地址)[\\s]*[：:]?\\s*([\\u4e00-\\u9fa5A-Za-z0-9省市区县路街道号弄室栋楼幢-—、]{4,80})");
+                "被告[\\s\\S]{0,40}?(?:住|住所地|住所位于|地址)[\\s]*[：:]?\\s*([\\u4e00-\\u9fa5A-Za-z0-9省市区县路街道号弄室栋楼幢-—、]{4,80})",
+                "被告[：:,，]\\s*([^，,\\n。；;]{4,80}?(?:省|市|区|县|路|街|道|镇|乡))");
             info.setDefendantAddress(cleanAddress(defendantAddr));
 
             String court = firstMatch(text,
