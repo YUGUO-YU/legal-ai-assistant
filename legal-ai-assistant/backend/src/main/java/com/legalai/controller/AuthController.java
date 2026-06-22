@@ -15,9 +15,9 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(@RequestBody LoginRequest request) {
-        LoginResponse response = authService.login(request);
+    @PostMapping("/admin/login")
+    public ApiResponse<LoginResponse> adminLogin(@RequestBody LoginRequest request) {
+        LoginResponse response = authService.adminLogin(request);
         return ApiResponse.success(response);
     }
 

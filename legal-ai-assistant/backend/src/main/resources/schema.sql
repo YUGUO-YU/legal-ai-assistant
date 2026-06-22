@@ -642,7 +642,7 @@ CREATE TABLE IF NOT EXISTS qa_session (
 
 -- ===== 默认数据 =====
 INSERT IGNORE INTO admin_user (id, username, password, real_name, status) VALUES
-(1, 'admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '超级管理员', 1);
+(1, 'admin', '$2b$10$L/aF0vqigVCUeNnOeMmQBOoEp.XI6vvXGAmFCd7fQ2FPhEU/JWpbS', '超级管理员', 1);
 
 INSERT IGNORE INTO admin_role (id, role_code, role_name, data_scope, status, remark) VALUES
 (1, 'SUPER_ADMIN', '超级管理员', 4, 1, '全部权限'),

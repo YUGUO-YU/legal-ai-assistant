@@ -4,6 +4,8 @@ import com.legalai.dto.LoginRequest;
 import com.legalai.dto.LoginResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -17,6 +19,13 @@ public class AuthService {
     private static final long REFRESH_TOKEN_EXPIRE_MS = 30 * 24 * 3600 * 1000L;
 
     private final Map<String, TokenInfo> tokenStore = new ConcurrentHashMap<>();
+    private final JdbcTemplate jdbc;
+    private final PasswordEncoder passwordEncoder;
+
+    public AuthService(JdbcTemplate jdbc, PasswordEncoder passwordEncoder) {
+        this.jdbc = jdbc;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     public LoginResponse login(LoginRequest request) {
         log.info("用户登录请求: username={}", request.getUsername());
@@ -45,6 +54,62 @@ public class AuthService {
         userInfo.setRole("lawyer");
         response.setUserInfo(userInfo);
 
+        return response;
+    }
+
+    public LoginResponse adminLogin(LoginRequest request) {
+        log.info("管理员登录请求: username={}", request.getUsername());
+
+        var rows = jdbc.queryForList(
+            "SELECT id, username, password, real_name, status FROM admin_user WHERE username = ?",
+            request.getUsername());
+
+        if (rows.isEmpty()) {
+            log.warn("管理员账号不存在: {}", request.getUsername());
+            throw new RuntimeException("账号或密码错误");
+        }
+
+        Map<String, Object> user = rows.get(0);
+        Integer status = (Integer) user.get("status");
+        if (status == null || status != 1) {
+            log.warn("管理员账号已停用: {}", request.getUsername());
+            throw new RuntimeException("账号已被停用，请联系超级管理员");
+        }
+
+        String dbPassword = (String) user.get("password");
+        if (dbPassword == null || !passwordEncoder.matches(request.getPassword(), dbPassword)) {
+            log.warn("管理员密码错误: {}", request.getUsername());
+            throw new RuntimeException("账号或密码错误");
+        }
+
+        Long userId = ((Number) user.get("id")).longValue();
+        String realName = (String) user.get("real_name");
+
+        String accessToken = "admin_" + UUID.randomUUID().toString().replace("-", "");
+        String refreshToken = "admin_" + UUID.randomUUID().toString().replace("-", "");
+
+        TokenInfo tokenInfo = new TokenInfo();
+        tokenInfo.setUserId(userId);
+        tokenInfo.setUsername(request.getUsername());
+        tokenInfo.setExpireTime(System.currentTimeMillis() + TOKEN_EXPIRE_MS);
+        tokenInfo.setRefreshExpireTime(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRE_MS);
+        tokenStore.put(accessToken, tokenInfo);
+
+        LoginResponse response = new LoginResponse();
+        response.setToken(accessToken);
+        response.setRefreshToken(refreshToken);
+        response.setExpireTime(tokenInfo.getExpireTime());
+
+        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo();
+        userInfo.setUserId(userId);
+        userInfo.setUsername(request.getUsername());
+        userInfo.setNickname(realName != null ? realName : "管理员");
+        userInfo.setEmail(request.getUsername() + "@legal-ai.local");
+        userInfo.setAvatar("");
+        userInfo.setRole("admin");
+        response.setUserInfo(userInfo);
+
+        log.info("管理员登录成功: username={}, userId={}", request.getUsername(), userId);
         return response;
     }
 

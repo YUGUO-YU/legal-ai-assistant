@@ -87,25 +87,54 @@
       </el-menu>
     </el-aside>
 
-    <el-main class="main">
-      <router-view />
-    </el-main>
+    <div class="right-area">
+      <div class="top-bar">
+        <span class="top-bar-title">Legal AI 后台</span>
+        <div class="top-bar-right">
+          <span class="user-name">{{ adminName }}</span>
+          <el-button text size="small" @click="handleLogout">
+            <el-icon><SwitchButton /></el-icon>
+            退出
+          </el-button>
+        </div>
+      </div>
+      <el-main class="main">
+        <router-view />
+      </el-main>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { Setting, Odometer, Tools, Document, MagicStick, DataAnalysis, Bell } from '@element-plus/icons-vue'
+import { computed, ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Setting, Odometer, Tools, Document, MagicStick, DataAnalysis, Bell, SwitchButton } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
+const router = useRouter()
 const activeMenu = computed(() => route.path)
+const adminName = ref('管理员')
+
+onMounted(() => {
+  try {
+    const u = JSON.parse(localStorage.getItem('admin_user') || '{}')
+    adminName.value = u.nickname || u.username || '管理员'
+  } catch (e) { /* ignore */ }
+})
+
+const handleLogout = () => {
+  localStorage.removeItem('admin_token')
+  localStorage.removeItem('admin_user')
+  ElMessage.success('已退出后台管理')
+  router.push('/admin/login')
+}
 </script>
 
 <style lang="scss" scoped>
 .admin-layout {
   display: flex;
-  min-height: calc(100vh - 60px);
+  min-height: 100vh;
 }
 
 .aside {
@@ -113,7 +142,7 @@ const activeMenu = computed(() => route.path)
   color: #fff;
 
   .aside-header {
-    height: 60px;
+    height: 56px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -127,6 +156,40 @@ const activeMenu = computed(() => route.path)
 
   .aside-menu {
     border-right: none;
+  }
+}
+
+.right-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-bar {
+  height: 56px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+
+  .top-bar-title {
+    font-size: 14px;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .user-name {
+      font-size: 13px;
+      color: #334155;
+      font-weight: 500;
+    }
   }
 }
 

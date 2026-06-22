@@ -115,9 +115,13 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/admin/login',
+    component: () => import('../views/AdminLogin.vue')
+  },
+  {
     path: '/admin',
     component: () => import('../views/admin/AdminLayout.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAdmin: true },
     children: [
       { path: '', component: () => import('../views/admin/AdminDashboard.vue') },
 
@@ -178,7 +182,13 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
-  if (to.meta.requiresAuth && !token) {
+  const adminToken = localStorage.getItem('admin_token')
+
+  if (to.meta.requiresAdmin && !adminToken) {
+    next('/admin/login')
+  } else if (to.path === '/admin/login' && adminToken) {
+    next('/admin')
+  } else if (to.meta.requiresAuth && !token) {
     next('/')
   } else {
     next()

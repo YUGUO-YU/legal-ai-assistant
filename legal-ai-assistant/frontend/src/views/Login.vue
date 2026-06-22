@@ -217,7 +217,7 @@ const goDashboard = () => {
 }
 
 const goAdmin = () => {
-  router.push('/admin')
+  router.push('/admin/login')
 }
 </script>
 

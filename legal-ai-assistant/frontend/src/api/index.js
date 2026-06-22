@@ -11,7 +11,10 @@ const api = axios.create({
 })
 
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
+  const isAdminCall = config.url && (config.url.includes('/admin/') || config.url.includes('/auth/admin/'))
+  const token = isAdminCall
+    ? localStorage.getItem('admin_token')
+    : localStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -43,7 +46,8 @@ api.interceptors.response.use(
           break
         case 401:
           localStorage.removeItem('token')
-          window.location.href = '/login'
+          localStorage.removeItem('admin_token')
+          window.location.href = '/'
           break
         case 403:
           console.error('权限不足')
