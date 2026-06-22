@@ -47,7 +47,10 @@ api.interceptors.response.use(
         case 401:
           localStorage.removeItem('token')
           localStorage.removeItem('admin_token')
-          window.location.href = '/'
+          localStorage.removeItem('admin_user')
+          const reqUrl = error.config?.url || ''
+          const isAdminReq = reqUrl.includes('/admin/') || reqUrl.includes('/auth/admin/')
+          window.location.href = isAdminReq ? '/admin/login' : '/'
           break
         case 403:
           console.error('权限不足')
