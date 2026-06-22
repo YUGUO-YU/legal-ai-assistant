@@ -193,14 +193,19 @@ const handleLogin = async () => {
         password: loginForm.password
       })
 
+      if (!res?.data?.token) {
+        throw new Error('登录响应数据异常')
+      }
+
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))
 
       ElMessage.success('登录成功')
-      router.push('/dashboard')
+      await router.push('/dashboard')
+      return
     } catch (e) {
-      console.error(e)
-      ElMessage.error('登录失败，请检查用户名和密码')
+      console.error('登录失败:', e)
+      ElMessage.error(e?.message || '登录失败，请检查用户名和密码')
       refreshCaptcha()
     } finally {
       loading.value = false
