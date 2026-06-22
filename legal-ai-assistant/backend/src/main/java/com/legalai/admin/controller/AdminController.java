@@ -189,7 +189,7 @@ public class AdminController {
 
     @GetMapping("/biz/mod01/laws/{id}/revisions")
     public ApiResponse<Map<String, Object>> mod01LawRevisions(@PathVariable Long id) {
-        return ApiResponse.success(adminDataService.list("law_revision", null, 1, 50, null));
+        return ApiResponse.success(adminDataService.listRevisionsByLawId(id));
     }
 
     @GetMapping("/biz/mod01/crawl-tasks")

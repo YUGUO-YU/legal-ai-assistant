@@ -680,4 +680,144 @@ INSERT IGNORE INTO alert_rule (rule_name, metric, operator, threshold, duration_
 ('接口 RT P99 > 3s', 'interface.rt.p99', '>', 3000, 180, 2, JSON_ARRAY('feishu'), JSON_ARRAY('ops'), NULL, 1),
 ('ES 索引缺失', 'es.index.missing', '>', 0, 60, 1, JSON_ARRAY('feishu'), JSON_ARRAY('ops'), NULL, 1),
 ('Milvus 不可用', 'milvus.collection.unavailable', '>', 0, 60, 1, JSON_ARRAY('feishu'), JSON_ARRAY('ops'), NULL, 1),
-('LLM 调用失败率', 'llm.api.fail_rate', '>', 0.05, 120, 1, JSON_ARRAY('feishu'), JSON_ARRAY('ops'), NULL, 1);
+ ('LLM 调用失败率', 'llm.api.fail_rate', '>', 0.05, 120, 1, JSON_ARRAY('feishu'), JSON_ARRAY('ops'), NULL, 1);
+
+-- ===== 后台菜单树（33 个功能页 + 7 个目录）=====
+INSERT IGNORE INTO admin_menu (id, parent_id, menu_name, menu_type, path, component, permission, icon, sort_order, biz_module) VALUES
+-- 一级目录 (menu_type=1)
+(1,  0, '概览',     1, '/admin',                  NULL,                          NULL,             'Odometer',   1, NULL),
+(2,  0, '基础设施', 1, '/admin/infra',            NULL,                          NULL,             'Tools',      2, NULL),
+(3,  0, '数据资产', 1, '/admin/biz',              NULL,                          NULL,             'Document',   3, NULL),
+(4,  0, 'AI 能力',  1, '/admin/ai',               NULL,                          NULL,             'MagicStick', 4, NULL),
+(5,  0, '运营分析', 1, '/admin/ops',              NULL,                          NULL,             'DataAnalysis',5,NULL),
+(6,  0, '监控告警', 1, '/admin/monitor',          NULL,                          NULL,             'Bell',       6, NULL),
+(7,  0, '系统配置', 1, '/admin/sys',              NULL,                          NULL,             'Setting',    7, NULL),
+-- 二级菜单 (menu_type=2)
+(8,  1, '仪表盘',      2, '/admin',                  'admin/AdminDashboard',   'admin:dashboard',    NULL, 1, NULL),
+(9,  2, '用户管理',    2, '/admin/infra/users',       'admin/infra/Users',      'admin:user:list',    NULL, 1, 'MOD-00'),
+(10, 2, '角色权限',    2, '/admin/infra/roles',       'admin/infra/Roles',      'admin:role:list',    NULL, 2, 'MOD-00'),
+(11, 2, '菜单权限',    2, '/admin/infra/menus',       'admin/infra/Menus',      'admin:menu:list',    NULL, 3, 'MOD-00'),
+(12, 2, '操作审计',    2, '/admin/infra/audit',       'admin/infra/AuditLogs',  'admin:audit:list',   NULL, 4, 'MOD-00'),
+(13, 2, '服务健康',    2, '/admin/infra/service-health','admin/infra/ServiceHealth','admin:health:view',NULL,5,'MOD-00'),
+(14, 3, '法规主数据',  2, '/admin/biz/mod01',         'admin/biz/Mod01Laws',    'admin:mod01:list',   NULL, 1, 'MOD-01'),
+(15, 3, '法规修订',    2, '/admin/biz/mod01-revisions','admin/biz/Mod01Revisions','admin:mod01:revision',NULL,2,'MOD-01'),
+(16, 3, '爬虫任务',    2, '/admin/biz/mod01-crawl',   'admin/biz/Mod01Crawl',   'admin:mod01:crawl',  NULL, 3, 'MOD-01'),
+(17, 3, '案件主数据',  2, '/admin/biz/mod02',         'admin/biz/Mod02Cases',   'admin:mod02:list',   NULL, 4, 'MOD-02'),
+(18, 3, '案件要素',    2, '/admin/biz/mod02-elements','admin/biz/Mod02Elements','admin:mod02:element',NULL, 5, 'MOD-02'),
+(19, 3, '文书模板',    2, '/admin/biz/mod03-templates','admin/biz/Mod03Templates','admin:mod03:template',NULL,6,'MOD-03'),
+(20, 3, '草稿复核',    2, '/admin/biz/mod03-drafts',  'admin/biz/Mod03Drafts',  'admin:mod03:draft',  NULL, 7, 'MOD-03'),
+(21, 3, '复核规则',    2, '/admin/biz/mod03-rules',   'admin/biz/Mod03ReviewRules','admin:mod03:rule',NULL,  8, 'MOD-03'),
+(22, 3, '研究任务',    2, '/admin/biz/mod04',         'admin/biz/Mod04Tasks',   'admin:mod04:list',   NULL, 9, 'MOD-04'),
+(23, 3, '企业 API',    2, '/admin/biz/mod05',         'admin/biz/Mod05CompanyApis','admin:mod05:list', NULL, 10, 'MOD-05'),
+(24, 3, '案例查询日志',2, '/admin/biz/mod06',         'admin/biz/Mod06CaseSearch','admin:mod06:list',  NULL, 11, 'MOD-06'),
+(25, 3, '法规查询',    2, '/admin/biz/mod07',         'admin/biz/Mod07Laws',    'admin:mod07:list',   NULL, 12, 'MOD-07'),
+(26, 3, '合同规则',    2, '/admin/biz/mod08',         'admin/biz/Mod08ContractRules','admin:mod08:list',NULL, 13, 'MOD-08'),
+(27, 3, '知识库',      2, '/admin/biz/mod09-kb',      'admin/biz/Mod09KbBases', 'admin:mod09:kb',     NULL, 14, 'MOD-09'),
+(28, 3, '分块策略',    2, '/admin/biz/mod09-strategy','admin/biz/Mod09Strategy', 'admin:mod09:strategy',NULL,15,'MOD-09'),
+(29, 3, '问答会话',    2, '/admin/biz/mod10',         'admin/biz/Mod10QaSessions','admin:mod10:list',  NULL, 16, 'MOD-10'),
+(30, 4, 'Prompt 管理', 2, '/admin/ai/prompts',        'admin/ai/Prompts',       'admin:ai:prompt',    NULL, 1, NULL),
+(31, 4, '灰度发布',    2, '/admin/ai/gray',           'admin/ai/GrayReleases',  'admin:ai:gray',      NULL, 2, NULL),
+(32, 4, '模型配置',    2, '/admin/ai/llm',            'admin/ai/LlmModels',     'admin:ai:llm',       NULL, 3, NULL),
+(33, 4, 'Token 用量',  2, '/admin/ai/token',          'admin/ai/TokenUsage',    'admin:ai:token',     NULL, 4, NULL),
+(34, 4, 'Milvus 集合', 2, '/admin/ai/milvus',         'admin/ai/MilvusCollections','admin:ai:milvus', NULL,   5, NULL),
+(35, 5, '用户反馈',    2, '/admin/ops/feedback',      'admin/ops/UserFeedback', 'admin:ops:feedback', NULL, 1, NULL),
+(36, 5, '搜索日志',    2, '/admin/ops/search-logs',   'admin/ops/SearchLogs',   'admin:ops:search',   NULL, 2, NULL),
+(37, 6, '告警规则',    2, '/admin/monitor/rules',     'admin/monitor/AlertRules','admin:monitor:rule', NULL, 1, NULL),
+(38, 6, '告警历史',    2, '/admin/monitor/history',   'admin/monitor/AlertHistory','admin:monitor:history',NULL,2,NULL),
+(39, 7, '系统参数',    2, '/admin/sys/configs',       'admin/sys/SysConfigs',   'admin:sys:config',   NULL, 1, NULL),
+(40, 7, '数据字典',    2, '/admin/sys/dicts',         'admin/sys/SysDicts',     'admin:sys:dict',     NULL, 2, NULL);
+
+-- ===== 角色-菜单授权 =====
+-- SUPER_ADMIN (1): 全部菜单
+INSERT IGNORE INTO admin_role_menu (role_id, menu_id) VALUES
+(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8),(1,9),(1,10),
+(1,11),(1,12),(1,13),(1,14),(1,15),(1,16),(1,17),(1,18),(1,19),(1,20),
+(1,21),(1,22),(1,23),(1,24),(1,25),(1,26),(1,27),(1,28),(1,29),(1,30),
+(1,31),(1,32),(1,33),(1,34),(1,35),(1,36),(1,37),(1,38),(1,39),(1,40);
+
+-- OPS_ADMIN (2): 概览+基础+数据资产+运营+系统
+INSERT IGNORE INTO admin_role_menu (role_id, menu_id) VALUES
+(2,1),(2,2),(2,3),(2,5),(2,7),(2,8),(2,9),(2,10),(2,11),(2,12),
+(2,13),(2,14),(2,15),(2,16),(2,17),(2,18),(2,19),(2,20),(2,21),(2,22),
+(2,23),(2,24),(2,25),(2,26),(2,27),(2,28),(2,29),(2,35),(2,36),(2,39),(2,40);
+
+-- LEGAL_ADMIN (3): 概览+数据资产
+INSERT IGNORE INTO admin_role_menu (role_id, menu_id) VALUES
+(3,1),(3,3),(3,8),(3,14),(3,15),(3,16),(3,17),(3,18),(3,19),(3,20),
+(3,21),(3,22),(3,23),(3,24),(3,25),(3,26),(3,27),(3,28),(3,29);
+
+-- DEV_OPS (4): 概览+基础+AI+监控+系统
+INSERT IGNORE INTO admin_role_menu (role_id, menu_id) VALUES
+(4,1),(4,2),(4,4),(4,6),(4,7),(4,8),(4,9),(4,10),(4,11),(4,12),
+(4,13),(4,30),(4,31),(4,32),(4,33),(4,34),(4,37),(4,38),(4,39),(4,40);
+
+-- AUDITOR (5): 概览+审计+监控+运营
+INSERT IGNORE INTO admin_role_menu (role_id, menu_id) VALUES
+(5,1),(5,8),(5,12),(5,35),(5,36),(5,37),(5,38);
+
+-- READONLY (6): 全部只读
+INSERT IGNORE INTO admin_role_menu (role_id, menu_id) VALUES
+(6,1),(6,2),(6,3),(6,4),(6,5),(6,6),(6,7),(6,8),(6,9),(6,10),
+(6,11),(6,12),(6,13),(6,14),(6,15),(6,16),(6,17),(6,18),(6,19),(6,20),
+(6,21),(6,22),(6,23),(6,24),(6,25),(6,26),(6,27),(6,28),(6,29),(6,30),
+(6,31),(6,32),(6,33),(6,34),(6,35),(6,36),(6,37),(6,38),(6,39),(6,40);
+
+-- ===== 业务表默认数据 =====
+
+-- Prompt 模板（3条）
+INSERT IGNORE INTO prompt_template (id, prompt_code, module, scene, version, content, variables, is_active, is_gray, gray_ratio, gray_teams, adopt_rate, feedback_score, created_by) VALUES
+(1, 'law-search-v1', 'MOD-07', '法规搜索', 'v1.0.0', '你是一名资深法律顾问。请根据以下参考法规，回答用户问题：\n\n参考法规：\n{{laws}}\n\n用户问题：\n{{question}}\n\n请引用具体条款原文。',
+ JSON_OBJECT('laws', '参考法规原文', 'question', '用户问题'), 1, 0, 0, NULL, 0.85, 4.2, 1),
+(2, 'draft-generation-v1', 'MOD-03', '文书起草', 'v1.0.0', '你是一名专业法律文书撰写师。请根据以下信息起草一份{{doc_type}}：\n\n案件信息：\n{{case_info}}\n\n当事人：\n{{parties}}\n\n请求事项：\n{{claims}}\n\n请严格按照司法文书格式撰写，语言严谨、逻辑清晰。',
+ JSON_OBJECT('doc_type', '文书类型', 'case_info', '案件信息', 'parties', '当事人', 'claims', '请求事项'), 1, 0, 0, NULL, 0.78, 3.9, 1),
+(3, 'contract-review-v1', 'MOD-08', '合同审查', 'v1.0.0', '你是一名合同审查专家。请审查以下合同条款，识别风险并给出修改建议：\n\n合同摘要：\n{{contract_summary}}\n\n审查重点：\n{{focus_dimensions}}\n\n输出格式：\n1. 风险等级（高/中/低）\n2. 风险描述\n3. 修改建议\n4. 替代条款草案',
+ JSON_OBJECT('contract_summary', '合同摘要', 'focus_dimensions', '审查重点维度'), 1, 0, 0, NULL, 0.72, 3.6, 1);
+
+-- 爬虫任务（2条）
+INSERT IGNORE INTO crawl_task (id, task_name, source, crawl_type, target_url, cron_expression, status, config) VALUES
+(1, '最高人民法院公报', 'spc.gov.cn', 'html', 'https://gongbao.court.gov.cn/', '0 0 8 * * 1', 1,
+ JSON_OBJECT('headers', JSON_OBJECT('User-Agent', 'LegalBot/1.0'), 'retry', 3, 'timeout_sec', 30)),
+(2, '国家法律法规数据库', 'flk.npc.gov.cn', 'api', 'https://flk.npc.gov.cn/api/', '0 0 6 * * *', 1,
+ JSON_OBJECT('api_key_env', 'NPC_API_KEY', 'rate_limit_qps', 5, 'timeout_sec', 60));
+
+-- 企业查询 API 配置（2条）
+INSERT IGNORE INTO company_api_config (id, api_name, provider, endpoint, api_key_enc, monthly_quota, used_count, status) VALUES
+(1, '天眼查基础信息', 'tianyancha', 'https://api.tianyancha.com/v3/baseinfo', 'enc:xxxxxxxx', 10000, 2340, 1),
+(2, '企查查风险扫描', 'qichacha', 'https://api.qichacha.com/risk/v1', 'enc:yyyyyyyy', 5000, 890, 1);
+
+-- 合同审查规则（5条维度）
+INSERT IGNORE INTO contract_review_rule (id, dimension, weight, threshold_high, threshold_low, status) VALUES
+(1, '风险条款', 0.30, 80, 50, 1),
+(2, '责任分配', 0.25, 75, 45, 1),
+(3, '期限条款', 0.20, 70, 40, 1),
+(4, '付款条件', 0.15, 85, 55, 1),
+(5, '保密条款', 0.10, 90, 60, 1);
+
+-- 文书模板（3条）
+INSERT IGNORE INTO doc_template (id, template_code, template_name, category, schema_json, risk_rules, review_required, version) VALUES
+(1, 'complaint-civil', '民事起诉状模板', '起诉文书',
+ JSON_OBJECT('sections', JSON_ARRAY('当事人信息', '诉讼请求', '事实与理由', '证据清单')),
+ JSON_ARRAY('诉讼请求是否明确', '被告信息是否完整', '管辖权是否正确'), 1, 'v2.1'),
+(2, 'defense-civil', '民事答辩状模板', '答辩文书',
+ JSON_OBJECT('sections', JSON_ARRAY('答辩人信息', '答辩意见', '事实与理由', '证据反驳')),
+ JSON_ARRAY('是否针对诉求逐条答辩', '是否附证据'), 1, 'v2.0'),
+(3, 'contract-general', '通用合同模板', '合同文书',
+ JSON_OBJECT('sections', JSON_ARRAY('签约方', '合同标的', '付款条款', '违约责任', '争议解决', '附则')),
+ JSON_ARRAY('违约责任是否对等', '管辖约定是否合法', '是否有霸王条款'), 1, 'v3.0');
+
+-- 案件要素字典（8条）
+INSERT IGNORE INTO case_element_dict (id, element_code, element_name, category, sort_order, status) VALUES
+(1, 'cause_of_action', '案由', '案件基本信息', 1, 1),
+(2, 'court_level', '法院层级', '案件基本信息', 2, 1),
+(3, 'judgment_type', '裁判类型', '裁判结果', 3, 1),
+(4, 'penalty_range', '量刑幅度', '裁判结果', 4, 1),
+(5, 'litigation_amount', '诉讼标的额', '案件信息', 5, 1),
+(6, 'party_type', '当事人类型', '案件信息', 6, 1),
+(7, 'evidence_type', '证据类型', '证据信息', 7, 1),
+(8, 'law_basis', '法律依据', '法律适用', 8, 1);
+
+-- 知识库分块策略（3条）
+INSERT IGNORE INTO kb_chunk_strategy (id, kb_id, chunk_size, chunk_overlap, splitter, status) VALUES
+(1, NULL, 512, 64, 'recursive', 1),
+(2, NULL, 1024, 128, 'semantic', 1),
+(3, NULL, 256, 32, 'sentence', 1);

@@ -28,8 +28,7 @@ public class AdminDataService {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
             java.util.List<Object> args = new java.util.ArrayList<>();
             if (module != null && !module.isEmpty()) {
-                where.append(" AND (biz_module = ? OR ? = '' OR biz_module IS NULL) ");
-                args.add(module);
+                where.append(" AND biz_module = ? ");
                 args.add(module);
             }
             if (keyword != null && !keyword.isEmpty()) {
@@ -75,6 +74,27 @@ public class AdminDataService {
             result.put("total", 0);
             result.put("page", page);
             result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> listRevisionsByLawId(Long lawId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            String sql = "SELECT * FROM law_revision WHERE law_id = ? ORDER BY id DESC";
+            List<Map<String, Object>> rows = jdbc.queryForList(sql, lawId);
+            result.put("total", rows.size());
+            result.put("page", 1);
+            result.put("pageSize", rows.size());
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 法规修订查询失败 lawId={}: {}", lawId, e.getMessage());
+            result.put("total", 0);
+            result.put("page", 1);
+            result.put("pageSize", 0);
             result.put("list", java.util.Collections.emptyList());
             result.put("error", e.getMessage());
         }
@@ -129,7 +149,17 @@ public class AdminDataService {
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
             List<Object> args = new java.util.ArrayList<>();
-            if (userId != null && !userId.isEmpty()) { where.append(" AND user_id = ? "); args.add(Long.valueOf(userId)); }
+            if (userId != null && !userId.isEmpty()) {
+                try {
+                    where.append(" AND user_id = ? ");
+                    args.add(Long.valueOf(userId));
+                } catch (NumberFormatException e) {
+                    result.put("total", 0);
+                    result.put("list", java.util.Collections.emptyList());
+                    result.put("error", "userId 格式非法，请传入数字");
+                    return result;
+                }
+            }
             if (operation != null && !operation.isEmpty()) { where.append(" AND operation = ? "); args.add(operation); }
             if (module != null && !module.isEmpty()) { where.append(" AND biz_module = ? "); args.add(module); }
             Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM admin_audit_log" + where, Integer.class, args.toArray());
@@ -301,7 +331,7 @@ public class AdminDataService {
     public Map<String, Object> ackAlert(Long historyId, Long handlerId) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
-            int n = jdbc.update("UPDATE alert_history SET notify_status = 2 WHERE id = ? AND notify_status IN (0, 1)", historyId);
+            int n = jdbc.update("UPDATE alert_history SET notify_status = 2, handler_id = ? WHERE id = ? AND notify_status IN (0, 1)", handlerId, historyId);
             result.put("ok", n > 0);
             result.put("affected", n);
             if (n == 0) result.put("error", "该告警已确认或不存在");
