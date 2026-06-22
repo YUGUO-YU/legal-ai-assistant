@@ -657,11 +657,15 @@ CREATE TABLE IF NOT EXISTS qa_session (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '文件问答会话';
 
 -- ===== 默认数据 =====
-INSERT IGNORE INTO admin_user (id, username, password, real_name, status) VALUES
-(1, 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', '超级管理员', 1);
+-- 密码格式：SHA-256Hex(rawPassword)，由 AuthService#passwordMatches 校验。
+-- 重要：使用 ON DUPLICATE KEY UPDATE 保证重跑脚本时密码能同步刷新（INSERT IGNORE 不会更新已存在行）。
+INSERT INTO admin_user (id, username, password, real_name, status) VALUES
+(1, 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', '超级管理员', 1)
+ON DUPLICATE KEY UPDATE password = VALUES(password), real_name = VALUES(real_name), status = VALUES(status);
 
-INSERT IGNORE INTO frontend_user (id, username, password, real_name, email, status) VALUES
-('u-001', 'demo', 'd3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791', '演示用户', 'demo@legal-ai.local', 1);
+INSERT INTO frontend_user (id, username, password, real_name, email, status) VALUES
+('u-001', 'demo', 'd3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791', '演示用户', 'demo@legal-ai.local', 1)
+ON DUPLICATE KEY UPDATE password = VALUES(password), real_name = VALUES(real_name), email = VALUES(email), status = VALUES(status);
 
 INSERT IGNORE INTO admin_role (id, role_code, role_name, data_scope, status, remark) VALUES
 (1, 'SUPER_ADMIN', '超级管理员', 4, 1, '全部权限'),
