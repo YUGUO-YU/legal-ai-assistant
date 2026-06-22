@@ -258,3 +258,426 @@ CREATE TABLE IF NOT EXISTS ppt_document (
     INDEX idx_status (status),
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='PPT文档表';
+-- ============================================================
+-- 后台管理系统表（admin 域）MVP 骨架
+-- 6 大域：基础设施 / 数据资产 / AI 能力 / 运营分析 / 监控告警 / 系统配置
+-- ============================================================
+
+-- ===== 域 01：基础设施 =====
+CREATE TABLE IF NOT EXISTS admin_user (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username        VARCHAR(64) NOT NULL UNIQUE,
+    password        VARCHAR(128) COMMENT 'BCrypt 加密',
+    real_name       VARCHAR(64) NOT NULL,
+    mobile          VARCHAR(20),
+    email           VARCHAR(128),
+    avatar          VARCHAR(500),
+    feishu_union_id VARCHAR(128),
+    user_type       TINYINT DEFAULT 1 COMMENT '1后台 2业务只读',
+    status          TINYINT DEFAULT 1 COMMENT '1启用 0停用 2锁定',
+    last_login_at   DATETIME,
+    last_login_ip   VARCHAR(64),
+    team_id         BIGINT,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_team (team_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '后台用户';
+
+CREATE TABLE IF NOT EXISTS admin_role (
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    role_code   VARCHAR(64) NOT NULL UNIQUE,
+    role_name   VARCHAR(64) NOT NULL,
+    data_scope  TINYINT DEFAULT 4 COMMENT '1本人 2本部门 3本团队 4全部',
+    status      TINYINT DEFAULT 1,
+    remark      VARCHAR(500),
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '后台角色';
+
+CREATE TABLE IF NOT EXISTS admin_menu (
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    parent_id   BIGINT DEFAULT 0,
+    menu_name   VARCHAR(64) NOT NULL,
+    menu_type   TINYINT COMMENT '1目录 2菜单 3按钮',
+    path        VARCHAR(200),
+    component   VARCHAR(200),
+    permission  VARCHAR(128),
+    icon        VARCHAR(64),
+    sort_order  INT DEFAULT 0,
+    status      TINYINT DEFAULT 1,
+    biz_module  VARCHAR(32) COMMENT 'MOD-01..MOD-10',
+    INDEX idx_module (biz_module)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '后台菜单';
+
+CREATE TABLE IF NOT EXISTS admin_role_menu (
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    role_id     BIGINT NOT NULL,
+    menu_id     BIGINT NOT NULL,
+    UNIQUE KEY uk_rm (role_id, menu_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS admin_user_role (
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id     BIGINT NOT NULL,
+    role_id     BIGINT NOT NULL,
+    UNIQUE KEY uk_ur (user_id, role_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id         BIGINT,
+    username        VARCHAR(64),
+    operation       VARCHAR(64) NOT NULL,
+    biz_module      VARCHAR(32),
+    biz_type        VARCHAR(64),
+    biz_id          VARCHAR(64),
+    request_url     VARCHAR(500),
+    request_method  VARCHAR(10),
+    request_params  TEXT,
+    response_result TEXT,
+    ip              VARCHAR(64),
+    duration_ms     INT,
+    status          TINYINT COMMENT '1成功 0失败',
+    error_msg       TEXT,
+    trace_id        VARCHAR(64),
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user (user_id),
+    INDEX idx_module_biz (biz_module, biz_type),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '审计日志';
+
+-- ===== 域 02：数据资产 =====
+CREATE TABLE IF NOT EXISTS doc_template (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    template_code   VARCHAR(64) NOT NULL UNIQUE,
+    template_name   VARCHAR(128) NOT NULL,
+    category        VARCHAR(64),
+    schema_json     JSON,
+    risk_rules      JSON,
+    review_required TINYINT DEFAULT 1,
+    status          TINYINT DEFAULT 1,
+    version         VARCHAR(16) DEFAULT 'v1.0',
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '文书模板';
+
+CREATE TABLE IF NOT EXISTS doc_draft (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    draft_uuid      VARCHAR(64) NOT NULL UNIQUE,
+    template_code   VARCHAR(64),
+    user_id         VARCHAR(64),
+    title           VARCHAR(200),
+    content         MEDIUMTEXT,
+    claim_amount    DECIMAL(18,2),
+    risk_level      VARCHAR(16),
+    review_status   TINYINT DEFAULT 0 COMMENT '0待审 1通过 2驳回',
+    reviewer_id     BIGINT,
+    review_note     TEXT,
+    reviewed_at     DATETIME,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_template (template_code),
+    INDEX idx_review (review_status),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '文书草稿';
+
+CREATE TABLE IF NOT EXISTS doc_review_rule (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    template_code   VARCHAR(64) NOT NULL,
+    rule_type       VARCHAR(32),
+    operator        VARCHAR(8),
+    threshold       DECIMAL(18,2),
+    trigger_action  VARCHAR(32),
+    status          TINYINT DEFAULT 1,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '复核规则';
+
+CREATE TABLE IF NOT EXISTS law_revision (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    law_id          BIGINT NOT NULL,
+    revision_no     VARCHAR(32),
+    revision_type   TINYINT,
+    revision_date   DATE,
+    revision_note   TEXT,
+    source_url      VARCHAR(500),
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_law (law_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '法规修订历史';
+
+CREATE TABLE IF NOT EXISTS crawl_task (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    task_name       VARCHAR(200) NOT NULL,
+    source          VARCHAR(32),
+    crawl_type      VARCHAR(32),
+    target_url      VARCHAR(500),
+    cron_expression VARCHAR(64),
+    status          TINYINT DEFAULT 0,
+    last_run_at     DATETIME,
+    next_run_at     DATETIME,
+    total_crawled   INT DEFAULT 0,
+    success_count   INT DEFAULT 0,
+    fail_count      INT DEFAULT 0,
+    config          JSON,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '爬虫任务';
+
+CREATE TABLE IF NOT EXISTS crawl_log (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    task_id         BIGINT NOT NULL,
+    started_at      DATETIME,
+    finished_at     DATETIME,
+    status          TINYINT,
+    crawled_count   INT DEFAULT 0,
+    success_count   INT DEFAULT 0,
+    fail_count      INT DEFAULT 0,
+    error_log       TEXT,
+    INDEX idx_task (task_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '爬虫日志';
+
+CREATE TABLE IF NOT EXISTS case_element_dict (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    element_code    VARCHAR(64) NOT NULL UNIQUE,
+    element_name    VARCHAR(128) NOT NULL,
+    category        VARCHAR(64),
+    sort_order      INT DEFAULT 0,
+    status          TINYINT DEFAULT 1,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '案件要素字典';
+
+CREATE TABLE IF NOT EXISTS company_api_config (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    api_name        VARCHAR(64) NOT NULL,
+    provider        VARCHAR(32),
+    endpoint        VARCHAR(500),
+    api_key_enc     VARCHAR(500),
+    monthly_quota   INT,
+    used_count      INT DEFAULT 0,
+    status          TINYINT DEFAULT 1,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '企业查询 API 配置';
+
+CREATE TABLE IF NOT EXISTS contract_review_rule (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    dimension       VARCHAR(64),
+    weight          DECIMAL(5,2),
+    threshold_high  INT DEFAULT 70,
+    threshold_low   INT DEFAULT 40,
+    status          TINYINT DEFAULT 1,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '合同审查规则';
+
+CREATE TABLE IF NOT EXISTS kb_chunk_strategy (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    kb_id           BIGINT,
+    chunk_size      INT DEFAULT 512,
+    chunk_overlap   INT DEFAULT 64,
+    splitter        VARCHAR(32) DEFAULT 'recursive',
+    status          TINYINT DEFAULT 1,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '知识库分块策略';
+
+-- ===== 域 03：AI 能力 =====
+CREATE TABLE IF NOT EXISTS prompt_template (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    prompt_code     VARCHAR(64) NOT NULL,
+    module          VARCHAR(32) NOT NULL,
+    scene           VARCHAR(64) NOT NULL,
+    version         VARCHAR(16) NOT NULL,
+    content         MEDIUMTEXT NOT NULL,
+    variables       JSON,
+    is_active       TINYINT DEFAULT 0,
+    is_gray         TINYINT DEFAULT 0,
+    gray_ratio      INT DEFAULT 0,
+    gray_teams      JSON,
+    adopt_rate      DECIMAL(5,4),
+    feedback_score  DECIMAL(3,2),
+    created_by      BIGINT,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_code_version (prompt_code, version),
+    INDEX idx_module (module),
+    INDEX idx_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT 'Prompt 模板';
+
+CREATE TABLE IF NOT EXISTS prompt_gray_release (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    prompt_id       BIGINT NOT NULL,
+    from_version    VARCHAR(16),
+    to_version      VARCHAR(16) NOT NULL,
+    ratio           INT NOT NULL,
+    teams           JSON,
+    started_at      DATETIME,
+    ended_at        DATETIME,
+    rollback_reason TEXT,
+    operator_id     BIGINT,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT 'Prompt 灰度发布';
+
+CREATE TABLE IF NOT EXISTS llm_model_config (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    model_code      VARCHAR(64) NOT NULL UNIQUE,
+    model_name      VARCHAR(128) NOT NULL,
+    provider        VARCHAR(32),
+    endpoint        VARCHAR(500),
+    api_key_enc     VARCHAR(500),
+    temperature     DECIMAL(3,2) DEFAULT 0.7,
+    max_tokens      INT DEFAULT 4096,
+    top_p           DECIMAL(3,2) DEFAULT 0.95,
+    is_primary      TINYINT DEFAULT 0,
+    is_fallback     TINYINT DEFAULT 0,
+    health_status   TINYINT DEFAULT 1,
+    last_check_at   DATETIME,
+    status          TINYINT DEFAULT 1,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT 'LLM 模型配置';
+
+CREATE TABLE IF NOT EXISTS llm_token_usage (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    model_code      VARCHAR(64),
+    module          VARCHAR(32),
+    prompt_tokens   INT DEFAULT 0,
+    completion_tokens INT DEFAULT 0,
+    total_tokens    INT DEFAULT 0,
+    cost_cny        DECIMAL(10,4) DEFAULT 0,
+    biz_id          VARCHAR(64),
+    user_id         VARCHAR(64),
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_module_time (module, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT 'Token 用量';
+
+-- ===== 域 04：运营分析 =====
+CREATE TABLE IF NOT EXISTS user_feedback (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id         BIGINT,
+    biz_module      VARCHAR(32),
+    biz_id          VARCHAR(64),
+    feedback_type   VARCHAR(32),
+    content         TEXT,
+    rating          TINYINT,
+    status          TINYINT DEFAULT 0 COMMENT '0待处理 1处理中 2已解决 3已关闭',
+    handler_id      BIGINT,
+    handle_note     TEXT,
+    handled_at      DATETIME,
+    sla_due_at      DATETIME,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_module_status (biz_module, status),
+    INDEX idx_sla (sla_due_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '用户反馈';
+
+-- ===== 域 05：监控告警 =====
+CREATE TABLE IF NOT EXISTS alert_rule (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    rule_name       VARCHAR(200) NOT NULL,
+    metric          VARCHAR(64) NOT NULL,
+    operator        VARCHAR(8),
+    threshold       DECIMAL(18,4),
+    duration_sec    INT DEFAULT 60,
+    level           TINYINT COMMENT '1P0 2P1 3P2',
+    channels        JSON,
+    receivers       JSON,
+    silence_sec     INT DEFAULT 1800,
+    biz_module      VARCHAR(32),
+    status          TINYINT DEFAULT 1,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '告警规则';
+
+CREATE TABLE IF NOT EXISTS alert_history (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    rule_id         BIGINT NOT NULL,
+    triggered_at    DATETIME NOT NULL,
+    resolved_at     DATETIME,
+    level           TINYINT,
+    metric_value    DECIMAL(18,4),
+    message         TEXT,
+    notify_status   TINYINT,
+    INDEX idx_rule (rule_id),
+    INDEX idx_triggered (triggered_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '告警历史';
+
+-- ===== 域 06：系统配置 =====
+CREATE TABLE IF NOT EXISTS sys_config (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    config_key      VARCHAR(128) NOT NULL UNIQUE,
+    config_value    TEXT,
+    config_group    VARCHAR(64),
+    value_type      VARCHAR(16),
+    remark          VARCHAR(500),
+    updated_by      BIGINT,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_group (config_group)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '系统参数';
+
+CREATE TABLE IF NOT EXISTS sys_dict (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    dict_type       VARCHAR(64) NOT NULL,
+    dict_label      VARCHAR(64) NOT NULL,
+    dict_value      VARCHAR(128) NOT NULL,
+    sort_order      INT DEFAULT 0,
+    status          TINYINT DEFAULT 1,
+    INDEX idx_type (dict_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '数据字典';
+
+CREATE TABLE IF NOT EXISTS legal_research_task (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    task_uuid       VARCHAR(64) NOT NULL UNIQUE,
+    user_id         VARCHAR(64),
+    topic           VARCHAR(500),
+    status          VARCHAR(16),
+    report          MEDIUMTEXT,
+    sources         JSON,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user (user_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '法律研究任务';
+
+CREATE TABLE IF NOT EXISTS qa_session (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    session_uuid    VARCHAR(64) NOT NULL UNIQUE,
+    user_id         VARCHAR(64),
+    kb_id           BIGINT,
+    title           VARCHAR(200),
+    msg_count       INT DEFAULT 0,
+    status          TINYINT DEFAULT 1,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '文件问答会话';
+
+-- ===== 默认数据 =====
+INSERT IGNORE INTO admin_user (id, username, password, real_name, status) VALUES
+(1, 'admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '超级管理员', 1);
+
+INSERT IGNORE INTO admin_role (id, role_code, role_name, data_scope, status, remark) VALUES
+(1, 'SUPER_ADMIN', '超级管理员', 4, 1, '全部权限'),
+(2, 'OPS_ADMIN', '运营管理员', 4, 1, '基础+数据资产+运营+系统配置'),
+(3, 'LEGAL_ADMIN', '法务管理员', 4, 1, '数据资产'),
+(4, 'DEV_OPS', '运维工程师', 4, 1, '基础+监控+系统配置+AI域'),
+(5, 'AUDITOR', '审计员', 4, 1, '只读 审计+监控+运营'),
+(6, 'READONLY', '只读访客', 4, 1, '全部只读');
+
+INSERT IGNORE INTO admin_user_role (user_id, role_id) VALUES (1, 1);
+
+INSERT IGNORE INTO sys_config (config_key, config_value, config_group, value_type, remark) VALUES
+('llm.default.temperature', '0.3', 'llm', 'number', '默认温度'),
+('cache.search.ttl_sec', '300', 'cache', 'number', '搜索缓存 TTL'),
+('rate_limit.api.search.qps', '100', 'rate_limit', 'number', '搜索限流'),
+('rate_limit.api.draft.qps', '20', 'rate_limit', 'number', '起草限流'),
+('feature.hallucination_detect.enabled', 'true', 'feature', 'boolean', '幻觉检测');
+
+INSERT IGNORE INTO sys_dict (dict_type, dict_label, dict_value, sort_order) VALUES
+('audit_status', '待审核', '0', 1),
+('audit_status', '已通过', '1', 2),
+('audit_status', '已驳回', '2', 3),
+('risk_level', '低', 'low', 1),
+('risk_level', '中', 'medium', 2),
+('risk_level', '高', 'high', 3),
+('llm_provider', 'MiniMax', 'minimax', 1),
+('llm_provider', 'OpenAI', 'openai', 2);
+
+INSERT IGNORE INTO llm_model_config (model_code, model_name, provider, endpoint, is_primary, is_fallback, status) VALUES
+('MiniMax-M3', 'MiniMax-M3', 'minimax', 'https://api.minimax.chat/v1', 1, 0, 1),
+('MiniMax-M2.7', 'MiniMax-M2.7 (备用)', 'minimax', 'https://api.minimax.chat/v1', 0, 1, 1);
+
+INSERT IGNORE INTO alert_rule (rule_name, metric, operator, threshold, duration_sec, level, channels, receivers, biz_module, status) VALUES
+('JVM 堆使用率过高', 'jvm.memory.heap.used.pct', '>', 0.85, 300, 2, JSON_ARRAY('feishu'), JSON_ARRAY('ops'), NULL, 1),
+('接口 RT P99 > 3s', 'interface.rt.p99', '>', 3000, 180, 2, JSON_ARRAY('feishu'), JSON_ARRAY('ops'), NULL, 1),
+('ES 索引缺失', 'es.index.missing', '>', 0, 60, 1, JSON_ARRAY('feishu'), JSON_ARRAY('ops'), NULL, 1),
+('Milvus 不可用', 'milvus.collection.unavailable', '>', 0, 60, 1, JSON_ARRAY('feishu'), JSON_ARRAY('ops'), NULL, 1),
+('LLM 调用失败率', 'llm.api.fail_rate', '>', 0.05, 120, 1, JSON_ARRAY('feishu'), JSON_ARRAY('ops'), NULL, 1);

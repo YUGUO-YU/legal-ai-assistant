@@ -115,6 +115,50 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/admin',
+    component: () => import('../views/admin/AdminLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', component: () => import('../views/admin/AdminDashboard.vue') },
+
+      { path: 'infra/users', component: () => import('../views/admin/infra/Users.vue') },
+      { path: 'infra/roles', component: () => import('../views/admin/infra/Roles.vue') },
+      { path: 'infra/menus', component: () => import('../views/admin/infra/Menus.vue') },
+      { path: 'infra/audit', component: () => import('../views/admin/infra/AuditLogs.vue') },
+
+      { path: 'biz/mod01', component: () => import('../views/admin/biz/Mod01Laws.vue') },
+      { path: 'biz/mod01-revisions', component: () => import('../views/admin/biz/Mod01Revisions.vue') },
+      { path: 'biz/mod01-crawl', component: () => import('../views/admin/biz/Mod01Crawl.vue') },
+      { path: 'biz/mod02', component: () => import('../views/admin/biz/Mod02Cases.vue') },
+      { path: 'biz/mod02-elements', component: () => import('../views/admin/biz/Mod02Elements.vue') },
+      { path: 'biz/mod03-templates', component: () => import('../views/admin/biz/Mod03Templates.vue') },
+      { path: 'biz/mod03-drafts', component: () => import('../views/admin/biz/Mod03Drafts.vue') },
+      { path: 'biz/mod03-rules', component: () => import('../views/admin/biz/Mod03ReviewRules.vue') },
+      { path: 'biz/mod04', component: () => import('../views/admin/biz/Mod04Tasks.vue') },
+      { path: 'biz/mod05', component: () => import('../views/admin/biz/Mod05CompanyApis.vue') },
+      { path: 'biz/mod06', component: () => import('../views/admin/biz/Mod06CaseSearch.vue') },
+      { path: 'biz/mod07', component: () => import('../views/admin/biz/Mod07Laws.vue') },
+      { path: 'biz/mod08', component: () => import('../views/admin/biz/Mod08ContractRules.vue') },
+      { path: 'biz/mod09-kb', component: () => import('../views/admin/biz/Mod09KbBases.vue') },
+      { path: 'biz/mod09-strategy', component: () => import('../views/admin/biz/Mod09Strategy.vue') },
+      { path: 'biz/mod10', component: () => import('../views/admin/biz/Mod10QaSessions.vue') },
+
+      { path: 'ai/prompts', component: () => import('../views/admin/ai/Prompts.vue') },
+      { path: 'ai/gray', component: () => import('../views/admin/ai/GrayReleases.vue') },
+      { path: 'ai/llm', component: () => import('../views/admin/ai/LlmModels.vue') },
+      { path: 'ai/token', component: () => import('../views/admin/ai/TokenUsage.vue') },
+
+      { path: 'ops/feedback', component: () => import('../views/admin/ops/UserFeedback.vue') },
+      { path: 'ops/search-logs', component: () => import('../views/admin/ops/SearchLogs.vue') },
+
+      { path: 'monitor/rules', component: () => import('../views/admin/monitor/AlertRules.vue') },
+      { path: 'monitor/history', component: () => import('../views/admin/monitor/AlertHistory.vue') },
+
+      { path: 'sys/configs', component: () => import('../views/admin/sys/SysConfigs.vue') },
+      { path: 'sys/dicts', component: () => import('../views/admin/sys/SysDicts.vue') }
+    ]
+  },
+  {
     path: '/profile',
     component: () => import('../views/Profile.vue'),
     meta: { requiresAuth: true }
