@@ -2,12 +2,13 @@ package com.legalai.service;
 
 import com.legalai.dto.LoginRequest;
 import com.legalai.dto.LoginResponse;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,11 +21,15 @@ public class AuthService {
 
     private final Map<String, TokenInfo> tokenStore = new ConcurrentHashMap<>();
     private final JdbcTemplate jdbc;
-    private final PasswordEncoder passwordEncoder;
 
-    public AuthService(JdbcTemplate jdbc, PasswordEncoder passwordEncoder) {
+    public AuthService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
-        this.passwordEncoder = passwordEncoder;
+    }
+
+    private boolean passwordMatches(String raw, String stored) {
+        if (stored == null) return false;
+        String hashed = DigestUtils.sha256Hex(raw.getBytes(StandardCharsets.UTF_8));
+        return hashed.equalsIgnoreCase(stored);
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -47,7 +52,7 @@ public class AuthService {
         }
 
         String dbPassword = (String) user.get("password");
-        if (dbPassword == null || !passwordEncoder.matches(request.getPassword(), dbPassword)) {
+        if (dbPassword == null || !passwordMatches(request.getPassword(), dbPassword)) {
             log.warn("用户密码错误: {}", request.getUsername());
             throw new RuntimeException("账号或密码错误");
         }
@@ -104,7 +109,7 @@ public class AuthService {
         }
 
         String dbPassword = (String) user.get("password");
-        if (dbPassword == null || !passwordEncoder.matches(request.getPassword(), dbPassword)) {
+        if (dbPassword == null || !passwordMatches(request.getPassword(), dbPassword)) {
             log.warn("管理员密码错误: {}", request.getUsername());
             throw new RuntimeException("账号或密码错误");
         }

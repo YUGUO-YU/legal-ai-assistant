@@ -267,7 +267,7 @@ CREATE TABLE IF NOT EXISTS ppt_document (
 CREATE TABLE IF NOT EXISTS admin_user (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
     username        VARCHAR(64) NOT NULL UNIQUE,
-    password        VARCHAR(128) COMMENT 'BCrypt 加密',
+    password        VARCHAR(128) COMMENT 'SHA-256 加密',
     real_name       VARCHAR(64) NOT NULL,
     mobile          VARCHAR(20),
     email           VARCHAR(128),
@@ -287,7 +287,7 @@ CREATE TABLE IF NOT EXISTS admin_user (
 CREATE TABLE IF NOT EXISTS frontend_user (
     id              VARCHAR(64) PRIMARY KEY,
     username        VARCHAR(64) NOT NULL UNIQUE,
-    password        VARCHAR(128) COMMENT 'BCrypt 加密',
+    password        VARCHAR(128) COMMENT 'SHA-256 加密',
     real_name       VARCHAR(64),
     email           VARCHAR(128),
     avatar          VARCHAR(500),
@@ -658,10 +658,10 @@ CREATE TABLE IF NOT EXISTS qa_session (
 
 -- ===== 默认数据 =====
 INSERT IGNORE INTO admin_user (id, username, password, real_name, status) VALUES
-(1, 'admin', '$2b$10$L/aF0vqigVCUeNnOeMmQBOoEp.XI6vvXGAmFCd7fQ2FPhEU/JWpbS', '超级管理员', 1);
+(1, 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', '超级管理员', 1);
 
 INSERT IGNORE INTO frontend_user (id, username, password, real_name, email, status) VALUES
-('u-001', 'demo', '$2b$10$6dFrbFXMUxtk/ECPqTN0jOD6cQDtg/TUA9BI4SpiJ5ohWXU1fHXOC', '演示用户', 'demo@legal-ai.local', 1);
+('u-001', 'demo', 'd3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791', '演示用户', 'demo@legal-ai.local', 1);
 
 INSERT IGNORE INTO admin_role (id, role_code, role_name, data_scope, status, remark) VALUES
 (1, 'SUPER_ADMIN', '超级管理员', 4, 1, '全部权限'),
