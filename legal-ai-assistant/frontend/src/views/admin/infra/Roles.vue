@@ -41,7 +41,7 @@
       </el-table>
     </el-card>
 
-    <el-dialog v-model="showDialog" :title="form.id ? '编辑角色' : '新增角色'" width="540px">
+    <el-dialog v-model="showDialog" :title="form.id ? '编辑角色' : '新增角色'" width="620px">
       <el-form :model="form" label-width="100px">
         <el-row :gutter="12">
           <el-col :span="12">
@@ -63,6 +63,18 @@
             <el-option label="全部数据" :value="4" />
           </el-select>
         </el-form-item>
+        <el-form-item label="菜单权限">
+          <el-tree
+            ref="menuTreeRef"
+            :data="menuTree"
+            show-checkbox
+            node-key="id"
+            :props="{ label: 'nodeLabel' }"
+            :default-expand-all="true"
+            :check-strictly="false"
+            style="max-height:300px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px"
+          />
+        </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="2" />
         </el-form-item>
@@ -79,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../api'
@@ -88,6 +100,9 @@ const rows = ref([])
 const loading = ref(false)
 const showDialog = ref(false)
 const statusOn = ref(true)
+const menuTree = ref([])
+const menuTreeRef = ref(null)
+const allMenus = ref([])
 const form = reactive({ id: null, role_code: '', role_name: '', data_scope: 4, status: 1, remark: '' })
 
 function scopeLabel(s) { return ({ 1: '仅本人', 2: '本部门', 3: '本团队', 4: '全部' }[s] || s) }
@@ -102,16 +117,56 @@ async function load() {
   finally { loading.value = false }
 }
 
+async function loadAllMenus() {
+  try {
+    const res = await api.get('/admin/infra/menus')
+    allMenus.value = res.data?.list || []
+    buildMenuTree()
+  } catch (e) { allMenus.value = [] }
+}
+
+function buildMenuTree() {
+  const map = {}
+  const roots = []
+  allMenus.value.forEach(m => {
+    const node = { ...m, nodeLabel: `${m.menu_name} ${m.permission ? '(' + m.permission + ')' : ''}` }
+    map[m.id] = node
+    node.children = []
+  })
+  allMenus.value.forEach(m => {
+    if (m.parent_id && map[m.parent_id]) {
+      map[m.parent_id].children.push(map[m.id])
+    } else if (m.parent_id === 0) {
+      roots.push(map[m.id])
+    }
+  })
+  menuTree.value = roots
+}
+
+async function loadRoleMenus(roleId) {
+  try {
+    const res = await api.get(`/admin/infra/roles/${roleId}/menus`)
+    return res.data?.menu_ids || []
+  } catch (e) { return [] }
+}
+
 function openCreate() {
   Object.assign(form, { id: null, role_code: '', role_name: '', data_scope: 4, status: 1, remark: '' })
   statusOn.value = true
   showDialog.value = true
+  nextTick(() => {
+    if (menuTreeRef.value) menuTreeRef.value.setCheckedKeys([])
+  })
 }
 
-function openEdit(row) {
+async function openEdit(row) {
   Object.assign(form, { ...row })
   statusOn.value = row.status === 1
   showDialog.value = true
+  const menuIds = await loadRoleMenus(row.id)
+  nextTick(() => {
+    if (menuTreeRef.value) menuTreeRef.value.setCheckedKeys(menuIds)
+  })
 }
 
 async function handleSave() {
@@ -122,8 +177,15 @@ async function handleSave() {
     const res = form.id
       ? await api.post(`/admin/{table}/${form.id}/update`.replace('{table}', 'admin_role'), payload)
       : await api.post('/admin/{table}/create'.replace('{table}', 'admin_role'), payload)
-    if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
-    else ElMessage.error(res.data?.error || '保存失败')
+    if (res.data?.ok) {
+      if (menuTreeRef.value) {
+        const checkedKeys = menuTreeRef.value.getCheckedKeys()
+        const halfCheckedKeys = menuTreeRef.value.getHalfCheckedKeys()
+        const allChecked = [...checkedKeys, ...halfCheckedKeys]
+        await api.post(`/admin/infra/roles/${form.id || res.data?.id || rows.value[0]?.id}/menus`, { menu_ids: allChecked })
+      }
+      ElMessage.success('保存成功'); showDialog.value = false; load()
+    } else ElMessage.error(res.data?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
 }
 
@@ -135,7 +197,7 @@ async function handleDelete(row) {
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
 }
 
-onMounted(load)
+onMounted(() => { load(); loadAllMenus() })
 </script>
 
 <style lang="scss" scoped>

@@ -165,6 +165,44 @@ public class AdminController {
         return ApiResponse.success(adminDataService.list("admin_menu", null, 1, 200, null));
     }
 
+    @GetMapping("/infra/roles/{roleId}/menus")
+    public ApiResponse<Map<String, Object>> getRoleMenus(@PathVariable Long roleId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            var rows = adminDataService.jdbc().queryForList(
+                "SELECT menu_id FROM admin_role_menu WHERE role_id = ?", roleId);
+            var menuIds = rows.stream().map(r -> ((Number) r.get("menu_id")).longValue()).toList();
+            result.put("menu_ids", menuIds);
+        } catch (Exception e) {
+            result.put("menu_ids", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return ApiResponse.success(result);
+    }
+
+    @PostMapping("/infra/roles/{roleId}/menus")
+    public ApiResponse<Map<String, Object>> saveRoleMenus(
+            @PathVariable Long roleId,
+            @RequestBody Map<String, Object> payload) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            @SuppressWarnings("unchecked")
+            var menuIds = (java.util.List<Integer>) payload.get("menu_ids");
+            if (menuIds == null) menuIds = java.util.Collections.emptyList();
+            adminDataService.jdbc().update("DELETE FROM admin_role_menu WHERE role_id = ?", roleId);
+            for (Integer mid : menuIds) {
+                adminDataService.jdbc().update(
+                    "INSERT IGNORE INTO admin_role_menu (role_id, menu_id) VALUES (?, ?)", roleId, mid);
+            }
+            result.put("ok", true);
+            result.put("count", menuIds.size());
+        } catch (Exception e) {
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return ApiResponse.success(result);
+    }
+
     @GetMapping("/infra/audit-logs")
     public ApiResponse<Map<String, Object>> listAuditLogs(
             @RequestParam(required = false) String userId,
@@ -368,11 +406,19 @@ public class AdminController {
     @GetMapping("/health")
     public ApiResponse<Map<String, Object>> health() {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("status", "UP");
         result.put("scope", "admin");
         result.put("timestamp", System.currentTimeMillis());
         result.put("domains", java.util.Arrays.asList(
                 "infra", "biz(mod01-mod10)", "ai", "ops", "monitor", "sys"));
+        try {
+            Integer dbOk = adminDataService.jdbc().queryForObject("SELECT 1", Integer.class);
+            result.put("status", dbOk != null && dbOk == 1 ? "UP" : "DOWN");
+            result.put("database", "UP");
+        } catch (Exception e) {
+            result.put("status", "DOWN");
+            result.put("database", "DOWN");
+            result.put("db_error", e.getMessage());
+        }
         return ApiResponse.success(result);
     }
 
