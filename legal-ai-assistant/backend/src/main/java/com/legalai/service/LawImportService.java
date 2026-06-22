@@ -252,9 +252,12 @@ public class LawImportService {
         try {
             org.springframework.core.io.Resource res = new ClassPathResource("seed-data/laws/");
             if (res.exists() && res.isReadable()) {
-                for (org.springframework.core.io.Resource child : res.getFile().listFiles()) {
-                    if (child.getFilename().endsWith(".json")) {
-                        presets.add(child.getFilename().replace(".json", ""));
+                java.io.File dir = res.getFile();
+                java.io.File[] files = dir.listFiles((d, name) -> name.endsWith(".json"));
+                if (files != null) {
+                    for (java.io.File f : files) {
+                        String name = f.getName();
+                        presets.add(name.substring(0, name.length() - 5));
                     }
                 }
             }
