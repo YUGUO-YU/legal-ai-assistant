@@ -20,6 +20,7 @@
           <el-menu-item index="/admin/infra/roles">角色权限</el-menu-item>
           <el-menu-item index="/admin/infra/menus">菜单权限</el-menu-item>
           <el-menu-item index="/admin/infra/audit">操作审计</el-menu-item>
+          <el-menu-item index="/admin/infra/service-health">服务健康</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="biz">
@@ -54,6 +55,7 @@
           <el-menu-item index="/admin/ai/gray">灰度发布</el-menu-item>
           <el-menu-item index="/admin/ai/llm">模型配置</el-menu-item>
           <el-menu-item index="/admin/ai/token">Token 用量</el-menu-item>
+          <el-menu-item index="/admin/ai/milvus">Milvus 集合</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="ops">

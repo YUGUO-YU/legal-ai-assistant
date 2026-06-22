@@ -125,6 +125,7 @@ const routes = [
       { path: 'infra/roles', component: () => import('../views/admin/infra/Roles.vue') },
       { path: 'infra/menus', component: () => import('../views/admin/infra/Menus.vue') },
       { path: 'infra/audit', component: () => import('../views/admin/infra/AuditLogs.vue') },
+      { path: 'infra/service-health', component: () => import('../views/admin/infra/ServiceHealth.vue') },
 
       { path: 'biz/mod01', component: () => import('../views/admin/biz/Mod01Laws.vue') },
       { path: 'biz/mod01-revisions', component: () => import('../views/admin/biz/Mod01Revisions.vue') },
@@ -147,6 +148,7 @@ const routes = [
       { path: 'ai/gray', component: () => import('../views/admin/ai/GrayReleases.vue') },
       { path: 'ai/llm', component: () => import('../views/admin/ai/LlmModels.vue') },
       { path: 'ai/token', component: () => import('../views/admin/ai/TokenUsage.vue') },
+      { path: 'ai/milvus', component: () => import('../views/admin/ai/MilvusCollections.vue') },
 
       { path: 'ops/feedback', component: () => import('../views/admin/ops/UserFeedback.vue') },
       { path: 'ops/search-logs', component: () => import('../views/admin/ops/SearchLogs.vue') },

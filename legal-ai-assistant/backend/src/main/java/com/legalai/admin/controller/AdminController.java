@@ -51,6 +51,96 @@ public class AdminController {
         return ApiResponse.success(data);
     }
 
+    @PostMapping("/{table}/create")
+    public ApiResponse<Map<String, Object>> create(@PathVariable String table, @RequestBody Map<String, Object> payload) {
+        Map<String, Object> data = adminDataService.create(table, payload);
+        recordAudit("CREATE", table, String.valueOf(data.get("id")));
+        return ApiResponse.success(data);
+    }
+
+    @PostMapping("/{table}/{id}/update")
+    public ApiResponse<Map<String, Object>> update(@PathVariable String table, @PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        Map<String, Object> data = adminDataService.update(table, id, payload);
+        recordAudit("UPDATE", table, String.valueOf(id));
+        return ApiResponse.success(data);
+    }
+
+    @PostMapping("/{table}/{id}/delete")
+    public ApiResponse<Map<String, Object>> delete(@PathVariable String table, @PathVariable Long id) {
+        Map<String, Object> data = adminDataService.delete(table, id);
+        recordAudit("DELETE", table, String.valueOf(id));
+        return ApiResponse.success(data);
+    }
+
+    @PostMapping("/{table}/{id}/toggle")
+    public ApiResponse<Map<String, Object>> toggle(@PathVariable String table, @PathVariable Long id, @RequestParam String column) {
+        Map<String, Object> data = adminDataService.toggle(table, id, column);
+        recordAudit("TOGGLE", table, String.valueOf(id));
+        return ApiResponse.success(data);
+    }
+
+    // ============================================================
+    // 工作流：审核/告警/Prompt
+    // ============================================================
+
+    @PostMapping("/biz/mod01/laws/{id}/audit")
+    public ApiResponse<Map<String, Object>> auditLaw(@PathVariable Long id, @RequestParam int action, @RequestParam(required = false) Long auditorId) {
+        return ApiResponse.success(adminDataService.auditLaw(id, action, auditorId));
+    }
+
+    @PostMapping("/biz/mod03/drafts/{id}/review")
+    public ApiResponse<Map<String, Object>> reviewDraft(@PathVariable Long id, @RequestParam int action, @RequestParam(required = false) Long reviewerId, @RequestBody(required = false) Map<String, Object> body) {
+        String note = body == null ? null : String.valueOf(body.getOrDefault("note", null));
+        return ApiResponse.success(adminDataService.reviewDraft(id, action, reviewerId, note));
+    }
+
+    @PostMapping("/monitor/alert-history/{id}/ack")
+    public ApiResponse<Map<String, Object>> ackAlert(@PathVariable Long id, @RequestParam(required = false) Long handlerId) {
+        return ApiResponse.success(adminDataService.ackAlert(id, handlerId));
+    }
+
+    @PostMapping("/monitor/alert-history/{id}/resolve")
+    public ApiResponse<Map<String, Object>> resolveAlert(@PathVariable Long id) {
+        return ApiResponse.success(adminDataService.resolveAlert(id));
+    }
+
+    @PostMapping("/ai/prompts/{id}/publish")
+    public ApiResponse<Map<String, Object>> publishPrompt(@PathVariable Long id) {
+        recordAudit("PUBLISH", "prompt_template", String.valueOf(id));
+        return ApiResponse.success(adminDataService.publishPrompt(id));
+    }
+
+    @PostMapping("/ai/prompts/{id}/gray")
+    public ApiResponse<Map<String, Object>> grayPrompt(@PathVariable Long id, @RequestParam int ratio, @RequestParam(required = false) String teams) {
+        recordAudit("GRAY", "prompt_template", String.valueOf(id));
+        return ApiResponse.success(adminDataService.grayPrompt(id, ratio, teams));
+    }
+
+    @PostMapping("/ai/prompts/{id}/rollback")
+    public ApiResponse<Map<String, Object>> rollbackPrompt(@PathVariable Long id, @RequestParam(required = false) String reason) {
+        recordAudit("ROLLBACK", "prompt_template", String.valueOf(id));
+        return ApiResponse.success(adminDataService.rollbackPrompt(id, reason));
+    }
+
+    // ============================================================
+    // 监控概览 + LLM 健康 + Milvus 状态
+    // ============================================================
+
+    @GetMapping("/monitor/overview")
+    public ApiResponse<Map<String, Object>> monitorOverview() {
+        return ApiResponse.success(adminDataService.monitorOverview());
+    }
+
+    @PostMapping("/ai/llm-models/health-check")
+    public ApiResponse<Map<String, Object>> llmHealthCheck() {
+        return ApiResponse.success(adminDataService.llmHealthCheck());
+    }
+
+    @GetMapping("/ai/milvus/collections")
+    public ApiResponse<Map<String, Object>> milvusCollections() {
+        return ApiResponse.success(adminDataService.milvusCollections());
+    }
+
     // ============================================================
     // 域 01 基础设施：用户/角色/菜单/审计
     // ============================================================
