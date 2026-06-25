@@ -16,6 +16,7 @@
         <el-form-item>
           <el-button type="primary" @click="load">查询</el-button>
           <el-button @click="reset">重置</el-button>
+          <el-button type="success" @click="exportData" :loading="exporting">导出</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -62,6 +63,7 @@ import api from '../../api'
 const rows = ref([])
 const total = ref(0)
 const loading = ref(false)
+const exporting = ref(false)
 const filter = reactive({ page: 1, pageSize: 20, userId: '', operation: '', module: '' })
 const operations = ['CREATE', 'UPDATE', 'DELETE', 'EXPORT', 'LOGIN', 'AUDIT', 'LIST', 'DETAIL']
 const modules = ['MOD-01', 'MOD-02', 'MOD-03', 'MOD-04', 'MOD-05', 'MOD-06', 'MOD-07', 'MOD-08', 'MOD-09', 'MOD-10', 'ADMIN']
@@ -86,6 +88,31 @@ async function load() {
 function reset() {
   filter.userId = ''; filter.operation = ''; filter.module = ''
   filter.page = 1; load()
+}
+
+function exportData() {
+  exporting.value = true
+  const headers = ['ID', '用户ID', '用户名', '操作', '模块', '对象类型', '对象ID', '方法', 'URL', 'IP', '耗时ms', '状态', '时间']
+  const fields = ['id', 'user_id', 'username', 'operation', 'biz_module', 'biz_type', 'biz_id', 'request_method', 'request_url', 'ip', 'duration_ms', 'status', 'created_at']
+  const csv = [headers.join(',')]
+  for (const row of rows.value) {
+    const values = fields.map(f => {
+      let v = row[f] == null ? '' : String(row[f])
+      if (v.includes(',') || v.includes('"') || v.includes('\n')) {
+        v = '"' + v.replace(/"/g, '""') + '"'
+      }
+      return v
+    })
+    csv.push(values.join(','))
+  }
+  const blob = new Blob(['\ufeff' + csv.join('\n')], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'audit_logs_' + new Date().toISOString().slice(0, 10) + '.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+  exporting.value = false
 }
 
 onMounted(load)

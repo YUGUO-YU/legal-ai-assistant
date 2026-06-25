@@ -91,6 +91,9 @@
       <div class="top-bar">
         <span class="top-bar-title">Legal AI 后台</span>
         <div class="top-bar-right">
+          <el-button text size="small" @click="toggleDark">
+            <el-icon><component :is="isDark ? Sunny : Moon" /></el-icon>
+          </el-button>
           <span class="user-name">{{ adminName }}</span>
           <el-button text size="small" @click="handleLogout">
             <el-icon><SwitchButton /></el-icon>
@@ -108,20 +111,37 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Setting, Odometer, Tools, Document, MagicStick, DataAnalysis, Bell, SwitchButton } from '@element-plus/icons-vue'
+import { Setting, Odometer, Tools, Document, MagicStick, DataAnalysis, Bell, SwitchButton, Sunny, Moon } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
 const activeMenu = computed(() => route.path)
 const adminName = ref('管理员')
+const isDark = ref(false)
 
 onMounted(() => {
   try {
     const u = JSON.parse(localStorage.getItem('admin_user') || '{}')
     adminName.value = u.nickname || u.username || '管理员'
   } catch (e) { /* ignore */ }
+  const saved = localStorage.getItem('darkMode')
+  if (saved === 'true') {
+    isDark.value = true
+    document.documentElement.classList.add('dark')
+  }
 })
+
+const toggleDark = () => {
+  isDark.value = !isDark.value
+  if (isDark.value) {
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('darkMode', 'true')
+  } else {
+    document.documentElement.classList.remove('dark')
+    localStorage.setItem('darkMode', 'false')
+  }
+}
 
 const handleLogout = () => {
   localStorage.removeItem('admin_token')
@@ -198,5 +218,47 @@ const handleLogout = () => {
   padding: 20px;
   background: #f1f5f9;
   overflow-x: hidden;
+}
+</style>
+
+<style>
+html.dark .aside {
+  background: #1e293b !important;
+}
+html.dark .aside-header {
+  background: #0f172a !important;
+  border-bottom-color: #334155 !important;
+}
+html.dark .top-bar {
+  background: #1e293b !important;
+  border-bottom-color: #334155 !important;
+}
+html.dark .top-bar-title {
+  color: #94a3b8 !important;
+}
+html.dark .user-name {
+  color: #e2e8f0 !important;
+}
+html.dark .main {
+  background: #0f172a !important;
+}
+html.dark .right-area {
+  background: #0f172a !important;
+}
+html.dark .el-menu {
+  background: transparent !important;
+}
+html.dark .el-menu-item {
+  color: #cbd5e1 !important;
+}
+html.dark .el-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+html.dark .el-menu-item.is-active {
+  background: rgba(99, 102, 241, 0.2) !important;
+  color: #818cf8 !important;
+}
+html.dark .el-sub-menu__title {
+  color: #cbd5e1 !important;
 }
 </style>
