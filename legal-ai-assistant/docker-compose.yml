@@ -1,7 +1,74 @@
 version: '3.8'
 
+volumes:
+  mysql_data:
+  es_data:
+  milvus_data:
+
 services:
-  # 前端服务
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: main0126
+      MYSQL_DATABASE: legal_ai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./backend/src/main/resources/data.sql:/docker-entrypoint-initdb.d/2-data.sql
+    networks:
+      - legal-ai-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pmain0126"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - legal-ai-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - legal-ai-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  milvus:
+    image: milvusdb/milvus:v2.3.3
+    ports:
+      - "19530:19530"
+    volumes:
+      - milvus_data:/var/lib/milvus
+    networks:
+      - legal-ai-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9091/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   frontend:
     build:
       context: ./frontend
@@ -13,7 +80,6 @@ services:
     networks:
       - legal-ai-network
 
-  # 后端服务 (Mock模式，无需外部依赖)
   backend:
     build:
       context: ./backend
@@ -22,6 +88,17 @@ services:
       - "3001:3001"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/legal_ai?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=main0126
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - ELASTICSEARCH_URIS=http://elasticsearch:9200
+      - MILVUS_HOST=milvus
+      - MILVUS_PORT=19530
+    depends_on:
+      mysql:
+        condition: service_healthy
     networks:
       - legal-ai-network
     restart: unless-stopped

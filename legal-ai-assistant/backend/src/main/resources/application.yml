@@ -3,9 +3,9 @@ spring:
     name: legal-ai-assistant
 
   datasource:
-    url: jdbc:mysql://localhost:3306/legal_ai?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
-    username: root
-    password: main0126
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/legal_ai?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:main0126}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
@@ -26,7 +26,7 @@ spring:
       continue-on-error: true
 
   elasticsearch:
-    uris: http://localhost:9200
+    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -62,15 +62,15 @@ mock:
 
 # Milvus Configuration
 milvus:
-  host: localhost
-  port: 19530
+  host: ${MILVUS_HOST:localhost}
+  port: ${MILVUS_PORT:19530}
   collection-name: legal_law_articles
   dimension: 1536
   enabled: false
 
 # Elasticsearch Configuration
 elasticsearch:
-  host: localhost
-  port: 9200
+  host: ${ELASTICSEARCH_HOST:localhost}
+  port: ${ELASTICSEARCH_PORT:9200}
   index-name: legal_law_articles
   enabled: false
