@@ -174,6 +174,62 @@ public class AuthService {
         tokenStore.remove(token);
     }
 
+    public void changePassword(String token, String oldPassword, String newPassword) {
+        TokenInfo tokenInfo = tokenStore.get(token);
+        if (tokenInfo == null) {
+            throw new RuntimeException("未登录或登录已过期");
+        }
+
+        String userIdStr = tokenInfo.getUserIdStr();
+        if (userIdStr == null) {
+            throw new RuntimeException("用户ID无效");
+        }
+
+        var rows = jdbc.queryForList(
+            "SELECT password FROM frontend_user WHERE id = ?", userIdStr);
+        if (rows.isEmpty()) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        String dbPassword = (String) rows.get(0).get("password");
+        if (!passwordMatches(oldPassword, dbPassword)) {
+            throw new RuntimeException("当前密码错误");
+        }
+
+        if (newPassword.length() < 6 || newPassword.length() > 32) {
+            throw new RuntimeException("新密码长度需在6-32个字符之间");
+        }
+
+        String hashedPassword = DigestUtils.sha256Hex(newPassword.getBytes(StandardCharsets.UTF_8));
+        jdbc.update("UPDATE frontend_user SET password = ? WHERE id = ?", hashedPassword, userIdStr);
+        log.info("密码修改成功: userId={}", userIdStr);
+    }
+
+    public void updateProfile(String token, String realName, String email, String phone, String bio) {
+        TokenInfo tokenInfo = tokenStore.get(token);
+        if (tokenInfo == null) {
+            throw new RuntimeException("未登录或登录已过期");
+        }
+
+        String userIdStr = tokenInfo.getUserIdStr();
+        if (userIdStr == null) {
+            throw new RuntimeException("用户ID无效");
+        }
+
+        if (email != null && !email.isEmpty()) {
+            var existingEmail = jdbc.queryForList(
+                "SELECT id FROM frontend_user WHERE email = ? AND id != ?", email, userIdStr);
+            if (!existingEmail.isEmpty()) {
+                throw new RuntimeException("邮箱已被其他用户使用");
+            }
+        }
+
+        jdbc.update(
+            "UPDATE frontend_user SET real_name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            realName, email, userIdStr);
+        log.info("个人信息更新成功: userId={}", userIdStr);
+    }
+
     public LoginResponse.UserInfo getUserInfo(String token) {
         TokenInfo tokenInfo = tokenStore.get(token);
         if (tokenInfo == null) {

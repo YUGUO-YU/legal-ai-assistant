@@ -154,9 +154,10 @@
             </el-breadcrumb>
           </div>
 
-          <div class="header-actions">
-            <el-button :icon="Bell" circle class="header-btn" />
-            <el-button :icon="Setting" circle class="header-btn" />
+              <div class="header-actions">
+                <el-button :icon="Bell" circle class="header-btn" />
+                <el-button :icon="isDark ? Sunny : Moon" circle class="header-btn" @click="toggleDark" />
+                <el-button :icon="Setting" circle class="header-btn" />
 
             <el-dropdown @command="handleCommand" trigger="click">
               <div class="user-info">
@@ -204,7 +205,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -227,12 +228,33 @@ import {
   SwitchButton,
   ArrowDown,
   Sunny,
+  Moon,
   TrendCharts,
   MagicStick
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
+const isDark = ref(false)
+
+onMounted(() => {
+  const saved = localStorage.getItem('darkMode')
+  if (saved === 'true') {
+    isDark.value = true
+    document.documentElement.classList.add('dark')
+  }
+})
+
+const toggleDark = () => {
+  isDark.value = !isDark.value
+  if (isDark.value) {
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('darkMode', 'true')
+  } else {
+    document.documentElement.classList.remove('dark')
+    localStorage.setItem('darkMode', 'false')
+  }
+}
 
 const isLoggedIn = computed(() => !!localStorage.getItem('token'))
 const username = computed(() => {
@@ -676,3 +698,54 @@ onMounted(() => {
   }
 }
 </style>
+
+<style>
+html.dark {
+  .sidebar {
+    background: #1e293b !important;
+  }
+  .aside-header {
+    background: #0f172a !important;
+    border-bottom-color: #334155 !important;
+  }
+  .top-bar {
+    background: #1e293b !important;
+    border-bottom-color: #334155 !important;
+  }
+  .top-bar-title {
+    color: #e2e8f0 !important;
+  }
+  .user-name {
+    color: #e2e8f0 !important;
+  }
+  .main {
+    background: #0f172a !important;
+  }
+  .main-container {
+    background: #0f172a !important;
+  }
+  .header-btn {
+    background: #334155 !important;
+    border-color: #475569 !important;
+    color: #94a3b8 !important;
+    &:hover {
+      border-color: #667eea !important;
+      color: #667eea !important;
+      background: rgba(102, 126, 234, 0.1) !important;
+    }
+  }
+  .page-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+  .page-header h2 {
+    color: #e2e8f0 !important;
+  }
+  .page-header p {
+    color: #94a3b8 !important;
+  }
+  .result-item {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+}

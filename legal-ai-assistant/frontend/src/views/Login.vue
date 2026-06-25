@@ -231,6 +231,13 @@ const goDashboard = () => {
 const goAdmin = () => {
   router.push('/admin/login')
 }
+
+onMounted(() => {
+  refreshCaptcha()
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.documentElement.classList.add('dark')
+  }
+})
 </script>
 
 <style lang="scss" scoped>

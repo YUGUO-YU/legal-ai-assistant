@@ -296,6 +296,7 @@ import {
   ChatDotRound,
   Document
 } from '@element-plus/icons-vue'
+import api from '../api'
 
 const router = useRouter()
 const activeTab = ref('profile')
@@ -392,18 +393,26 @@ const saveProfile = async () => {
     if (!valid) return
 
     saving.value = true
-    await new Promise(r => setTimeout(r, 1000))
-
-    Object.assign(userInfo, {
-      nickname: profileForm.nickname,
-      email: profileForm.email,
-      phone: profileForm.phone,
-      bio: profileForm.bio
-    })
-
-    localStorage.setItem('userInfo', JSON.stringify(userInfo))
-    ElMessage.success('个人信息已保存')
-    saving.value = false
+    try {
+      await api.auth.updateProfile({
+        realName: profileForm.nickname,
+        email: profileForm.email,
+        phone: profileForm.phone,
+        bio: profileForm.bio
+      })
+      Object.assign(userInfo, {
+        nickname: profileForm.nickname,
+        email: profileForm.email,
+        phone: profileForm.phone,
+        bio: profileForm.bio
+      })
+      localStorage.setItem('userInfo', JSON.stringify(userInfo))
+      ElMessage.success('个人信息已保存')
+    } catch (e) {
+      ElMessage.error(e?.message || '保存失败')
+    } finally {
+      saving.value = false
+    }
   })
 }
 
@@ -426,17 +435,25 @@ const changePassword = async () => {
   }
 
   changingPassword.value = true
-  await new Promise(r => setTimeout(r, 1500))
-
-  passwordForm.oldPassword = ''
-  passwordForm.newPassword = ''
-  passwordForm.confirmPassword = ''
-  changingPassword.value = false
-  ElMessage.success('密码修改成功')
+  try {
+    await api.auth.changePassword({
+      oldPassword: passwordForm.oldPassword,
+      newPassword: passwordForm.newPassword
+    })
+    passwordForm.oldPassword = ''
+    passwordForm.newPassword = ''
+    passwordForm.confirmPassword = ''
+    ElMessage.success('密码修改成功')
+  } catch (e) {
+    ElMessage.error(e?.message || '密码修改失败')
+  } finally {
+    changingPassword.value = false
+  }
 }
 
 const toggleDarkMode = () => {
-  document.body.classList.toggle('dark-mode', preferences.darkMode)
+  const isDark = document.documentElement.classList.toggle('dark')
+  localStorage.setItem('darkMode', String(isDark))
 }
 
 const savePreferences = async () => {
@@ -502,6 +519,9 @@ const deleteAccount = async () => {
 onMounted(() => {
   loadUserInfo()
   loadPreferences()
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.documentElement.classList.add('dark')
+  }
 })
 </script>
 

@@ -123,7 +123,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Key, CircleCheck, InfoFilled } from '@element-plus/icons-vue'
@@ -134,6 +134,12 @@ const formRef = ref(null)
 const loading = ref(false)
 const codeSent = ref(false)
 const serverCode = ref('')
+
+onMounted(() => {
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.documentElement.classList.add('dark')
+  }
+})
 
 const form = reactive({
   username: '',

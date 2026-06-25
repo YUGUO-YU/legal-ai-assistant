@@ -33,6 +33,28 @@ public class AuthController {
         return ApiResponse.success(null);
     }
 
+    @PutMapping("/password")
+    public ApiResponse<Void> changePassword(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody ChangePasswordRequest request) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            authHeader = authHeader.substring(7);
+        }
+        authService.changePassword(authHeader, request.getOldPassword(), request.getNewPassword());
+        return ApiResponse.success(null);
+    }
+
+    @PutMapping("/profile")
+    public ApiResponse<Void> updateProfile(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody UpdateProfileRequest request) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            authHeader = authHeader.substring(7);
+        }
+        authService.updateProfile(authHeader, request.getRealName(), request.getEmail(), request.getPhone(), request.getBio());
+        return ApiResponse.success(null);
+    }
+
     @PostMapping("/admin/login")
     public ApiResponse<LoginResponse> adminLogin(@RequestBody LoginRequest request) {
         LoginResponse response = authService.adminLogin(request);

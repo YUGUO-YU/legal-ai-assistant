@@ -195,7 +195,9 @@ export default {
   auth: {
     login: (data) => api.post('/auth/login', data),
     logout: () => api.post('/auth/logout'),
-    getUserInfo: () => withRetry(() => api.get('/auth/user-info'))
+    getUserInfo: () => withRetry(() => api.get('/auth/user-info')),
+    changePassword: (data) => api.put('/auth/password', data),
+    updateProfile: (data) => api.put('/auth/profile', data)
   },
   health: () => api.get('/health'),
   dataImport: {

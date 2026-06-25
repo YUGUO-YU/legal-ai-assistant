@@ -94,7 +94,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Postcard, Message, UserPlus } from '@element-plus/icons-vue'
@@ -103,6 +103,12 @@ import api from '../api'
 const router = useRouter()
 const formRef = ref(null)
 const loading = ref(false)
+
+onMounted(() => {
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.documentElement.classList.add('dark')
+  }
+})
 
 const form = reactive({
   username: '',
