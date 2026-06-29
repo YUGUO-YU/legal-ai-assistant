@@ -22,7 +22,7 @@
 <script setup>
 import {ref,watch,onMounted} from 'vue'
 import {Refresh} from '@element-plus/icons-vue'
-import api from '../../api'
+import api from '../../../api'
 const rows=ref([]);const total=ref(0);const loading=ref(false);const page=ref(1);const pageSize=ref(20)
 async function load(){loading.value=true;try{const res=await api.get('/admin/biz/mod10/qa-sessions',{params:{page:page.value,pageSize:pageSize.value}});rows.value=res.data?.list||[];total.value=res.data?.total||rows.value.length}catch(e){rows.value=[];total.value=0}finally{loading.value=false}}
 watch([page,pageSize],load)

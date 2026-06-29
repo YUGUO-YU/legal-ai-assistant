@@ -58,7 +58,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import api from '../../api'
+import api from '../../../api'
 
 const rows = ref([])
 const total = ref(0)

@@ -6,11 +6,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -48,6 +51,9 @@ public class LegalResearchService {
     @Autowired
     private SourceVerificationService sourceVerificationService;
 
+    @Autowired
+    private JdbcTemplate jdbc;
+
     private final Map<String, AtomicLong> taskProgress = new ConcurrentHashMap<>();
     private final Map<String, LegalResearchResponse> taskResults = new ConcurrentHashMap<>();
     private final AtomicLong taskIdCounter = new AtomicLong(1);
@@ -77,6 +83,16 @@ public class LegalResearchService {
         String taskId = "LR-" + System.currentTimeMillis() + "-" + taskIdCounter.getAndIncrement();
         taskProgress.put(taskId, new AtomicLong(0));
         taskResults.put(taskId, new LegalResearchResponse());
+
+        try {
+            String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            jdbc.update(
+                "INSERT INTO legal_research_task (task_uuid, user_id, topic, status, created_at) VALUES (?, ?, ?, 'pending', ?)",
+                taskId, "default", request.getQuestion(), now
+            );
+        } catch (Exception e) {
+            log.warn("创建法律研究任务DB持久化失败: {}", e.getMessage());
+        }
 
         return taskId;
     }
@@ -111,7 +127,26 @@ public class LegalResearchService {
     }
 
     public LegalResearchResponse getResearchReport(String taskId) {
-        return taskResults.get(taskId);
+        LegalResearchResponse cached = taskResults.get(taskId);
+        if (cached != null && cached.getReportContent() != null) {
+            return cached;
+        }
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT topic, report, sources, created_at FROM legal_research_task WHERE task_uuid = ?", taskId
+            );
+            if (!rows.isEmpty()) {
+                Map<String, Object> row = rows.get(0);
+                LegalResearchResponse response = new LegalResearchResponse();
+                response.setReportId(taskId);
+                response.setReportContent((String) row.get("report"));
+                response.setGeneratedAt(System.currentTimeMillis());
+                return response;
+            }
+        } catch (Exception e) {
+            log.warn("从DB加载研究任务失败: taskId={}, error={}", taskId, e.getMessage());
+        }
+        return null;
     }
 
     public LegalResearchResponse generateResearchReport(LegalResearchRequest request) {
@@ -119,11 +154,37 @@ public class LegalResearchService {
 
         validateRequest(request);
 
+        LegalResearchResponse response;
         if (mockEnabled) {
-            return mockGenerateReport(request);
+            response = mockGenerateReport(request);
+        } else {
+            response = aiGenerateReport(request);
         }
 
-        return aiGenerateReport(request);
+        persistReport(response, request.getQuestion());
+        return response;
+    }
+
+    private void persistReport(LegalResearchResponse response, String question) {
+        try {
+            String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String reportContent = response.getReportContent();
+            String taskId = response.getReportId();
+            Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM legal_research_task WHERE task_uuid = ?", Integer.class, taskId);
+            if (count != null && count > 0) {
+                jdbc.update(
+                    "UPDATE legal_research_task SET status = 'completed', report = ?, updated_at = ? WHERE task_uuid = ?",
+                    reportContent, now, taskId
+                );
+            } else {
+                jdbc.update(
+                    "INSERT INTO legal_research_task (task_uuid, user_id, topic, status, report, created_at, updated_at) VALUES (?, ?, ?, 'completed', ?, ?, ?)",
+                    taskId, "default", question, reportContent, now, now
+                );
+            }
+        } catch (Exception e) {
+            log.warn("研究报告DB持久化失败: {}", e.getMessage());
+        }
     }
 
     public Flux<Map<String, Object>> generateReportStream(LegalResearchRequest request) {

@@ -69,7 +69,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import api from '../../api'
+import api from '../../../api'
 
 const rows = ref([])
 const loading = ref(false)

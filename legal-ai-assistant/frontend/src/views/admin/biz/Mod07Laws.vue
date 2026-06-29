@@ -44,7 +44,7 @@
 <script setup>
 import {ref,reactive,computed,watch,onMounted} from 'vue'
 import {Refresh} from '@element-plus/icons-vue'
-import api from '../../api'
+import api from '../../../api'
 const rows=ref([]);const total=ref(0);const loading=ref(false);const page=ref(1);const pageSize=ref(20)
 const filter=reactive({cat:'',status:''});const showDetail=ref(false);const detail=ref(null)
 const categories=computed(()=>[...new Set(rows.value.map(r=>r.category_l1))].sort())

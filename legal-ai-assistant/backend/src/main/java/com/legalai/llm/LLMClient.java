@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -333,6 +334,26 @@ public class LLMClient {
             log.debug("获取 MiniMax 模型列表失败: {}", e.getMessage());
         }
         return model;
+    }
+
+    /**
+     * 健康检查并返回延迟信息
+     */
+    public Map<String, Object> healthCheck() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("model", model);
+        result.put("baseUrl", baseUrl);
+        long start = System.currentTimeMillis();
+        boolean healthy = ping();
+        long latency = System.currentTimeMillis() - start;
+        result.put("healthy", healthy);
+        result.put("latencyMs", latency);
+        result.put("apiKeyConfigured", apiKey != null && !apiKey.isEmpty());
+        return result;
+    }
+
+    public boolean isApiKeyConfigured() {
+        return apiKey != null && !apiKey.isEmpty();
     }
 
     private String executeChatRequest(Map<String, Object> requestBody) throws IOException {

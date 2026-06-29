@@ -100,7 +100,7 @@
 import { ref, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import api from '../../api'
+import api from '../../../api'
 
 const loading = ref(false)
 const llmLoading = ref(false)

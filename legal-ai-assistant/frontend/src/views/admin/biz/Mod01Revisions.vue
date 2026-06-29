@@ -34,7 +34,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import api from '../../api'
+import api from '../../../api'
 const rows = ref([]); const total = ref(0); const loading = ref(false); const page = ref(1); const pageSize = ref(20)
 function revLabel(t) { return ({1:'修订',2:'废止',3:'重新发布',4:'部分修正'}[t]||t) }
 function revTag(t) { return ({1:'warning',2:'danger',3:'success',4:'info'}[t]||'') }

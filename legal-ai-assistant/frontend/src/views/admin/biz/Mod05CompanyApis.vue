@@ -32,7 +32,7 @@
 import {ref,reactive,onMounted} from 'vue'
 import {Refresh} from '@element-plus/icons-vue'
 import {ElMessage,ElMessageBox} from 'element-plus'
-import api from '../../api'
+import api from '../../../api'
 const rows=ref([]);const loading=ref(false);const showDialog=ref(false)
 const form=reactive({id:null,api_name:'',provider:'企查查',endpoint:'',api_key_enc:'',monthly_quota:10000,used_count:0,status:1})
 const providers=['企查查','天眼查','启信宝','国家企业信用信息公示系统','爱企查']

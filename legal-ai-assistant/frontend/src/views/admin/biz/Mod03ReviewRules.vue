@@ -38,7 +38,7 @@
 import {ref,reactive,onMounted} from 'vue'
 import {Refresh} from '@element-plus/icons-vue'
 import {ElMessage,ElMessageBox} from 'element-plus'
-import api from '../../api'
+import api from '../../../api'
 const rows=ref([]);const loading=ref(false);const showDialog=ref(false)
 const form=reactive({id:null,template_code:'',rule_type:'word_count',operator:'gt',threshold:500,trigger_action:'warn',status:1})
 function operLabel(o){return({gt:'>',gte:'>=',lt:'<',lte:'<=',eq:'=='}[o]||o)}

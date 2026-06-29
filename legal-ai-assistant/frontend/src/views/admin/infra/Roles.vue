@@ -94,7 +94,7 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import api from '../../api'
+import api from '../../../api'
 
 const rows = ref([])
 const loading = ref(false)

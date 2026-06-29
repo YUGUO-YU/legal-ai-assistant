@@ -56,7 +56,7 @@
 import {ref,reactive,computed,watch,onMounted} from 'vue'
 import {Refresh} from '@element-plus/icons-vue'
 import {ElMessage,ElMessageBox} from 'element-plus'
-import api from '../../api'
+import api from '../../../api'
 const rows=ref([]);const total=ref(0);const loading=ref(false);const page=ref(1);const pageSize=ref(20)
 const filter=reactive({status:''});const showDialog=ref(false)
 const form=reactive({id:null,task_name:'',source:'官方网站',crawl_type:'full',target_url:'',cron_expression:'0 2 * * *',config:'{}',status:0})

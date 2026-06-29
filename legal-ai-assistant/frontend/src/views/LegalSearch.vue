@@ -309,7 +309,11 @@ const generatePpt = async () => {
 }
 
 const viewCase = (c) => {
-  ElMessage.info('跳转到案例详情页（待实现）')
+  if (c.caseUuid) {
+    router.push(`/case-detail/${c.caseUuid}`)
+  } else {
+    ElMessage.warning('该案例缺少详情信息')
+  }
 }
 </script>
 

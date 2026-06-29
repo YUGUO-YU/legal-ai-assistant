@@ -1,5 +1,7 @@
 package com.legalai.admin.service;
 
+import com.legalai.llm.LLMClient;
+import com.legalai.service.MilvusService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,12 @@ public class AdminDataService {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired(required = false)
+    private LLMClient llmClient;
+
+    @Autowired(required = false)
+    private MilvusService milvusService;
 
     public JdbcTemplate jdbc() {
         return jdbc;
@@ -534,9 +542,16 @@ public class AdminDataService {
                 ck.put("model_name", m.get("model_name"));
                 ck.put("is_primary", m.get("is_primary"));
                 long t0 = System.currentTimeMillis();
-                // 真实环境应发 HEAD/GET 请求；骨架阶段用 DB 状态模拟
-                boolean healthy = Integer.parseInt(String.valueOf(m.getOrDefault("health_status", 1))) == 1;
-                long dur = System.currentTimeMillis() - t0 + (long) (Math.random() * 80 + 20);
+                boolean healthy;
+                long dur;
+                if (llmClient != null) {
+                    Map<String, Object> probe = llmClient.healthCheck();
+                    healthy = (boolean) probe.get("healthy");
+                    dur = (long) probe.get("latencyMs");
+                } else {
+                    healthy = Integer.parseInt(String.valueOf(m.getOrDefault("health_status", 1))) == 1;
+                    dur = (long) (Math.random() * 80 + 20);
+                }
                 ck.put("healthy", healthy);
                 ck.put("latencyMs", dur);
                 ck.put("checkedAt", new java.sql.Timestamp(System.currentTimeMillis()).toString());
@@ -557,6 +572,9 @@ public class AdminDataService {
     // ============================================================
 
     public Map<String, Object> milvusCollections() {
+        if (milvusService != null) {
+            return milvusService.getCollectionsStatus();
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         List<Map<String, Object>> cols = new java.util.ArrayList<>();
         String[] names = {"legal_law_articles", "legal_cases", "legal_contracts", "kb_documents"};

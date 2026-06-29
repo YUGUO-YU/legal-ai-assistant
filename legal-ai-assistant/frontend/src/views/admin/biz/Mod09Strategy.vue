@@ -33,7 +33,7 @@
 import {ref,reactive,onMounted} from 'vue'
 import {Refresh} from '@element-plus/icons-vue'
 import {ElMessage,ElMessageBox} from 'element-plus'
-import api from '../../api'
+import api from '../../../api'
 const rows=ref([]);const loading=ref(false);const showDialog=ref(false)
 const form=reactive({id:null,kb_id:1,chunk_size:512,chunk_overlap:64,splitter:'recursive',status:1})
 async function load(){loading.value=true;try{const res=await api.get('/admin/biz/mod09/kb-strategies');rows.value=res.data?.list||[]}catch(e){rows.value=[]}finally{loading.value=false}}

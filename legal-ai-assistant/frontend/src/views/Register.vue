@@ -10,7 +10,7 @@
     <div class="login-box">
       <div class="login-header">
         <div class="logo-icon">
-          <el-icon :size="48"><UserPlus /></el-icon>
+          <el-icon :size="48"><Avatar /></el-icon>
         </div>
         <h1>用户注册</h1>
         <p>创建您的法律AI助手账号</p>
@@ -97,7 +97,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Postcard, Message, UserPlus } from '@element-plus/icons-vue'
+import { User, Lock, Postcard, Message, Avatar } from '@element-plus/icons-vue'
 import api from '../api'
 
 const router = useRouter()

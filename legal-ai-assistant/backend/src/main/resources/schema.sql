@@ -642,6 +642,7 @@ CREATE TABLE IF NOT EXISTS legal_research_task (
     report          MEDIUMTEXT,
     sources         JSON,
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user (user_id),
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '法律研究任务';
@@ -846,3 +847,18 @@ INSERT IGNORE INTO kb_chunk_strategy (id, kb_id, chunk_size, chunk_overlap, spli
 (1, NULL, 512, 64, 'recursive', 1),
 (2, NULL, 1024, 128, 'semantic', 1),
 (3, NULL, 256, 32, 'sentence', 1);
+
+-- 知识库文档分块存储表
+CREATE TABLE IF NOT EXISTS kb_chunk_store (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    kb_id           BIGINT NOT NULL COMMENT '知识库ID',
+    file_name       VARCHAR(255) COMMENT '文件名',
+    content         MEDIUMTEXT NOT NULL COMMENT '分块内容',
+    chunk_index     INT DEFAULT 0 COMMENT '分块序号',
+    token_count     INT DEFAULT 0 COMMENT 'token数',
+    vector_id       VARCHAR(128) COMMENT 'Milvus向量ID',
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (kb_id) REFERENCES kb_knowledge_base(id) ON DELETE CASCADE,
+    INDEX idx_kb (kb_id),
+    INDEX idx_file (kb_id, file_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='知识库文档分块存储';

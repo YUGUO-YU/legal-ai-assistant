@@ -44,7 +44,7 @@
 import {ref,reactive,computed,onMounted} from 'vue'
 import {Refresh} from '@element-plus/icons-vue'
 import {ElMessage,ElMessageBox} from 'element-plus'
-import api from '../../api'
+import api from '../../../api'
 const rows=ref([]);const loading=ref(false);const showDialog=ref(false)
 const form=reactive({id:null,parent_id:0,menu_name:'',menu_type:2,path:'',component:'',permission:'',icon:'',sort_order:0,biz_module:'',status:1})
 function menuTypeLabel(t){return({1:'目录',2:'菜单',3:'按钮'}[t]||t)}

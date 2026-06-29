@@ -7,8 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,6 +29,7 @@ public class LegalSearchService {
     private final MilvusConfig milvusConfig;
     private final SourceVerificationService sourceVerificationService;
     private final CacheService cacheService;
+    private final JdbcTemplate jdbc;
 
     private static final String SYSTEM_PROMPT =
         "你是一个专业的法律助手，专注于中国法律法规的检索与解读。你拥有法学背景，能够准确理解法律条文含义并给出专业解释。\n\n" +
@@ -65,7 +69,8 @@ public class LegalSearchService {
             ElasticsearchConfig esConfig,
             MilvusConfig milvusConfig,
             SourceVerificationService sourceVerificationService,
-            CacheService cacheService) {
+            CacheService cacheService,
+            JdbcTemplate jdbc) {
         this.elasticsearchService = elasticsearchService;
         this.milvusService = milvusService;
         this.aiService = aiService;
@@ -73,6 +78,7 @@ public class LegalSearchService {
         this.milvusConfig = milvusConfig;
         this.sourceVerificationService = sourceVerificationService;
         this.cacheService = cacheService;
+        this.jdbc = jdbc;
     }
 
     public LegalSearchResponse search(LegalSearchRequest request) {
@@ -264,7 +270,9 @@ public class LegalSearchService {
         response.setPage(request.getPage());
         response.setPageSize(request.getPageSize());
         response.setTookMs(System.currentTimeMillis() - startTime);
-        response.setSearchLogId(System.currentTimeMillis());
+
+        Long searchLogId = persistSearchLog(request.getQuery(), fusedResults.size(), System.currentTimeMillis() - startTime);
+        response.setSearchLogId(searchLogId);
         response.setItems(pagedResults);
         response.setRelatedCases(relatedCases);
 
@@ -598,9 +606,24 @@ public class LegalSearchService {
             throw new IllegalArgumentException("articleId不能为空");
         }
 
-        log.info("反馈已记录: isHelpful={}, comment={}",
-                request.getIsHelpful() == 1 ? "有用" : "无用",
-                request.getUserComment());
+        try {
+            String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            if (request.getSearchLogId() != null) {
+                jdbc.update(
+                    "INSERT INTO search_feedback (search_log_id, article_id, is_helpful, user_comment, created_at) VALUES (?, ?, ?, ?, ?)",
+                    request.getSearchLogId(), request.getArticleId(),
+                    request.getIsHelpful(), request.getUserComment(), now
+                );
+            }
+            log.info("反馈已持久化: isHelpful={}, comment={}",
+                    request.getIsHelpful() == 1 ? "有用" : "无用",
+                    request.getUserComment());
+        } catch (Exception e) {
+            log.warn("反馈持久化失败 (非致命): {}", e.getMessage());
+            log.info("反馈已记录: isHelpful={}, comment={}",
+                    request.getIsHelpful() == 1 ? "有用" : "无用",
+                    request.getUserComment());
+        }
     }
 
     private List<Map<String, String>> getMockLaws() {
@@ -636,5 +659,20 @@ public class LegalSearchService {
             }
         }
         return true;
+    }
+
+    private Long persistSearchLog(String query, int resultCount, long responseTimeMs) {
+        try {
+            String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            jdbc.update(
+                "INSERT INTO search_log (query_text, result_count, response_time_ms, created_at) VALUES (?, ?, ?, ?)",
+                query, resultCount, (int) responseTimeMs, now
+            );
+            Long id = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+            return id != null ? id : System.currentTimeMillis();
+        } catch (Exception e) {
+            log.warn("搜索日志持久化失败 (非致命): {}", e.getMessage());
+        }
+        return System.currentTimeMillis();
     }
 }

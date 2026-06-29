@@ -76,7 +76,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import api from '../../api'
+import api from '../../../api'
 
 const rows = ref([])
 const loading = ref(false)

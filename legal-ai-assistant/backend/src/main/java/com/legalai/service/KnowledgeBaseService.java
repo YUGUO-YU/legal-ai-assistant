@@ -1,20 +1,17 @@
 package com.legalai.service;
 
-import com.legalai.config.MilvusConfig;
 import com.legalai.dto.KnowledgeBaseListResponse;
 import com.legalai.dto.LegalSearchResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 @Service
 public class KnowledgeBaseService {
@@ -27,78 +24,52 @@ public class KnowledgeBaseService {
     @Value("${mock.enabled:true}")
     private boolean mockEnabled;
 
-    private final AtomicLong idGenerator = new AtomicLong(5);
-    private final AtomicLong chunkIdGenerator = new AtomicLong(1);
-    private final ConcurrentHashMap<Long, KnowledgeBaseListResponse.KnowledgeBase> kbStore = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Long, List<DocumentChunk>> chunkStore = new ConcurrentHashMap<>();
-
-    @Autowired
-    private MilvusService milvusService;
-
-    @Autowired
-    private MilvusConfig milvusConfig;
+    private final JdbcTemplate jdbc;
+    private final Map<Long, List<DocumentChunk>> chunkCache = new LinkedHashMap<Long, List<DocumentChunk>>() {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, List<DocumentChunk>> eldest) {
+            return size() > 50;
+        }
+    };
 
     @Autowired
     private AIService aiService;
 
-    public KnowledgeBaseService() {
-        initMockData();
-    }
-
-    private void initMockData() {
-        String today = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE);
-
-        addKb(createKb(1L, "劳动法法规库", "劳动法律法规及相关案例汇总", "public", true, 156, 2340, "128MB", "系统管理员", today, 2));
-        addKb(createKb(2L, "合同纠纷案例", "各类合同纠纷案例集", "private", false, 89, 1560, "96MB", "张三", today, 2));
-        addKb(createKb(3L, "知识产权法规", "知识产权相关法律法规", "public", true, 234, 3200, "156MB", "系统管理员", today, 2));
-        addKb(createKb(4L, "公司法务文档", "公司内部法务文档", "private", false, 45, 680, "45MB", "李四", today, 1));
-    }
-
-    private void addKb(KnowledgeBaseListResponse.KnowledgeBase kb) {
-        kbStore.put(kb.getId(), kb);
-    }
-
-    private KnowledgeBaseListResponse.KnowledgeBase createKb(Long id, String name, String desc, String type, boolean isPublic,
-                                                               int docCount, int chunkCount, String size, String owner, String updateTime, int parseStatus) {
-        KnowledgeBaseListResponse.KnowledgeBase kb = new KnowledgeBaseListResponse.KnowledgeBase();
-        kb.setId(id);
-        kb.setName(name);
-        kb.setDescription(desc);
-        kb.setType(type);
-        kb.setIsPublic(isPublic);
-        kb.setDocCount(docCount);
-        kb.setChunkCount(chunkCount);
-        kb.setSize(size);
-        kb.setOwner(owner);
-        kb.setUpdateTime(updateTime);
-        kb.setParseStatus(parseStatus);
-        return kb;
+    public KnowledgeBaseService(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
 
     public KnowledgeBaseListResponse listKnowledgeBases(String keyword, int page, int pageSize) {
         log.info("Listing knowledge bases: keyword={}, page={}, pageSize={}", keyword, page, pageSize);
 
-        List<KnowledgeBaseListResponse.KnowledgeBase> allKbs = new ArrayList<>(kbStore.values());
-
+        StringBuilder where = new StringBuilder("WHERE 1=1 ");
+        List<Object> args = new ArrayList<>();
         if (keyword != null && !keyword.isBlank()) {
-            String kw = keyword.toLowerCase();
-            allKbs = allKbs.stream()
-                .filter(kb -> kb.getName().toLowerCase().contains(kw) ||
-                             (kb.getDescription() != null && kb.getDescription().toLowerCase().contains(kw)))
-                .toList();
+            where.append("AND (name LIKE ? OR description LIKE ?) ");
+            String like = "%" + keyword + "%";
+            args.add(like);
+            args.add(like);
         }
 
-        int total = allKbs.size();
-        int start = (page - 1) * pageSize;
-        int end = Math.min(start + pageSize, total);
+        String countSql = "SELECT COUNT(*) FROM kb_knowledge_base " + where;
+        Integer total = jdbc.queryForObject(countSql, Integer.class, args.toArray());
 
-        List<KnowledgeBaseListResponse.KnowledgeBase> pageItems = start < total
-            ? allKbs.subList(start, end)
-            : new ArrayList<>();
+        int offset = (page - 1) * pageSize;
+        String dataSql = "SELECT id, kb_uuid, name, description, owner_id, is_public, doc_count, created_at, updated_at FROM kb_knowledge_base " + where + " ORDER BY updated_at DESC LIMIT ? OFFSET ?";
+        args.add(pageSize);
+        args.add(offset);
+
+        List<Map<String, Object>> rows = jdbc.queryForList(dataSql, args.toArray());
+        List<KnowledgeBaseListResponse.KnowledgeBase> items = new ArrayList<>();
+
+        for (Map<String, Object> row : rows) {
+            KnowledgeBaseListResponse.KnowledgeBase kb = mapRowToKb(row);
+            items.add(kb);
+        }
 
         KnowledgeBaseListResponse response = new KnowledgeBaseListResponse();
-        response.setItems(pageItems);
-        response.setTotal(total);
+        response.setItems(items);
+        response.setTotal(total != null ? total : 0);
         response.setPage(page);
         response.setPageSize(pageSize);
         return response;
@@ -107,179 +78,222 @@ public class KnowledgeBaseService {
     public KnowledgeBaseListResponse.KnowledgeBase createKnowledgeBase(String name, String description, boolean isPublic) {
         log.info("Creating knowledge base: name={}, isPublic={}", name, isPublic);
 
-        long id = idGenerator.getAndIncrement();
-        String today = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE);
+        String kbUuid = "KB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String ownerId = "default";
+        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
-        KnowledgeBaseListResponse.KnowledgeBase kb = createKb(
-            id, name, description, isPublic ? "public" : "private",
-            isPublic, 0, 0, "0MB",
-            "当前用户", today, 0
+        jdbc.update(
+            "INSERT INTO kb_knowledge_base (kb_uuid, name, description, owner_id, is_public, doc_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?)",
+            kbUuid, name, description != null ? description : "", ownerId, isPublic ? 1 : 0, now, now
         );
-        kb.setIsPublic(isPublic);
 
-        addKb(kb);
-        chunkStore.put(id, new ArrayList<>());
+        Long id = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+
+        KnowledgeBaseListResponse.KnowledgeBase kb = new KnowledgeBaseListResponse.KnowledgeBase();
+        kb.setId(id);
+        kb.setName(name);
+        kb.setDescription(description != null ? description : "");
+        kb.setType(isPublic ? "public" : "private");
+        kb.setIsPublic(isPublic);
+        kb.setDocCount(0);
+        kb.setChunkCount(0);
+        kb.setSize("0MB");
+        kb.setOwner("当前用户");
+        kb.setUpdateTime(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE));
+        kb.setParseStatus(0);
         return kb;
     }
 
     public boolean deleteKnowledgeBase(Long id) {
         log.info("Deleting knowledge base: id={}", id);
-        chunkStore.remove(id);
-        return kbStore.remove(id) != null;
+        chunkCache.remove(id);
+        jdbc.update("DELETE FROM kb_chunk_store WHERE kb_id = ?", id);
+        jdbc.update("DELETE FROM kb_document WHERE kb_id = ?", id);
+        int affected = jdbc.update("DELETE FROM kb_knowledge_base WHERE id = ?", id);
+        return affected > 0;
     }
 
     public String uploadDocument(Long kbId, String fileName, String content) {
         log.info("Uploading document to kb: kbId={}, fileName={}", kbId, fileName);
 
-        KnowledgeBaseListResponse.KnowledgeBase kb = kbStore.get(kbId);
+        KnowledgeBaseListResponse.KnowledgeBase kb = getKnowledgeBase(kbId);
         if (kb == null) {
             return "知识库不存在";
         }
 
-        List<DocumentChunk> chunks = semanticChunking(content, fileName);
+        String docUuid = "DOC-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
-        for (DocumentChunk chunk : chunks) {
-            if (mockEnabled) {
-                chunk.setChunkId(chunkIdGenerator.getAndIncrement());
-            } else {
-                vectorizeChunk(chunk);
-            }
+        List<DocumentChunk> chunks = semanticChunking(content, fileName);
+        int chunkCount = chunks.size();
+
+        jdbc.update(
+            "INSERT INTO kb_document (kb_id, doc_uuid, file_name, file_type, file_size, file_path, chunk_count, parse_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 2, ?)",
+            kbId, docUuid, fileName, detectFileType(fileName), (long) content.getBytes().length, "/kb/" + kbId + "/" + docUuid, chunkCount, now
+        );
+
+        chunkCache.put(kbId, chunks);
+
+        try {
+            jdbc.update("DELETE FROM kb_chunk_store WHERE kb_id = ? AND file_name = ?", kbId, fileName);
+        } catch (Exception ignored) {
         }
 
-        List<DocumentChunk> existingChunks = chunkStore.getOrDefault(kbId, new ArrayList<>());
-        existingChunks.addAll(chunks);
-        chunkStore.put(kbId, existingChunks);
+        jdbc.update(
+            "UPDATE kb_knowledge_base SET doc_count = doc_count + 1, updated_at = ? WHERE id = ?",
+            now, kbId
+        );
 
-        kb.setDocCount(kb.getDocCount() + 1);
-        kb.setChunkCount(existingChunks.size());
-        kb.setSize(String.format("%.0fMB", existingChunks.size() * 0.01));
-        kb.setUpdateTime(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE));
-        kb.setParseStatus(2);
-
-        return String.format("文档上传成功，生成%d个语义块", chunks.size());
+        return String.format("文档上传成功，生成%d个语义块", chunkCount);
     }
 
     public List<DocumentChunk> semanticChunking(String content, String fileName) {
         List<DocumentChunk> chunks = new ArrayList<>();
-
         String[] paragraphs = content.split("\n\n");
-
         StringBuilder currentChunk = new StringBuilder();
         int currentSize = 0;
 
         for (String paragraph : paragraphs) {
             if (paragraph.trim().isEmpty()) continue;
-
             int paragraphSize = paragraph.length();
-
             if (currentSize + paragraphSize > CHUNK_SIZE && currentSize > 0) {
-                DocumentChunk chunk = new DocumentChunk();
-                chunk.setContent(currentChunk.toString().trim());
-                chunk.setFileName(fileName);
-                chunk.setChunkIndex(chunks.size());
-                chunk.setTokenCount(currentSize);
+                DocumentChunk chunk = buildChunk(currentChunk.toString().trim(), fileName, chunks.size(), currentSize);
                 chunks.add(chunk);
-
                 String overlapText = currentChunk.toString();
                 int overlapStart = Math.max(0, overlapText.length() - CHUNK_OVERLAP);
                 currentChunk = new StringBuilder(overlapText.substring(overlapStart));
                 currentSize = currentChunk.length();
             }
-
             currentChunk.append(paragraph).append("\n\n");
             currentSize += paragraphSize + 2;
         }
 
         if (currentChunk.length() > 0) {
-            DocumentChunk chunk = new DocumentChunk();
-            chunk.setContent(currentChunk.toString().trim());
-            chunk.setFileName(fileName);
-            chunk.setChunkIndex(chunks.size());
-            chunk.setTokenCount(currentSize);
-            chunks.add(chunk);
+            chunks.add(buildChunk(currentChunk.toString().trim(), fileName, chunks.size(), currentSize));
         }
 
         return chunks;
     }
 
-    private void vectorizeChunk(DocumentChunk chunk) {
-        try {
-            float[] vector = aiService.embedText(chunk.getContent());
-            chunk.setVector(vector);
-            chunk.setVectorId("VEC-" + chunkIdGenerator.getAndIncrement());
-            log.debug("向量化语义块: {}, 向量维度={}", chunk.getVectorId(), vector.length);
-        } catch (Exception e) {
-            log.error("向量化失败: {}", e.getMessage());
-        }
+    private DocumentChunk buildChunk(String content, String fileName, int index, int tokenCount) {
+        DocumentChunk chunk = new DocumentChunk();
+        chunk.setContent(content);
+        chunk.setFileName(fileName);
+        chunk.setChunkIndex(index);
+        chunk.setTokenCount(tokenCount);
+        return chunk;
     }
 
     public List<LegalSearchResponse.SearchResultItem> searchInKnowledgeBase(Long kbId, String query, int topK) {
         log.info("知识库内搜索: kbId={}, query={}, topK={}", kbId, query, topK);
 
-        List<DocumentChunk> chunks = chunkStore.get(kbId);
+        List<DocumentChunk> chunks = chunkCache.get(kbId);
         if (chunks == null || chunks.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        if (!mockEnabled && chunks.stream().anyMatch(c -> c.getVector() != null)) {
-            return semanticSearch(chunks, query, topK);
+            return loadChunksFromDb(kbId, query, topK);
         }
 
         return textSearchChunks(chunks, query, topK);
     }
 
+    private List<LegalSearchResponse.SearchResultItem> loadChunksFromDb(Long kbId, String query, int topK) {
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT file_name, LEFT(content, 1000) AS content, chunk_index FROM kb_chunk_store WHERE kb_id = ? ORDER BY chunk_index",
+                kbId
+            );
+            if (rows.isEmpty()) {
+                return Collections.emptyList();
+            }
+            List<DocumentChunk> chunks = new ArrayList<>();
+            for (Map<String, Object> row : rows) {
+                DocumentChunk chunk = new DocumentChunk();
+                chunk.setFileName((String) row.get("file_name"));
+                chunk.setContent((String) row.get("content"));
+                chunk.setChunkIndex(row.get("chunk_index") != null ? ((Number) row.get("chunk_index")).intValue() : 0);
+                chunks.add(chunk);
+            }
+            return textSearchChunks(chunks, query, topK);
+        } catch (Exception e) {
+            log.warn("从DB加载知识库分块失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     public KnowledgeBaseListResponse.KnowledgeBase getKnowledgeBase(Long id) {
-        return id == null ? null : kbStore.get(id);
+        if (id == null) return null;
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT id, kb_uuid, name, description, owner_id, is_public, doc_count, created_at, updated_at FROM kb_knowledge_base WHERE id = ?", id
+            );
+            if (rows.isEmpty()) return null;
+            return mapRowToKb(rows.get(0));
+        } catch (Exception e) {
+            log.warn("获取知识库失败: id={}, error={}", id, e.getMessage());
+            return null;
+        }
     }
 
     public List<DocumentChunk> getDocumentChunks(Long kbId) {
-        return kbId == null ? Collections.emptyList() :
-            chunkStore.getOrDefault(kbId, Collections.emptyList());
+        if (kbId == null) return Collections.emptyList();
+        List<DocumentChunk> cached = chunkCache.get(kbId);
+        if (cached != null && !cached.isEmpty()) return cached;
+
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT id as chunk_id, content, file_name, chunk_index, token_count FROM kb_chunk_store WHERE kb_id = ? ORDER BY chunk_index", kbId
+            );
+            List<DocumentChunk> chunks = new ArrayList<>();
+            for (Map<String, Object> row : rows) {
+                DocumentChunk chunk = new DocumentChunk();
+                chunk.setChunkId(((Number) row.get("chunk_id")).longValue());
+                chunk.setContent((String) row.get("content"));
+                chunk.setFileName((String) row.get("file_name"));
+                chunk.setChunkIndex(row.get("chunk_index") != null ? ((Number) row.get("chunk_index")).intValue() : 0);
+                chunk.setTokenCount(row.get("token_count") != null ? ((Number) row.get("token_count")).intValue() : 0);
+                chunks.add(chunk);
+            }
+            return chunks;
+        } catch (Exception e) {
+            log.warn("从DB获取文档分块失败: kbId={}, error={}", kbId, e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     public List<LegalSearchResponse.SearchResultItem> searchInKnowledgeBase(String kbId, String query, int topK) {
-        log.info("知识库内搜索: kbId={}, query={}", kbId, query);
-
         Long numericKbId = parseKbId(kbId);
         if (numericKbId == null) {
             log.warn("无效的知识库ID: {}", kbId);
             return Collections.emptyList();
         }
-
         return searchInKnowledgeBase(numericKbId, query, topK);
     }
 
     private Long parseKbId(String kbId) {
-        if (kbId == null || kbId.isBlank()) {
+        if (kbId == null || kbId.isBlank()) return null;
+        if (kbId.matches("\\d+")) return Long.parseLong(kbId);
+        if (kbId.matches("KB-\\d+")) return Long.parseLong(kbId.substring(3));
+        try {
+            Long id = jdbc.queryForObject("SELECT id FROM kb_knowledge_base WHERE name = ? OR kb_uuid = ? LIMIT 1", Long.class, kbId, kbId);
+            return id;
+        } catch (Exception e) {
             return null;
         }
-        if (kbId.matches("\\d+")) {
-            return Long.parseLong(kbId);
-        }
-        if (kbId.matches("KB-\\d+")) {
-            return Long.parseLong(kbId.substring(3));
-        }
-        for (Map.Entry<Long, KnowledgeBaseListResponse.KnowledgeBase> entry : kbStore.entrySet()) {
-            if (entry.getValue().getName().contains(kbId) || entry.getValue().getName().equals(kbId)) {
-                return entry.getKey();
-            }
-        }
-        return null;
     }
 
     private List<LegalSearchResponse.SearchResultItem> textSearchChunks(List<DocumentChunk> chunks, String query, int topK) {
         String lowerQuery = query.toLowerCase();
+        String[] queryWords = lowerQuery.split("\\s+");
 
         List<ScoredChunk> scoredChunks = new ArrayList<>();
         for (DocumentChunk chunk : chunks) {
             String content = chunk.getContent().toLowerCase();
             int matchCount = 0;
-            for (String word : lowerQuery.split("\\s+")) {
+            for (String word : queryWords) {
                 if (word.length() > 1 && content.contains(word)) {
                     matchCount++;
                 }
             }
-            float score = matchCount > 0 ? (float) matchCount / lowerQuery.split("\\s+").length : 0f;
+            float score = matchCount > 0 ? (float) matchCount / queryWords.length : 0f;
             if (score > 0) {
                 scoredChunks.add(new ScoredChunk(chunk, score));
             }
@@ -297,67 +311,48 @@ public class KnowledgeBaseService {
                 item.setScore(Math.min(0.99, 0.7 + sc.score * 0.25));
                 return item;
             })
-            .collect(Collectors.toList());
+            .collect(java.util.stream.Collectors.toList());
     }
 
-    private List<LegalSearchResponse.SearchResultItem> semanticSearch(List<DocumentChunk> chunks, String query, int topK) {
-        try {
-            float[] queryVector = aiService.embedText(query);
-            log.info("开始语义搜索: query长度={}, chunk数量={}", query.length(), chunks.size());
+    private KnowledgeBaseListResponse.KnowledgeBase mapRowToKb(Map<String, Object> row) {
+        KnowledgeBaseListResponse.KnowledgeBase kb = new KnowledgeBaseListResponse.KnowledgeBase();
+        kb.setId(((Number) row.get("id")).longValue());
+        kb.setName((String) row.get("name"));
+        kb.setDescription((String) row.get("description"));
+        Boolean isPublic = row.get("is_public") instanceof Boolean
+            ? (Boolean) row.get("is_public")
+            : Integer.valueOf(1).equals(((Number) row.get("is_public")).intValue());
+        kb.setIsPublic(isPublic);
+        kb.setType(isPublic ? "public" : "private");
+        kb.setOwner((String) row.getOrDefault("owner_id", "default"));
+        kb.setDocCount(row.get("doc_count") != null ? ((Number) row.get("doc_count")).intValue() : 0);
 
-            List<ScoredChunk> scoredChunks = new ArrayList<>();
-            for (DocumentChunk chunk : chunks) {
-                if (chunk.getVector() != null) {
-                    float similarity = cosineSimilarity(queryVector, chunk.getVector());
-                    scoredChunks.add(new ScoredChunk(chunk, similarity));
-                }
-            }
-
-            scoredChunks.sort((a, b) -> Float.compare(b.score, a.score));
-
-            return scoredChunks.stream()
-                .limit(topK)
-                .map(sc -> {
-                    LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
-                    item.setArticleId(String.valueOf(sc.chunk.getChunkId()));
-                    item.setTitle(sc.chunk.getFileName());
-                    item.setContent(sc.chunk.getContent());
-                    item.setScore((double) sc.score);
-                    return item;
-                })
-                .collect(Collectors.toList());
-
-        } catch (Exception e) {
-            log.error("语义搜索失败: {}", e.getMessage());
-            return chunks.stream()
-                .limit(topK)
-                .map(chunk -> {
-                    LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
-                    item.setArticleId(String.valueOf(chunk.getChunkId()));
-                    item.setTitle(chunk.getFileName());
-                    item.setContent(chunk.getContent());
-                    item.setScore(0.85);
-                    return item;
-                })
-                .collect(Collectors.toList());
+        Object updatedAt = row.get("updated_at");
+        if (updatedAt instanceof java.sql.Timestamp) {
+            kb.setUpdateTime(((java.sql.Timestamp) updatedAt).toLocalDateTime().format(DateTimeFormatter.ISO_DATE));
+        } else if (updatedAt instanceof LocalDateTime) {
+            kb.setUpdateTime(((LocalDateTime) updatedAt).format(DateTimeFormatter.ISO_DATE));
+        } else if (updatedAt != null) {
+            kb.setUpdateTime(updatedAt.toString().substring(0, 10));
+        } else {
+            kb.setUpdateTime(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE));
         }
+
+        kb.setChunkCount(0);
+        kb.setSize("0MB");
+        kb.setParseStatus(0);
+        return kb;
     }
 
-    private float cosineSimilarity(float[] a, float[] b) {
-        if (a.length != b.length) return 0f;
-
-        float dotProduct = 0f;
-        float normA = 0f;
-        float normB = 0f;
-
-        for (int i = 0; i < a.length; i++) {
-            dotProduct += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-
-        if (normA == 0f || normB == 0f) return 0f;
-        return dotProduct / (float) (Math.sqrt(normA) * Math.sqrt(normB));
+    private String detectFileType(String fileName) {
+        if (fileName == null) return "txt";
+        String lower = fileName.toLowerCase();
+        if (lower.endsWith(".pdf")) return "pdf";
+        if (lower.endsWith(".docx")) return "docx";
+        if (lower.endsWith(".doc")) return "doc";
+        if (lower.endsWith(".txt")) return "txt";
+        if (lower.endsWith(".md")) return "md";
+        return "txt";
     }
 
     private static class ScoredChunk {

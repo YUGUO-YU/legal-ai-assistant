@@ -148,7 +148,7 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import api from '../../api'
+import api from '../../../api'
 
 const range = ref('7')
 const loading = ref(false)
