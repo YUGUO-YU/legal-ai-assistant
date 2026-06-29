@@ -421,9 +421,29 @@ const printDocument = () => {
   window.print()
 }
 
-const showPasteDialog = () => {
-  pasteText.value = ''
-  showPasteDialogVisible.value = true
+const showPasteDialog = async () => {
+  if (!selectedTemplate.value) {
+    ElMessage.warning('请先选择文书模板')
+    return
+  }
+  
+  try {
+    const clipboardText = await navigator.clipboard.readText()
+    if (clipboardText && clipboardText.trim()) {
+      pasteText.value = clipboardText
+      showPasteDialogVisible.value = true
+      await handleExtractInfo()
+    } else {
+      pasteText.value = ''
+      showPasteDialogVisible.value = true
+      ElMessage.info('剪贴板为空，请手动粘贴案件信息')
+    }
+  } catch (err) {
+    console.warn('无法自动读取剪贴板，可能是浏览器权限限制:', err)
+    pasteText.value = ''
+    showPasteDialogVisible.value = true
+    ElMessage.warning('无法自动读取剪贴板，请手动粘贴案件信息')
+  }
 }
 
 const handleExtractInfo = async () => {
