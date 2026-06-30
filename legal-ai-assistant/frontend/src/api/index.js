@@ -195,6 +195,9 @@ export default {
   auth: {
     login: (data) => api.post('/auth/login', data),
     logout: () => api.post('/auth/logout'),
+    register: (data) => api.post('/auth/register', data),
+    sendVerifyCode: (username) => api.post('/auth/forgot-password', { username }),
+    resetPassword: (data) => api.post('/auth/reset-password', data),
     getUserInfo: () => withRetry(() => api.get('/auth/user-info')),
     changePassword: (data) => api.put('/auth/password', data),
     updateProfile: (data) => api.put('/auth/profile', data)

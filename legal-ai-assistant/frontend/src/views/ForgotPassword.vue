@@ -182,12 +182,13 @@ const handleGetCode = async () => {
     if (errorMsg) return
     loading.value = true
     try {
-      const res = await api.post('/auth/forgot-password', { username: form.username })
+      const res = await api.auth.sendVerifyCode(form.username)
       serverCode.value = res.data.code
       codeSent.value = true
       ElMessage.success('验证码已生成，请查收')
     } catch (e) {
-      ElMessage.error(e?.message || '获取验证码失败')
+      console.error('获取验证码失败:', e)
+      ElMessage.error(e?.message || e?.response?.data?.message || '获取验证码失败')
     } finally {
       loading.value = false
     }
@@ -199,7 +200,7 @@ const handleReset = async () => {
     if (!valid) return
     loading.value = true
     try {
-      await api.post('/auth/reset-password', {
+      await api.auth.resetPassword({
         username: form.username,
         code: form.code,
         newPassword: form.newPassword
@@ -207,7 +208,8 @@ const handleReset = async () => {
       ElMessage.success('密码重置成功，请使用新密码登录')
       router.push('/')
     } catch (e) {
-      ElMessage.error(e?.message || '重置失败')
+      console.error('重置密码失败:', e)
+      ElMessage.error(e?.message || e?.response?.data?.message || '重置失败')
     } finally {
       loading.value = false
     }

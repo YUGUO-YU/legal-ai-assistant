@@ -152,7 +152,7 @@ const handleRegister = async () => {
 
     loading.value = true
     try {
-      await api.post('/auth/register', {
+      await api.auth.register({
         username: form.username,
         password: form.password,
         realName: form.realName,
@@ -161,7 +161,8 @@ const handleRegister = async () => {
       ElMessage.success('注册成功，请登录')
       router.push('/')
     } catch (e) {
-      ElMessage.error(e?.message || '注册失败')
+      console.error('注册失败:', e)
+      ElMessage.error(e?.message || e?.response?.data?.message || '注册失败')
     } finally {
       loading.value = false
     }

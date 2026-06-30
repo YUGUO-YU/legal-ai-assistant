@@ -188,18 +188,38 @@ const router = createRouter({
   routes
 })
 
+const publicPaths = ['/', '/register', '/forgot-password']
+
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const adminToken = localStorage.getItem('admin_token')
+  const isAdminRoute = to.path.startsWith('/admin')
 
-  if (to.meta.requiresAdmin && !adminToken) {
-    next('/admin/login')
-  } else if (to.path === '/admin/login' && adminToken) {
-    next('/admin')
-  } else if (to.meta.requiresAuth && !token) {
-    next('/')
+  if (isAdminRoute) {
+    if (to.meta.requiresAdmin && !adminToken) {
+      next('/admin/login')
+    } else if (to.path === '/admin/login' && adminToken) {
+      next('/admin')
+    } else {
+      next()
+    }
+    return
+  }
+
+  if (token) {
+    if (publicPaths.includes(to.path)) {
+      next('/dashboard')
+    } else if (to.meta.requiresAuth) {
+      next()
+    } else {
+      next()
+    }
   } else {
-    next()
+    if (to.meta.requiresAuth || !publicPaths.includes(to.path)) {
+      next('/')
+    } else {
+      next()
+    }
   }
 })
 

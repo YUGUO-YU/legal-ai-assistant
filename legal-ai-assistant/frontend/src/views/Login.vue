@@ -207,8 +207,11 @@ const handleLogin = async () => {
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))
 
-      ElMessage.success('登录成功')
-      await router.push('/dashboard')
+      ElMessage.success('登录成功，即将跳转到首页...')
+
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 500)
       return
     } catch (e) {
       console.error('登录失败:', e)
