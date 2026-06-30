@@ -1,9 +1,42 @@
 <template>
   <div class="page-card">
     <div class="page-header">
-      <h2>法规查询</h2>
-      <p>查询法律法规，支持分类浏览和版本追溯</p>
+      <div class="header-content">
+        <div>
+          <h2>法规查询</h2>
+          <p>查询法律法规，支持分类浏览和版本追溯</p>
+        </div>
+        <el-button type="primary" @click="showUploadDialog">
+          <el-icon><Upload /></el-icon>
+          上传法规
+        </el-button>
+      </div>
     </div>
+
+    <el-dialog v-model="uploadDialogVisible" title="AI 联网导入法规" width="500px" :close-on-click-modal="false">
+      <el-form :model="uploadForm" label-width="100px">
+        <el-form-item label="法律名称">
+          <el-input
+            v-model="uploadForm.lawName"
+            placeholder="例如：民法典、刑法、劳动合同法"
+            clearable
+            @keyup.enter="submitLawUpload"
+          />
+        </el-form-item>
+        <el-form-item>
+          <div class="upload-tip">
+            <el-icon><InfoFilled /></el-icon>
+            <span>AI 将自动联网搜索该法律的完整条文，结构化后写入数据库</span>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="uploadDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="uploadLoading" @click="submitLawUpload">
+          开始导入
+        </el-button>
+      </template>
+    </el-dialog>
 
     <el-row :gutter="24">
       <el-col :span="6">
@@ -124,6 +157,12 @@ const searched = ref(false)
 const keyword = ref('')
 const statusFilter = ref(null)
 
+const uploadDialogVisible = ref(false)
+const uploadLoading = ref(false)
+const uploadForm = reactive({
+  lawName: ''
+})
+
 const treeData = ref([
   {
     id: 'law',
@@ -210,6 +249,32 @@ const handleSearch = async () => {
   }
 }
 
+const showUploadDialog = () => {
+  uploadForm.lawName = ''
+  uploadDialogVisible.value = true
+}
+
+const submitLawUpload = async () => {
+  if (!uploadForm.lawName.trim()) {
+    ElMessage.warning('请输入法律名称')
+    return
+  }
+
+  uploadLoading.value = true
+  try {
+    const res = await api.lawImport.webSearch({ lawName: uploadForm.lawName.trim() })
+    if (res.data) {
+      ElMessage.success('法规导入任务已启动，请到数据管理中心查看进度')
+      uploadDialogVisible.value = false
+    }
+  } catch (e) {
+    console.error('法规上传失败:', e)
+    ElMessage.error(e?.message || e?.response?.data?.message || '导入失败')
+  } finally {
+    uploadLoading.value = false
+  }
+}
+
 const handleNodeClick = (data) => {
   if (!data.children || data.children.length === 0) {
     keyword.value = data.label
@@ -283,6 +348,25 @@ const loadCategories = async () => {
       font-size: 16px;
     }
   }
+}
+
+.page-header {
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.upload-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #909399;
+  font-size: 13px;
+  background: #f6f8fa;
+  padding: 8px 12px;
+  border-radius: 4px;
 }
 
 .tree-node {
