@@ -64,9 +64,9 @@
         </el-link>
       </div>
 
-      <div class="hint-box">
+        <div class="hint-box">
         <el-icon><InfoFilled /></el-icon>
-        <span>默认账号: admin / admin123</span>
+        <span>默认账号: admin / admin</span>
       </div>
     </div>
   </div>
