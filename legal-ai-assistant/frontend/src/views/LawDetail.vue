@@ -121,6 +121,48 @@
           复制全文
         </el-button>
       </div>
+
+      <el-dialog v-model="analysisDialogVisible" title="AI法规解读" width="800px" :close-on-click-modal="false">
+        <loading v-if="analysisLoading" text="正在分析法规，请稍候..." />
+        <div v-else-if="analysisResult" class="analysis-content">
+          <el-alert v-if="analysisResult.summary" :title="analysisResult.summary" type="success" :closable="false" show-icon />
+          <el-tabs>
+            <el-tab-pane label="立法目的" v-if="analysisResult.legislativePurpose">
+              <div class="analysis-text">{{ analysisResult.legislativePurpose }}</div>
+            </el-tab-pane>
+            <el-tab-pane label="核心条款" v-if="analysisResult.coreProvisions">
+              <div class="analysis-text">{{ analysisResult.coreProvisions }}</div>
+            </el-tab-pane>
+            <el-tab-pane label="重点法条释义" v-if="analysisResult.keyArticles && analysisResult.keyArticles.length">
+              <div v-for="(article, index) in analysisResult.keyArticles" :key="index" class="article-interpretation">
+                <h4>{{ article.articleNo }} {{ article.title }}</h4>
+                <p>{{ article.interpretation }}</p>
+              </div>
+            </el-tab-pane>
+            <el-tab-pane label="适用场景" v-if="analysisResult.practicalScenarios && analysisResult.practicalScenarios.length">
+              <ul class="scenario-list">
+                <li v-for="(scenario, index) in analysisResult.practicalScenarios" :key="index">{{ scenario }}</li>
+              </ul>
+            </el-tab-pane>
+            <el-tab-pane label="关联法规" v-if="analysisResult.relatedLaws && analysisResult.relatedLaws.length">
+              <ul class="scenario-list">
+                <li v-for="(law, index) in analysisResult.relatedLaws" :key="index">{{ law }}</li>
+              </ul>
+            </el-tab-pane>
+            <el-tab-pane label="风险点" v-if="analysisResult.riskPoints && analysisResult.riskPoints.length">
+              <el-alert v-for="(risk, index) in analysisResult.riskPoints" :key="index" :title="risk" type="warning" show-icon style="margin-bottom: 8px;" />
+            </el-tab-pane>
+            <el-tab-pane label="合规建议" v-if="analysisResult.complianceSuggestions && analysisResult.complianceSuggestions.length">
+              <ul class="scenario-list">
+                <li v-for="(suggestion, index) in analysisResult.complianceSuggestions" :key="index">{{ suggestion }}</li>
+              </ul>
+            </el-tab-pane>
+          </el-tabs>
+        </div>
+        <template #footer>
+          <el-button @click="analysisDialogVisible = false">关闭</el-button>
+        </template>
+      </el-dialog>
     </div>
 
     <empty-state
@@ -156,6 +198,9 @@ const router = useRouter()
 const loading = ref(true)
 const lawData = ref(null)
 const lawArticles = ref([])
+const analysisDialogVisible = ref(false)
+const analysisLoading = ref(false)
+const analysisResult = ref(null)
 
 const loadLawDetail = async () => {
   const lawUuid = route.params.lawUuid
@@ -198,8 +243,41 @@ const getStatusType = (status) => {
   return types[status] || 'info'
 }
 
-const generateAnalysis = () => {
-  ElMessage.info('AI法规解读功能开发中...')
+const generateAnalysis = async () => {
+  if (!lawData.value && lawArticles.value.length === 0) {
+    ElMessage.warning('无法获取法规数据')
+    return
+  }
+
+  analysisResult.value = null
+  analysisDialogVisible.value = true
+  analysisLoading.value = true
+
+  try {
+    const articles = lawArticles.value.map(a => ({
+      articleNo: a.articleNo,
+      title: a.title || '',
+      content: a.content || ''
+    }))
+
+    const res = await api.lawAnalysis.analyze(
+      lawData.value?.lawUuid,
+      lawData.value?.title,
+      articles
+    )
+
+    if (res.data) {
+      analysisResult.value = res.data
+      ElMessage.success('AI法规解读完成')
+    } else {
+      throw new Error('解读结果为空')
+    }
+  } catch (e) {
+    console.error('AI法规解读失败:', e)
+    ElMessage.error(e?.message || e?.response?.data?.message || 'AI法规解读失败')
+  } finally {
+    analysisLoading.value = false
+  }
 }
 
 const copyContent = () => {
@@ -497,6 +575,45 @@ onMounted(() => {
       font-size: 14px;
       line-height: 1.8;
       color: #4b5563;
+    }
+  }
+}
+
+.analysis-content {
+  .analysis-text {
+    font-size: 14px;
+    line-height: 1.8;
+    color: #333;
+    padding: 16px;
+    background: #f9f9f9;
+    border-radius: 8px;
+  }
+
+  .article-interpretation {
+    padding: 16px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    h4 {
+      margin: 0 0 8px 0;
+      color: #1890ff;
+      font-size: 15px;
+    }
+    p {
+      margin: 0;
+      color: #333;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  }
+
+  .scenario-list {
+    padding-left: 20px;
+    li {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #333;
+      margin-bottom: 8px;
     }
   }
 }

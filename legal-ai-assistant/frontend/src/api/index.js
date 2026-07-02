@@ -149,6 +149,9 @@ export default {
     list: () => api.get('/law-favorite/list'),
     check: (lawUuid) => api.get(`/law-favorite/check/${lawUuid}`)
   },
+  lawAnalysis: {
+    analyze: (lawUuid, lawTitle, articles) => api.post('/law-analysis/analyze', { lawUuid, lawTitle, articles })
+  },
   legalResearch: {
     createTask: (data) => withRetry(() => api.post('/legal-research/tasks', data)),
     getReport: (taskId) => withRetry(() => api.get(`/legal-research/tasks/${taskId}/report`)),
