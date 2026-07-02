@@ -200,6 +200,7 @@ export default {
   },
   auth: {
     login: (data) => api.post('/auth/login', data),
+    adminLogin: (data) => api.post('/auth/admin/login', data),
     logout: () => api.post('/auth/logout'),
     register: (data) => api.post('/auth/register', data),
     sendVerifyCode: (username) => api.post('/auth/forgot-password', { username }),

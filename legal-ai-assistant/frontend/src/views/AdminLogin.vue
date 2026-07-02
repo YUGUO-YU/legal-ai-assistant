@@ -112,7 +112,7 @@ const handleLogin = async () => {
   console.log('Making API call to /auth/admin/login')
   loading.value = true
   try {
-    const res = await api.post('/auth/admin/login', {
+    const res = await api.auth.adminLogin({
       username: form.username,
       password: form.password
     })
