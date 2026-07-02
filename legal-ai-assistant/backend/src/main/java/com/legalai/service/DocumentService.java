@@ -535,82 +535,77 @@ public class DocumentService {
         ExtractedInfo info = new ExtractedInfo();
 
         try {
-            // 原告姓名 - 匹配"原告"后跟姓名
-            String plaintiff = extractAfterKeyword(text, "原告", 50);
-            if (plaintiff != null) {
-                plaintiff = plaintiff.replaceAll("(住所|地址|住|男|女|族|身份证号|住址|出生|汉族|公司|有限|有限公司).*$", "").trim();
-                plaintiff = cleanName(plaintiff);
-            }
-            info.setPlaintiffName(plaintiff != null && plaintiff.length() >= 2 ? plaintiff : null);
+            // 1. 原告姓名 - 多种格式支持
+            String plaintiff = extractPartyName(text, "原告");
+            if (plaintiff == null) plaintiff = extractPartyName(text, "申请人");
+            if (plaintiff == null) plaintiff = extractPartyName(text, "申请执行人");
+            if (plaintiff == null) plaintiff = extractPartyName(text, "委托代理人");
+            info.setPlaintiffName(plaintiff);
 
-            // 被告姓名
-            String defendant = extractAfterKeyword(text, "被告", 50);
-            if (defendant != null) {
-                defendant = defendant.replaceAll("(住所|地址|住|男|女|族|身份证号|住址|出生|汉族|公司|有限|有限公司).*$", "").trim();
-                defendant = cleanName(defendant);
-            }
-            info.setDefendantName(defendant != null && defendant.length() >= 2 ? defendant : null);
+            // 2. 被告姓名 - 多种格式支持
+            String defendant = extractPartyName(text, "被告");
+            if (defendant == null) defendant = extractPartyName(text, "被申请人");
+            if (defendant == null) defendant = extractPartyName(text, "被执行人");
+            if (defendant == null) defendant = extractPartyName(text, "被诉人");
+            info.setDefendantName(defendant);
 
-            // 原告地址
-            String plaintiffAddr = extractAddressAfterKeyword(text, "原告", 100);
+            // 3. 原告地址
+            String plaintiffAddr = extractAddress(text, "原告");
+            if (plaintiffAddr == null) plaintiffAddr = extractAddress(text, "申请人");
             info.setPlaintiffAddress(plaintiffAddr);
 
-            // 被告地址
-            String defendantAddr = extractAddressAfterKeyword(text, "被告", 100);
+            // 4. 被告地址
+            String defendantAddr = extractAddress(text, "被告");
+            if (defendantAddr == null) defendantAddr = extractAddress(text, "被申请人");
             info.setDefendantAddress(defendantAddr);
 
-            // 法院名称
+            // 5. 法院名称
             String court = extractCourtName(text);
             info.setCourtName(court);
 
-            // 诉讼金额
+            // 6. 诉讼金额
             BigDecimal amount = parseAmount(text);
             if (amount != null) {
                 info.setClaimAmount(amount);
             }
 
-            // 诉讼请求
+            // 7. 诉讼请求
             String claimDesc = extractClaimDescription(text);
             info.setClaimDescription(claimDesc);
 
-            // 事实与理由
+            // 8. 事实与理由
             String facts = extractFacts(text);
             info.setFacts(facts);
 
-            // 用人单位（劳动纠纷）
-            String employer = extractAfterKeyword(text, "用人单位", 60);
+            // 9. 用人单位（劳动纠纷）
+            String employer = extractPartyName(text, "用人单位");
             if (employer != null) {
                 employer = employer.replaceAll("(住所|地址|统一社会信用代码).*$", "").trim();
             }
-            info.setEmployerName(employer != null && employer.length() >= 2 ? employer : null);
+            info.setEmployerName(employer);
 
-            // 劳动者
-            String employee = extractAfterKeyword(text, "劳动者", 30);
-            info.setEmployeeName(cleanName(employee));
+            // 10. 劳动者
+            String employee = extractPartyName(text, "劳动者");
+            info.setEmployeeName(employee);
 
-            // 工作岗位
-            String workContent = firstMatch(text,
-                "工作岗位[：:为]\\s*([\\u4e00-\\u9fa5A-Za-z0-9、，,\\-\\s]{2,40})",
-                "从事\\s*([\\u4e00-\\u9fa5A-Za-z0-9、，,\\-\\s]{2,40})");
-            info.setWorkContent(workContent != null ? workContent.trim() : null);
+            // 11. 工作岗位
+            String workContent = extractField(text, "工作岗位", 40);
+            if (workContent == null) workContent = extractField(text, "从事", 40);
+            info.setWorkContent(workContent);
 
-            // 工资
-            String salary = firstMatch(text,
-                "(?:月工资|工资|月薪)[为约是]\\s*([\\d,，\\.\\s]+(?:元|万元|块|人民币)?)",
-                "工资[为约是]\\s*([\\d,，\\.\\s]+(?:元|万元|块|人民币)?)");
-            info.setSalary(salary != null ? salary.trim() : null);
+            // 12. 工资
+            String salary = extractField(text, "工资", 20);
+            if (salary == null) salary = extractField(text, "月薪", 20);
+            if (salary == null) salary = extractField(text, "月工资", 20);
+            info.setSalary(salary);
 
-            // 入职日期
-            String startDate = firstMatch(text,
-                "(?:入职|于|自)\\s*(\\d{4}[年\\-/.]\\d{1,2}[月\\-/.]\\d{1,2}[日]?)",
-                "(\\d{4}年\\d{1,2}月\\d{1,2}日?)");
-            info.setStartDate(startDate != null ? startDate.replaceAll("\\s+", "").trim() : null);
+            // 13. 入职日期
+            String startDate = extractDate(text);
+            info.setStartDate(startDate);
 
-            // 争议类型
-            String dispute = firstMatch(text,
-                "争议类型[：:]\\s*([\\u4e00-\\u9fa5A-Za-z]{2,30})",
-                "(?:劳动争议|工伤赔偿|工资争议|劳动合同纠纷|社会保险纠纷|经济补偿金纠纷|违法解除劳动合同|民事纠纷|合同纠纷|房屋租赁纠纷|借款合同纠纷)");
-            info.setDisputeType(dispute != null ? dispute.trim() : null);
+            // 14. 争议类型
+            String dispute = extractDisputeType(text);
+            info.setDisputeType(dispute);
 
         } catch (Exception e) {
             log.warn("本地正则提取异常: {}", e.getMessage());
@@ -619,150 +614,236 @@ public class DocumentService {
         return info;
     }
 
-    private String extractAfterKeyword(String text, String keyword, int maxLen) {
+    private String extractPartyName(String text, String keyword) {
         if (text == null || keyword == null) return null;
+        
+        // 找到关键字位置
         int idx = text.indexOf(keyword);
         if (idx < 0) return null;
+        
+        // 关键字后一段文字（到换行或足够长）
         int start = idx + keyword.length();
-        int end = Math.min(start + maxLen, text.length());
+        int end = Math.min(start + 80, text.length());
         String segment = text.substring(start, end);
-        Pattern p = Pattern.compile("[\\u4e00-\\u9fa5A-Za-z·\\.]{2,30}");
+        
+        // 移除常见前缀词
+        segment = segment.replaceAll("^[：:,，\\s为叫字]+", "");
+        
+        // 匹配姓名或单位名
+        // 中文姓名：2-4个汉字+可选的·+2-4个汉字
+        Pattern p = Pattern.compile("^[\\u4e00-\\u9fa5]{2,4}(?:[·•][\\u4e00-\\u9fa5]{2,4})?");
         Matcher m = p.matcher(segment);
         if (m.find()) {
-            return m.group();
+            String name = m.group().trim();
+            // 去掉常见后缀
+            name = name.replaceAll("(住所|地址|住|男|女|族|身份证号|住址|出生|汉族|公司|有限|有限公司| Corporation).*$", "");
+            if (name.length() >= 2) return name;
         }
-        p = Pattern.compile("[^\\s]{2,30}");
+        
+        // 匹配公司名：XX有限公司 / XX公司 / XX集团
+        p = Pattern.compile("^[\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{4,50}(?:有限公司|公司|集团|企业|合作社|协会)?
+                (?:住所|地址|注册地)?");
         m = p.matcher(segment);
         if (m.find()) {
-            return m.group();
+            String name = m.group().trim();
+            name = name.replaceAll("(住所|地址|住|注册地|统一社会信用代码).*$", "");
+            if (name.length() >= 4) return name;
         }
+        
         return null;
     }
 
-    private String extractAddressAfterKeyword(String text, String keyword, int maxLen) {
+    private String extractAddress(String text, String keyword) {
         if (text == null || keyword == null) return null;
+        
         int idx = text.indexOf(keyword);
         if (idx < 0) return null;
+        
         int start = idx + keyword.length();
-        int end = Math.min(start + maxLen, text.length());
+        int end = Math.min(start + 150, text.length());
         String segment = text.substring(start, end);
+        
+        // 移除前缀标点和空格
+        segment = segment.replaceAll("^[：:,，\\s为住]+", "");
+        
+        // 找到第一个换行，截取第一行作为地址
         int lineEnd = segment.indexOf('\n');
-        if (lineEnd > 0) {
+        if (lineEnd > 0 && lineEnd < 120) {
             segment = segment.substring(0, lineEnd);
         }
+        
+        // 截取到常见分隔符
         int commaEnd = segment.indexOf('，');
-        if (commaEnd > 0 && commaEnd < 80) {
+        if (commaEnd > 10 && commaEnd < 100) {
             segment = segment.substring(0, commaEnd);
         }
-        segment = segment.replaceAll("^[：:,，\\s]+", "").trim();
-        if (segment.length() >= 4) {
+        
+        // 截取到句号
+        int periodEnd = segment.indexOf('。');
+        if (periodEnd > 10 && periodEnd < 100) {
+            segment = segment.substring(0, periodEnd);
+        }
+        
+        segment = segment.trim();
+        
+        // 验证是否是有效地址（包含省/市/区/县/路/街/道/镇/乡/号等）
+        if (segment.length() >= 6 && (
+            segment.contains("省") || segment.contains("市") || segment.contains("区") ||
+            segment.contains("县") || segment.contains("路") || segment.contains("街") ||
+            segment.contains("道") || segment.contains("镇") || segment.contains("乡") ||
+            segment.contains("号") || segment.contains("栋") || segment.contains("楼") ||
+            segment.contains("室") || segment.contains("弄")
+        )) {
             return segment;
         }
+        
+        // 如果不包含地址关键词但长度合适也返回
+        if (segment.length() >= 8 && segment.length() <= 120) {
+            return segment;
+        }
+        
         return null;
     }
 
     private String extractCourtName(String text) {
         if (text == null) return null;
-        // 优先匹配"XX人民法院"格式
-        Pattern p = Pattern.compile("([\\u4e00-\\u9fa5]{2,10}人民法院)");
+        
+        // 优先匹配"XX市XX人民法院"格式
+        Pattern p = Pattern.compile("([\\u4e00-\\u9fa5]{2,6}人民法院)");
         Matcher m = p.matcher(text);
         if (m.find()) {
             return m.group(1);
         }
-        // 匹配"XX法院"格式
+        
+        // 匹配"XX市XX法院"格式
         p = Pattern.compile("([\\u4e00-\\u9fa5]{2,8}法院)");
         m = p.matcher(text);
         if (m.find()) {
             return m.group(1);
         }
+        
         // 匹配"管辖法院：XXX"格式
-        p = Pattern.compile("(?:管辖法院|受案法院|起诉至|向)[\\s：:]*([\\u4e00-\\u9fa5A-Za-z]{2,15}(?:人民法院|法院))");
+        p = Pattern.compile("(?:管辖法院|受案法院|起诉至|向|移送至)[\\s：:]*([\\u4e00-\\u9fa5A-Za-z]{2,15}(?:人民法院|法院))");
         m = p.matcher(text);
         if (m.find()) {
             return m.group(1);
         }
+        
         return null;
     }
 
     private String extractClaimDescription(String text) {
         if (text == null) return null;
-        // 匹配"诉讼请求："后的大段内容
-        Pattern p = Pattern.compile("(?:诉讼请求|请求事项|仲裁请求|索赔|请求)[：:][\\s\\S]{1,1000}(?=(?:事实|理由|证据|此致|$))");
+        
+        // 匹配"诉讼请求："或"请求事项："后的内容
+        Pattern p = Pattern.compile("(?:诉讼请求|请求事项|仲裁请求|索赔|请求)[：:][\\s\\S]{1,2000}(?=(?:事实|理由|证据|此致|$))");
         Matcher m = p.matcher(text);
         if (m.find()) {
             String result = m.group();
             result = result.replaceAll("^(?:诉讼请求|请求事项|仲裁请求|索赔|请求)[：:]", "").trim();
-            return result.length() > 0 ? result : null;
+            if (result.length() > 0) return result;
         }
-        // 匹配"1. xxx 2. xxx"格式
-        p = Pattern.compile("(?:1[、.．][\\s\\S]{10,500}|一[、.．][\\s\\S]{10,500})");
+        
+        // 匹配"1. xxx"格式的列表
+        p = Pattern.compile("(?:1[、.．][\\s\\S]{5,300}){1,5}");
         m = p.matcher(text);
         if (m.find()) {
             return m.group().trim();
         }
+        
+        // 匹配"一、xxx"格式
+        p = Pattern.compile("(?:一[、.．][\\s\\S]{5,300}){1,5}");
+        m = p.matcher(text);
+        if (m.find()) {
+            return m.group().trim();
+        }
+        
         return null;
     }
 
     private String extractFacts(String text) {
         if (text == null) return null;
+        
         // 匹配"事实与理由："或"事实："后的内容
-        Pattern p = Pattern.compile("(?:事实(?:与理由)?|理由|案情|案件事实)[：:][\\s\\S]{10,3000}(?=(?:此致|具状|落款|申请人|$))");
+        Pattern p = Pattern.compile("(?:事实(?:与理由)?|理由|案情|案件事实)[：:][\\s\\S]{10,5000}(?=(?:此致|具状|落款|申请人|$))");
         Matcher m = p.matcher(text);
         if (m.find()) {
             String result = m.group();
             result = result.replaceAll("^(?:事实(?:与理由)?|理由|案情|案件事实)[：:]", "").trim();
-            return result.length() > 0 ? result : null;
+            if (result.length() > 0) return result;
         }
+        
         return null;
     }
 
-            String claimDesc = firstMatch(text,
-                "(?:诉讼请求|请求|仲裁请求|索赔)[：:][\\s\\S]{1,800}?(?=(?:事实|理由|证据|此致|$))",
-                "请求事项[：:][\\s\\S]{1,800}",
-                "(?:1\\.|一[、.]).{0,100}(?:赔偿|支付|返还|补偿)");
-            info.setClaimDescription(claimDesc == null ? "" : claimDesc.trim());
-
-            String facts = firstMatch(text,
-                "(?:事实(?:与理由)?|理由|案情|案件事实)[：:][\\s\\S]{10,3000}?(?=(?:此致|具状|落款|申请人|$))",
-                "事实与理由[：:][\\s\\S]{10,3000}",
-                "事实[：:][\\s\\S]{10,3000}");
-            info.setFacts(facts == null ? "" : facts.trim());
-
-            String employer = firstMatch(text,
-                "用人单位[：:]\\s*([\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{2,50})",
-                "被申请人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{2,50})");
-            info.setEmployerName(employer == null ? "" : employer.replaceAll("(住所|地址|统一社会信用代码).*$", "").trim());
-
-            String employee = firstMatch(text,
-                "劳动者[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})",
-                "申请人[：:]\\s*([\\u4e00-\\u9fa5A-Za-z·\\.]{2,30})");
-            info.setEmployeeName(cleanName(employee));
-
-            String workContent = firstMatch(text,
-                "工作岗位[：:]\\s*([\\u4e00-\\u9fa5A-Za-z0-9、，,\\-\\s]{2,40})",
-                "从事[\\s]*([\\u4e00-\\u9fa5A-Za-z0-9、，,\\-\\s]{2,40}?)(?:工作|岗位|劳动)");
-            info.setWorkContent(workContent == null ? "" : workContent.trim());
-
-            String salary = firstMatch(text,
-                "月?工资[为于约]?\\s*([\\d,，\\.\\s]+(?:元|万元|块|人民币)?)",
-                "月薪[为于约]?\\s*([\\d,，\\.\\s]+(?:元|万元|块|人民币)?)");
-            info.setSalary(salary == null ? "" : salary.trim());
-
-            String startDate = firstMatch(text,
-                "(?:于|自)\\s*(\\d{4}\\s*年\\s*\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日?)(?:起)?(?:入?(?:职|厂|司))?",
-                "入职日期[：:]\\s*(\\d{4}[-/]\\d{1,2}[-/]\\d{1,2})",
-                "(?:于|自)\\s*(\\d{4}[-/]\\d{1,2}[-/]\\d{1,2})");
-            info.setStartDate(startDate == null ? "" : startDate.replaceAll("\\s+", "").trim());
-
-            String dispute = firstMatch(text,
-                "争议类型[：:]\\s*([\\u4e00-\\u9fa5A-Za-z]{2,30})",
-                "(劳动争议|工伤赔偿|工资争议|劳动合同纠纷|社会保险纠纷|经济补偿金纠纷|违法解除劳动合同|民事纠纷|合同纠纷)");
-            info.setDisputeType(dispute == null ? "" : dispute.trim());
-        } catch (Exception e) {
-            log.warn("本地正则提取异常: {}", e.getMessage());
+    private String extractField(String text, String keyword, int maxLen) {
+        if (text == null || keyword == null) return null;
+        
+        int idx = text.indexOf(keyword);
+        if (idx < 0) return null;
+        
+        int start = idx + keyword.length();
+        int end = Math.min(start + maxLen, text.length());
+        String segment = text.substring(start, end);
+        
+        // 移除前缀
+        segment = segment.replaceAll("^[：:,，\\s为是]+", "");
+        
+        // 截取到换行或足够长度
+        int lineEnd = segment.indexOf('\n');
+        if (lineEnd > 0) {
+            segment = segment.substring(0, lineEnd);
         }
+        
+        segment = segment.trim();
+        if (segment.length() >= 2) {
+            return segment;
+        }
+        
+        return null;
+    }
 
-        return info;
+    private String extractDate(String text) {
+        if (text == null) return null;
+        
+        // 多种日期格式
+        String[] datePatterns = {
+            "(\\d{4}年\\d{1,2}月\\d{1,2}日?)",
+            "(\\d{4}[年\\-/.]\\d{1,2}[月\\-/.]\\d{1,2}[日]?)",
+            "(\\d{8})"
+        };
+        
+        for (String p : datePatterns) {
+            Pattern pattern = Pattern.compile(p);
+            Matcher m = pattern.matcher(text);
+            if (m.find()) {
+                String date = m.group(1);
+                date = date.replaceAll("\\s+", "");
+                return date;
+            }
+        }
+        
+        return null;
+    }
+
+    private String extractDisputeType(String text) {
+        if (text == null) return null;
+        
+        String[] disputes = {
+            "劳动争议", "工伤赔偿", "工资争议", "劳动合同纠纷", "社会保险纠纷",
+            "经济补偿金纠纷", "违法解除劳动合同", "民事纠纷", "合同纠纷",
+            "房屋租赁纠纷", "借款合同纠纷", "买卖合同纠纷", "租赁合同纠纷",
+            "服务合同纠纷", "委托合同纠纷", "赠与合同纠纷", "承揽合同纠纷",
+            "建设工程合同纠纷", "运输合同纠纷", "技术合同纠纷", "知识产权纠纷"
+        };
+        
+        for (String dispute : disputes) {
+            if (text.contains(dispute)) {
+                return dispute;
+            }
+        }
+        
+        return null;
     }
 
     private String firstMatch(String text, String... patterns) {
