@@ -266,10 +266,6 @@ import {
   Download,
   Printer,
   Search,
-  DocumentCopy,
-  Download,
-  Printer,
-  Search,
   DocumentCopy
 } from '@element-plus/icons-vue'
 import api from '../api'
