@@ -29,6 +29,10 @@ public class ExtractedInfo {
     private String defendantIdCard;
     private String claimBasis;
     private String evidence;
+    private String unifiedSocialCreditCode;
+    private String legalRepresentative;
+    private String position;
+    private String residenceAddress;
 
     public boolean isSuccess() {
         return success;
@@ -220,5 +224,37 @@ public class ExtractedInfo {
 
     public void setEvidence(String evidence) {
         this.evidence = evidence;
+    }
+
+    public String getUnifiedSocialCreditCode() {
+        return unifiedSocialCreditCode;
+    }
+
+    public void setUnifiedSocialCreditCode(String unifiedSocialCreditCode) {
+        this.unifiedSocialCreditCode = unifiedSocialCreditCode;
+    }
+
+    public String getLegalRepresentative() {
+        return legalRepresentative;
+    }
+
+    public void setLegalRepresentative(String legalRepresentative) {
+        this.legalRepresentative = legalRepresentative;
+    }
+
+    public String getPosition() {
+        return position;
+    }
+
+    public void setPosition(String position) {
+        this.position = position;
+    }
+
+    public String getResidenceAddress() {
+        return residenceAddress;
+    }
+
+    public void setResidenceAddress(String residenceAddress) {
+        this.residenceAddress = residenceAddress;
     }
 }

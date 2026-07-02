@@ -637,6 +637,22 @@ public class DocumentService {
             String evidence = extractEvidence(text);
             info.setEvidence(evidence);
 
+            // 22. 统一社会信用代码
+            String creditCode = extractUnifiedSocialCreditCode(text);
+            info.setUnifiedSocialCreditCode(creditCode);
+
+            // 23. 法定代表人
+            String legalRep = extractLegalRepresentative(text);
+            info.setLegalRepresentative(legalRep);
+
+            // 24. 职务
+            String position = extractPosition(text);
+            info.setPosition(position);
+
+            // 25. 住所地
+            String residence = extractResidenceAddress(text);
+            info.setResidenceAddress(residence);
+
         } catch (Exception e) {
             log.warn("本地正则提取异常: {}", e.getMessage());
         }
@@ -1000,6 +1016,78 @@ public class DocumentService {
             if (evidence.length() >= 10) {
                 return evidence;
             }
+        }
+        
+        return null;
+    }
+
+    private String extractUnifiedSocialCreditCode(String text) {
+        if (text == null) return null;
+        
+        // 统一社会信用代码是18位数字和大写字母组合
+        Pattern p = Pattern.compile("(?:统一社会信用代码|信用代码|代码)[：:]?\\s*([1-9A-HJ-NPQRTUWXY]{2}\\d{6}[1-9A-HJ-NPQRTUWXY]{9}[0-9A-Z])");
+        Matcher m = p.matcher(text);
+        if (m.find()) {
+            return m.group(1);
+        }
+        
+        // 直接匹配18位统一社会信用代码格式
+        p = Pattern.compile("\\b([1-9A-HJ-NPQRTUWXY]{2}\\d{6}[1-9A-HJ-NPQRTUWXY]{9}[0-9A-Z])\\b");
+        m = p.matcher(text);
+        if (m.find()) {
+            return m.group(1);
+        }
+        
+        return null;
+    }
+
+    private String extractLegalRepresentative(String text) {
+        if (text == null) return null;
+        
+        // 匹配"法定代表人：XXX"或"法人代表：XXX"或"法定代表人：XXX（职务）"
+        Pattern p = Pattern.compile("(?:法定代表人|法人代表|法人|负责人)[：:]\\s*([\\u4e00-\\u9fa5]{2,6})(?:[（\\(][\\u4e00-\\u9fa5]{2,10}[）\\)])?");
+        Matcher m = p.matcher(text);
+        if (m.find()) {
+            return m.group(1);
+        }
+        
+        return null;
+    }
+
+    private String extractPosition(String text) {
+        if (text == null) return null;
+        
+        // 匹配"职务：XXX"或"职位：XXX"或"担任职务：XXX"
+        Pattern p = Pattern.compile("(?:职务|职位|担任职务|岗位)[：:]\\s*([\\u4e00-\\u9fa5A-Za-z0-9]{2,20})");
+        Matcher m = p.matcher(text);
+        if (m.find()) {
+            return m.group(1).trim();
+        }
+        
+        // 从法定代表人后面的括号中提取职务
+        p = Pattern.compile("(?:法定代表人|法人代表|法人)[：:]\\s*[\\u4e00-\\u9fa5]{2,6}[（\\(]([\\u4e00-\\u9fa5]{2,10})[）\\)]");
+        m = p.matcher(text);
+        if (m.find()) {
+            return m.group(1);
+        }
+        
+        return null;
+    }
+
+    private String extractResidenceAddress(String text) {
+        if (text == null) return null;
+        
+        // 匹配"住所地：XXX"或"住所：XXX"或"地址：XXX"
+        Pattern p = Pattern.compile("(?:住所地|住所|注册地址|经营地址)[：:]\\s*([\\u4e00-\\u9fa5A-Za-z0-9省市区县路街道号弄室栋楼\\-，,]{10,150})");
+        Matcher m = p.matcher(text);
+        if (m.find()) {
+            String addr = m.group(1).trim();
+            // 截取到换行或特定分隔符
+            int lineEnd = addr.indexOf('\n');
+            if (lineEnd > 0) addr = addr.substring(0, lineEnd);
+            int commaEnd = addr.indexOf('，');
+            if (commaEnd > 10 && commaEnd < 100) addr = addr.substring(0, commaEnd);
+            return addr.trim();
         }
         
         return null;
