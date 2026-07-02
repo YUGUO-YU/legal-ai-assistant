@@ -95,25 +95,29 @@ const rules = {
 
 const handleLogin = async () => {
   if (!formRef.value) return
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-    loading.value = true
-    try {
-      const res = await api.post('/auth/admin/login', {
-        username: form.username,
-        password: form.password
-      })
-      localStorage.setItem('admin_token', res.data.token)
-      localStorage.setItem('admin_user', JSON.stringify(res.data.userInfo))
-      ElMessage.success('登录成功')
-      router.push('/admin')
-    } catch (e) {
-      const msg = e?.response?.data?.error || e?.response?.data?.message || '登录失败'
-      ElMessage.error(msg)
-    } finally {
-      loading.value = false
-    }
-  })
+
+  try {
+    await formRef.value.validate()
+  } catch (e) {
+    return
+  }
+
+  loading.value = true
+  try {
+    const res = await api.post('/auth/admin/login', {
+      username: form.username,
+      password: form.password
+    })
+    localStorage.setItem('admin_token', res.data.token)
+    localStorage.setItem('admin_user', JSON.stringify(res.data.userInfo))
+    ElMessage.success('登录成功')
+    router.push('/admin')
+  } catch (e) {
+    const msg = e?.response?.data?.error || e?.response?.data?.message || '登录失败'
+    ElMessage.error(msg)
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

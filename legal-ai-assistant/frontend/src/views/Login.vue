@@ -183,44 +183,45 @@ const refreshCaptcha = () => {
 const handleLogin = async () => {
   if (!loginFormRef.value) return
 
-  await loginFormRef.value.validate(async (valid) => {
-    if (!valid) return
+  try {
+    await loginFormRef.value.validate()
+  } catch (e) {
+    return
+  }
 
-    if (loginForm.captcha.toUpperCase() !== captchaText.value.toUpperCase()) {
-      ElMessage.error('验证码错误')
-      refreshCaptcha()
-      return
+  if (loginForm.captcha.toUpperCase() !== captchaText.value.toUpperCase()) {
+    ElMessage.error('验证码错误')
+    refreshCaptcha()
+    return
+  }
+
+  loading.value = true
+
+  try {
+    const res = await api.auth.login({
+      username: loginForm.username,
+      password: loginForm.password
+    })
+
+    if (!res?.data?.token) {
+      throw new Error('登录响应数据异常')
     }
 
-    loading.value = true
+    localStorage.setItem('token', res.data.token)
+    localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))
 
-    try {
-      const res = await api.auth.login({
-        username: loginForm.username,
-        password: loginForm.password
-      })
+    ElMessage.success('登录成功，即将跳转到首页...')
 
-      if (!res?.data?.token) {
-        throw new Error('登录响应数据异常')
-      }
-
-      localStorage.setItem('token', res.data.token)
-      localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))
-
-      ElMessage.success('登录成功，即将跳转到首页...')
-
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 500)
-      return
-    } catch (e) {
-      console.error('登录失败:', e)
-      ElMessage.error(e?.message || '登录失败，请检查用户名和密码')
-      refreshCaptcha()
-    } finally {
-      loading.value = false
-    }
-  })
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 500)
+  } catch (e) {
+    console.error('登录失败:', e)
+    ElMessage.error(e?.message || '登录失败，请检查用户名和密码')
+    refreshCaptcha()
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => {
