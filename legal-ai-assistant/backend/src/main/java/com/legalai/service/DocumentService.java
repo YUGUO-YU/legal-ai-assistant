@@ -214,8 +214,29 @@ public class DocumentService {
             throw new IllegalArgumentException("不支持的文书模板: " + request.getTemplateCode());
         }
 
-        String content = generateDocumentContent(template, request);
-        String contentSource = "本地模板生成";
+        String content;
+        String contentSource;
+        String localContent = generateDocumentContent(template, request);
+        
+        if (mockEnabled || llmClient == null) {
+            content = localContent;
+            contentSource = "本地模板生成";
+        } else {
+            try {
+                String enhancedContent = enhanceDocumentWithAI(localContent, template, request);
+                if (enhancedContent != null && !enhancedContent.trim().isEmpty()) {
+                    content = enhancedContent;
+                    contentSource = "AI优化增强";
+                } else {
+                    content = localContent;
+                    contentSource = "本地模板生成";
+                }
+            } catch (Exception e) {
+                log.warn("[Document] AI优化失败，使用本地模板: {}", e.getMessage());
+                content = localContent;
+                contentSource = "本地模板生成";
+            }
+        }
 
         String riskPrompt = generateRiskPrompt(template, request);
         String disclaimer = generateDisclaimer(template, request.getCaseData());
@@ -258,6 +279,34 @@ public class DocumentService {
             + "案件信息：\n" + facts.toString();
 
         log.info("[Document] 调 LLM 起草 {} 文书，prompt 长度={}", template.name, prompt.length());
+        return llmClient.chat(prompt);
+    }
+
+    private String enhanceDocumentWithAI(String localContent, DocumentTemplate template, DocumentDraftRequest request) throws Exception {
+        DocumentDraftRequest.DocumentData data = request.getCaseData();
+        StringBuilder caseInfo = new StringBuilder();
+        if (data != null) {
+            if (notEmpty(data.getPlaintiffName())) caseInfo.append("原告：").append(data.getPlaintiffName()).append("\n");
+            if (notEmpty(data.getPlaintiffAddress())) caseInfo.append("原告地址：").append(data.getPlaintiffAddress()).append("\n");
+            if (notEmpty(data.getDefendantName())) caseInfo.append("被告：").append(data.getDefendantName()).append("\n");
+            if (notEmpty(data.getDefendantAddress())) caseInfo.append("被告地址：").append(data.getDefendantAddress()).append("\n");
+            if (data.getClaimAmount() != null) caseInfo.append("诉讼金额：").append(data.getClaimAmount()).append(" 元\n");
+            if (notEmpty(data.getClaimDescription())) caseInfo.append("诉讼请求：").append(data.getClaimDescription()).append("\n");
+            if (data.getFacts() != null && !data.getFacts().isEmpty()) caseInfo.append("事实与理由：\n").append(String.join("\n", data.getFacts())).append("\n");
+            if (notEmpty(data.getCourtName())) caseInfo.append("管辖法院：").append(data.getCourtName()).append("\n");
+        }
+
+        String prompt = "你是一名资深中国法律文书专家。请根据以下本地模板生成的文书和案件信息，对文书进行优化润色。\n\n"
+            + "要求：\n"
+            + "1. 保持文书基本结构和格式不变；\n"
+            + "2. 优化语言表达，使其更加严谨规范；\n"
+            + "3. 确保【】占位符被真实信息替换（如已提供）；\n"
+            + "4. 引用相关法条（参考：" + String.join("、", template.referencedLaws) + "）；\n"
+            + "5. 直接输出优化后的文书正文，不要任何解释或 Markdown 包裹。\n\n"
+            + "案件信息：\n" + caseInfo.toString() + "\n\n"
+            + "本地模板生成的内容：\n" + localContent;
+
+        log.info("[Document] AI优化文书，prompt 长度={}", prompt.length());
         return llmClient.chat(prompt);
     }
 
@@ -518,7 +567,9 @@ public class DocumentService {
             info.setDefendantAddress(cleanAddress(defendantAddr));
 
             String court = firstMatch(text,
-                "(?:管辖法院|受案法院|移送|由)[^\n]{5,50}", "[\u4e00-\u9fa5A-Za-z]{2,20}法院", "法院[^\n]{0,50}");
+                "(?:管辖法院|受案法院|移送|由|起诉至|向)[^\n]{0,30}?([\u4e00-\\u9fa5A-Za-z]{2,20}法院)",
+                "([\u4e00-\\u9fa5A-Za-z]{2,20}人民法院)",
+                "法院[^\n]{0,30}([\u4e00-\\u9fa5A-Za-z]{2,15}法院)");
             info.setCourtName(cleanCourt(court));
 
             BigDecimal amount = parseAmount(text);
@@ -527,11 +578,15 @@ public class DocumentService {
             }
 
             String claimDesc = firstMatch(text,
-                "(?:诉讼请求|请求|仲裁请求)[：:][^\n]{1,500}");
+                "(?:诉讼请求|请求|仲裁请求|索赔)[：:][\\s\\S]{1,800}?(?=(?:事实|理由|证据|此致|$))",
+                "请求事项[：:][\\s\\S]{1,800}",
+                "(?:1\\.|一[、.]).{0,100}(?:赔偿|支付|返还|补偿)");
             info.setClaimDescription(claimDesc == null ? "" : claimDesc.trim());
 
             String facts = firstMatch(text,
-                "(?:事实|理由|案情)[：:][^\n]{10,2000}");
+                "(?:事实(?:与理由)?|理由|案情|案件事实)[：:][\\s\\S]{10,3000}?(?=(?:此致|具状|落款|申请人|$))",
+                "事实与理由[：:][\\s\\S]{10,3000}",
+                "事实[：:][\\s\\S]{10,3000}");
             info.setFacts(facts == null ? "" : facts.trim());
 
             String employer = firstMatch(text,
@@ -562,7 +617,7 @@ public class DocumentService {
 
             String dispute = firstMatch(text,
                 "争议类型[：:]\\s*([\\u4e00-\\u9fa5A-Za-z]{2,30})",
-                "(劳动争议|工伤赔偿|工资争议|劳动合同纠纷|社会保险纠纷|经济补偿金纠纷|违法解除劳动合同)");
+                "(劳动争议|工伤赔偿|工资争议|劳动合同纠纷|社会保险纠纷|经济补偿金纠纷|违法解除劳动合同|民事纠纷|合同纠纷)");
             info.setDisputeType(dispute == null ? "" : dispute.trim());
         } catch (Exception e) {
             log.warn("本地正则提取异常: {}", e.getMessage());
