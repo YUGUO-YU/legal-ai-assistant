@@ -94,25 +94,36 @@ const rules = {
 }
 
 const handleLogin = async () => {
-  if (!formRef.value) return
-
-  try {
-    await formRef.value.validate()
-  } catch (e) {
+  console.log('handleLogin called, formRef:', formRef.value)
+  if (!formRef.value) {
+    console.log('formRef is null')
     return
   }
 
+  try {
+    console.log('Validating form...')
+    await formRef.value.validate()
+    console.log('Form validation passed')
+  } catch (e) {
+    console.log('Form validation failed:', e)
+    return
+  }
+
+  console.log('Making API call to /auth/admin/login')
   loading.value = true
   try {
     const res = await api.post('/auth/admin/login', {
       username: form.username,
       password: form.password
     })
+    console.log('Login success:', res)
     localStorage.setItem('admin_token', res.data.token)
     localStorage.setItem('admin_user', JSON.stringify(res.data.userInfo))
     ElMessage.success('登录成功')
     router.push('/admin')
   } catch (e) {
+    console.log('Login failed:', e)
+    console.log('Response data:', e?.response?.data)
     const msg = e?.response?.data?.error || e?.response?.data?.message || '登录失败'
     ElMessage.error(msg)
   } finally {
