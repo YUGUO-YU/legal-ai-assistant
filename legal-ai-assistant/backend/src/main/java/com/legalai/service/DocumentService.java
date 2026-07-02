@@ -981,10 +981,10 @@ public class DocumentService {
         if (text == null) return null;
         
         // 匹配"证据"部分
-        Pattern p = Pattern.compile("(?:证据|证据材料|证据清单)[：:]?[\\s\\S]{0,50}((?=(?:事实|理由|此致|$))[\\s\\S]{10,1000})");
+        Pattern p = Pattern.compile("(?:证据|证据材料|证据清单)[：:]?[\\s\\S]{0,50}(?=(?:事实|理由|此致|$))[\\s\\S]{10,1000}");
         Matcher m = p.matcher(text);
         if (m.find()) {
-            String evidence = m.group(1).trim();
+            String evidence = m.group().trim();
             // 清理格式
             evidence = evidence.replaceAll("^(?:1[、.．]|一[、.．])", "").trim();
             if (evidence.length() >= 5) {
