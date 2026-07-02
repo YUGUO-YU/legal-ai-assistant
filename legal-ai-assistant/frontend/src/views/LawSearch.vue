@@ -38,6 +38,26 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="articlesDialogVisible" :title="selectedLaw?.title + ' - 条款列表'" width="800px" :close-on-click-modal="false">
+      <loading v-if="articlesLoading" text="正在加载条款..." />
+      <div v-else-if="articles.length > 0" class="articles-preview">
+        <div v-for="article in articles" :key="article.articleUuid" class="article-item">
+          <div class="article-header">
+            <span class="article-no">{{ article.articleNo }}</span>
+            <span class="article-title" v-if="article.title">{{ article.title }}</span>
+          </div>
+          <div class="article-content">{{ article.content }}</div>
+        </div>
+      </div>
+      <empty-state v-else icon="Document" title="暂无条款" description="该法规尚未包含条款内容" />
+      <template #footer>
+        <el-button @click="articlesDialogVisible = false">关闭</el-button>
+        <el-button type="primary" @click="viewLaw(selectedLaw)">
+          查看详情
+        </el-button>
+      </template>
+    </el-dialog>
+
     <el-row :gutter="24">
       <el-col :span="6">
         <div class="category-panel">
@@ -163,6 +183,11 @@ const uploadForm = reactive({
   lawName: ''
 })
 
+const articlesDialogVisible = ref(false)
+const articlesLoading = ref(false)
+const articles = ref([])
+const selectedLaw = ref(null)
+
 const treeData = ref([
   {
     id: 'law',
@@ -282,7 +307,8 @@ const handleNodeClick = (data) => {
   }
 }
 
-const refreshCategories = () => {
+const refreshCategories = async () => {
+  await loadCategories()
   ElMessage.success('分类已刷新')
 }
 
@@ -292,15 +318,35 @@ const getStatusType = (status) => {
 }
 
 const viewLaw = (law) => {
+  articlesDialogVisible.value = false
   router.push(`/law-detail/${law.lawUuid}`)
 }
 
-const browseArticles = (law) => {
-  ElMessage.info('条款浏览功能开发中...')
+const browseArticles = async (law) => {
+  selectedLaw.value = law
+  articles.value = []
+  articlesDialogVisible.value = true
+  articlesLoading.value = true
+
+  try {
+    const res = await api.lawSearch.getLawArticles(law.lawUuid)
+    articles.value = res.data || []
+  } catch (e) {
+    console.error('加载条款失败:', e)
+    ElMessage.error('加载条款失败')
+  } finally {
+    articlesLoading.value = false
+  }
 }
 
-const collectLaw = (law) => {
-  ElMessage.success('已添加到收藏')
+const collectLaw = async (law) => {
+  try {
+    await api.lawFavorite.add(law.lawUuid, law.title)
+    ElMessage.success('已添加到收藏')
+  } catch (e) {
+    console.error('收藏失败:', e)
+    ElMessage.error(e?.message || e?.response?.data?.message || '收藏失败')
+  }
 }
 
 onMounted(async () => {
@@ -460,5 +506,43 @@ const loadCategories = async () => {
 
 .empty-state {
   padding: 48px 0;
+}
+
+.articles-preview {
+  max-height: 60vh;
+  overflow-y: auto;
+
+  .article-item {
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .article-header {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .article-no {
+      font-weight: 600;
+      color: #1890ff;
+      font-size: 15px;
+    }
+
+    .article-title {
+      color: #333;
+      font-size: 14px;
+    }
+
+    .article-content {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.8;
+      text-align: justify;
+    }
+  }
 }
 </style>

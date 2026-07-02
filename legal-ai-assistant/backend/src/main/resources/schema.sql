@@ -43,6 +43,17 @@ CREATE TABLE IF NOT EXISTS law_article (
     INDEX idx_article_no (article_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='法规条款表';
 
+-- 法规收藏表
+CREATE TABLE IF NOT EXISTS law_favorite (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id         VARCHAR(64) NOT NULL COMMENT '用户ID',
+    law_uuid        VARCHAR(64) NOT NULL COMMENT '法规UUID',
+    law_title       VARCHAR(500) COMMENT '法规标题（冗余存储）',
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_user_law (user_id, law_uuid),
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='法规收藏表';
+
 -- 判例表
 CREATE TABLE IF NOT EXISTS legal_case (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -301,6 +312,18 @@ CREATE TABLE IF NOT EXISTS frontend_user (
     INDEX idx_username (username),
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '前端用户';
+
+CREATE TABLE IF NOT EXISTS auth_tokens (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    token           VARCHAR(128) NOT NULL UNIQUE,
+    user_id         VARCHAR(64) NOT NULL,
+    username        VARCHAR(64),
+    expire_at       DATETIME NOT NULL,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_token (token),
+    INDEX idx_user_id (user_id),
+    INDEX idx_expire (expire_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='认证令牌表';
 
 CREATE TABLE IF NOT EXISTS admin_role (
     id          BIGINT PRIMARY KEY AUTO_INCREMENT,

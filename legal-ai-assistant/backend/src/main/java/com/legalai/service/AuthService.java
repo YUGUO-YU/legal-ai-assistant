@@ -24,6 +24,15 @@ public class AuthService {
     private static final long REFRESH_TOKEN_EXPIRE_MS = 30 * 24 * 3600 * 1000L;
     private static final long RESET_CODE_EXPIRE_MS = 10 * 60 * 1000L;
 
+    private static final String INSERT_TOKEN_SQL = """
+        INSERT INTO auth_tokens (token, user_id, username, expire_at) VALUES (?, ?, ?, ?)
+    """;
+    private static final String DELETE_TOKEN_SQL = "DELETE FROM auth_tokens WHERE token = ?";
+    private static final String SELECT_TOKEN_SQL = """
+        SELECT user_id, username FROM auth_tokens WHERE token = ? AND expire_at > NOW()
+    """;
+    private static final String DELETE_EXPIRED_TOKENS_SQL = "DELETE FROM auth_tokens WHERE expire_at < NOW()";
+
     private final Map<String, TokenInfo> tokenStore = new ConcurrentHashMap<>();
     private final Map<String, ResetCodeInfo> resetCodeStore = new ConcurrentHashMap<>();
     private final JdbcTemplate jdbc;
@@ -31,6 +40,53 @@ public class AuthService {
 
     public AuthService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
+    }
+
+    private void persistToken(String token, String userId, String username, long expireTime) {
+        try {
+            java.sql.Timestamp expireAt = new java.sql.Timestamp(expireTime);
+            jdbc.update(INSERT_TOKEN_SQL, token, userId, username, expireAt);
+            log.debug("Token persisted to database for user {}", userId);
+        } catch (Exception e) {
+            log.warn("Failed to persist token to database: {}", e.getMessage());
+        }
+    }
+
+    private void removePersistedToken(String token) {
+        try {
+            jdbc.update(DELETE_TOKEN_SQL, token);
+            log.debug("Token removed from database");
+        } catch (Exception e) {
+            log.warn("Failed to remove token from database: {}", e.getMessage());
+        }
+    }
+
+    public TokenUserInfo getUserIdFromToken(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+
+        TokenInfo info = tokenStore.get(token);
+        if (info != null && System.currentTimeMillis() <= info.getExpireTime()) {
+            TokenUserInfo result = new TokenUserInfo();
+            result.userId = info.getUserIdStr();
+            result.username = info.getUsername();
+            return result;
+        }
+
+        try {
+            var rows = jdbc.queryForList(SELECT_TOKEN_SQL, token);
+            if (!rows.isEmpty()) {
+                TokenUserInfo result = new TokenUserInfo();
+                result.userId = (String) rows.get(0).get("user_id");
+                result.username = (String) rows.get(0).get("username");
+                return result;
+            }
+        } catch (Exception e) {
+            log.debug("Database token lookup failed: {}", e.getMessage());
+        }
+
+        return null;
     }
 
     private boolean passwordMatches(String raw, String stored) {
@@ -81,6 +137,7 @@ public class AuthService {
         tokenInfo.setExpireTime(System.currentTimeMillis() + TOKEN_EXPIRE_MS);
         tokenInfo.setRefreshExpireTime(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRE_MS);
         tokenStore.put(accessToken, tokenInfo);
+        persistToken(accessToken, userId, request.getUsername(), tokenInfo.getExpireTime());
 
         LoginResponse response = new LoginResponse();
         response.setToken(accessToken);
@@ -172,6 +229,7 @@ public class AuthService {
     public void logout(String token) {
         log.info("用户登出: token={}", token);
         tokenStore.remove(token);
+        removePersistedToken(token);
     }
 
     public void changePassword(String token, String oldPassword, String newPassword) {
@@ -360,5 +418,10 @@ public class AuthService {
         public void setExpireTime(long expireTime) { this.expireTime = expireTime; }
         public long getRefreshExpireTime() { return refreshExpireTime; }
         public void setRefreshExpireTime(long refreshExpireTime) { this.refreshExpireTime = refreshExpireTime; }
+    }
+
+    public static class TokenUserInfo {
+        public String userId;
+        public String username;
     }
 }

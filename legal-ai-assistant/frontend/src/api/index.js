@@ -143,6 +143,12 @@ export default {
     getLawDetail: (uuid) => withRetry(() => api.get(`/law-search/laws/${uuid}`)),
     getLawArticles: (uuid) => withRetry(() => api.get(`/law-search/laws/${uuid}/articles`))
   },
+  lawFavorite: {
+    add: (lawUuid, lawTitle) => api.post('/law-favorite/add', { lawUuid, lawTitle }),
+    remove: (lawUuid) => api.delete(`/law-favorite/remove/${lawUuid}`),
+    list: () => api.get('/law-favorite/list'),
+    check: (lawUuid) => api.get(`/law-favorite/check/${lawUuid}`)
+  },
   legalResearch: {
     createTask: (data) => withRetry(() => api.post('/legal-research/tasks', data)),
     getReport: (taskId) => withRetry(() => api.get(`/legal-research/tasks/${taskId}/report`)),
