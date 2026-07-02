@@ -365,7 +365,64 @@ const formatContent = (text) => {
 }
 
 const exportPdf = () => {
-  ElMessage.info('PDF导出功能开发中...')
+  if (!report.value || report.value.length === 0) {
+    ElMessage.warning('没有可导出的报告内容')
+    return
+  }
+
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) {
+    ElMessage.error('无法打开打印窗口，请检查浏览器设置')
+    return
+  }
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>法律研究报告</title>
+      <style>
+        body { font-family: "Microsoft YaHei", "SimHei", Arial, sans-serif; padding: 40px; color: #333; }
+        h1 { text-align: center; color: #1a1a2e; border-bottom: 2px solid #1890ff; padding-bottom: 20px; }
+        h2 { color: #1890ff; margin-top: 30px; border-left: 4px solid #1890ff; padding-left: 12px; }
+        .section { margin-bottom: 30px; }
+        .content { line-height: 1.8; text-align: justify; }
+        .content p { margin: 12px 0; }
+        .citation { background: #f5f5f5; padding: 10px; margin: 8px 0; border-left: 3px solid #67c23a; }
+        .footer { margin-top: 50px; text-align: center; color: #999; font-size: 12px; }
+        @media print { body { padding: 20px; } }
+      </style>
+    </head>
+    <body>
+      <h1>法律研究报告</h1>
+      ${report.value.map(section => `
+        <div class="section">
+          <h2>${section.title}</h2>
+          <div class="content">${section.content}</div>
+          ${section.citations && section.citations.length ? `
+            <div class="citations">
+              ${section.citations.map(c => `<div class="citation">${c.content || c.title || ''}</div>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('')}
+      <div class="footer">
+        <p>本报告由 Legal AI Assistant 自动生成</p>
+        <p>生成时间：${new Date().toLocaleString('zh-CN')}</p>
+      </div>
+    </body>
+    </html>
+  `
+
+  printWindow.document.write(html)
+  printWindow.document.close()
+  printWindow.onload = () => {
+    setTimeout(() => {
+      printWindow.print()
+      printWindow.close()
+    }, 500)
+  }
 }
 
 const copyReport = () => {
