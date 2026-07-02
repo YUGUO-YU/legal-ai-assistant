@@ -2,8 +2,8 @@
   <div class="document-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>AI文书起草</h2>
-        <p>选择文书模板，输入案件信息，智能生成法律文书</p>
+        <h2>法律文书生成</h2>
+        <p>选择文书模板，输入案件信息，快速生成法律文书</p>
       </div>
     </div>
 
@@ -226,7 +226,7 @@
             本地智能识别：粘贴法律文本后自动提取当事人、金额、事实等关键信息
           </template>
           <template #description>
-            完全在本地完成，不联网、不调用 AI，毫秒级响应。支持起诉状、仲裁申请书、合同等法律文本。
+            完全在本地完成，毫秒级响应。支持起诉状、仲裁申请书、合同等法律文本。
           </template>
         </el-alert>
         <el-input
@@ -267,7 +267,10 @@ import {
   Printer,
   Search,
   DocumentCopy,
-  MagicStick
+  Download,
+  Printer,
+  Search,
+  DocumentCopy
 } from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
