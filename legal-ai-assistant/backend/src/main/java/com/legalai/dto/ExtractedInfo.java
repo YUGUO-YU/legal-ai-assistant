@@ -22,6 +22,13 @@ public class ExtractedInfo {
     private String salary;
     private String startDate;
     private String disputeType;
+    private String caseType;
+    private String plaintiffPhone;
+    private String defendantPhone;
+    private String plaintiffIdCard;
+    private String defendantIdCard;
+    private String claimBasis;
+    private String evidence;
 
     public boolean isSuccess() {
         return success;
@@ -157,5 +164,61 @@ public class ExtractedInfo {
 
     public void setDisputeType(String disputeType) {
         this.disputeType = disputeType;
+    }
+
+    public String getCaseType() {
+        return caseType;
+    }
+
+    public void setCaseType(String caseType) {
+        this.caseType = caseType;
+    }
+
+    public String getPlaintiffPhone() {
+        return plaintiffPhone;
+    }
+
+    public void setPlaintiffPhone(String plaintiffPhone) {
+        this.plaintiffPhone = plaintiffPhone;
+    }
+
+    public String getDefendantPhone() {
+        return defendantPhone;
+    }
+
+    public void setDefendantPhone(String defendantPhone) {
+        this.defendantPhone = defendantPhone;
+    }
+
+    public String getPlaintiffIdCard() {
+        return plaintiffIdCard;
+    }
+
+    public void setPlaintiffIdCard(String plaintiffIdCard) {
+        this.plaintiffIdCard = plaintiffIdCard;
+    }
+
+    public String getDefendantIdCard() {
+        return defendantIdCard;
+    }
+
+    public void setDefendantIdCard(String defendantIdCard) {
+        this.defendantIdCard = defendantIdCard;
+    }
+
+    public String getClaimBasis() {
+        return claimBasis;
+    }
+
+    public void setClaimBasis(String claimBasis) {
+        this.claimBasis = claimBasis;
+    }
+
+    public String getEvidence() {
+        return evidence;
+    }
+
+    public void setEvidence(String evidence) {
+        this.evidence = evidence;
     }
 }

@@ -607,6 +607,34 @@ public class DocumentService {
             String dispute = extractDisputeType(text);
             info.setDisputeType(dispute);
 
+            // 15. 案件类型
+            String caseType = extractCaseType(text);
+            info.setCaseType(caseType);
+
+            // 16. 原告电话
+            String plaintiffPhone = extractPhone(text, "原告");
+            info.setPlaintiffPhone(plaintiffPhone);
+
+            // 17. 被告电话
+            String defendantPhone = extractPhone(text, "被告");
+            info.setDefendantPhone(defendantPhone);
+
+            // 18. 原告身份证号
+            String plaintiffIdCard = extractIdCard(text, "原告");
+            info.setPlaintiffIdCard(plaintiffIdCard);
+
+            // 19. 被告身份证号
+            String defendantIdCard = extractIdCard(text, "被告");
+            info.setDefendantIdCard(defendantIdCard);
+
+            // 20. 诉讼依据
+            String claimBasis = extractClaimBasis(text);
+            info.setClaimBasis(claimBasis);
+
+            // 21. 证据
+            String evidence = extractEvidence(text);
+            info.setEvidence(evidence);
+
         } catch (Exception e) {
             log.warn("本地正则提取异常: {}", e.getMessage());
         }
@@ -840,6 +868,136 @@ public class DocumentService {
         for (String dispute : disputes) {
             if (text.contains(dispute)) {
                 return dispute;
+            }
+        }
+        
+        return null;
+    }
+
+    private String extractCaseType(String text) {
+        if (text == null) return null;
+        
+        String[] caseTypes = {
+            "民事", "刑事", "行政", "商事", "知识产权", "海事", "铁路", "军事",
+            "民事诉讼", "刑事诉讼", "行政诉讼", "民事纠纷", "合同纠纷", "侵权纠纷",
+            "物权纠纷", "债权纠纷", "婚姻家庭", "继承纠纷", "劳动纠纷", "人事纠纷"
+        };
+        
+        for (String type : caseTypes) {
+            if (text.contains(type)) {
+                return type;
+            }
+        }
+        
+        return null;
+    }
+
+    private String extractPhone(String text, String keyword) {
+        if (text == null || keyword == null) return null;
+        
+        int idx = text.indexOf(keyword);
+        if (idx < 0) return null;
+        
+        int start = idx;
+        int end = Math.min(start + 200, text.length());
+        String segment = text.substring(start, end);
+        
+        // 匹配手机号：1开头的11位数字
+        Pattern p = Pattern.compile("(?:电话|手机|联系电话|联系号码)[：:]?\\s*((?:1[3-9]\\d{9}))");
+        Matcher m = p.matcher(segment);
+        if (m.find()) {
+            return m.group(1);
+        }
+        
+        // 匹配固定电话：区号-号码
+        p = Pattern.compile("(?:电话|手机|联系电话)[：:]?\\s*((?:0\\d{2,3}[-]?)?\\d{7,8})");
+        m = p.matcher(segment);
+        if (m.find()) {
+            return m.group(1);
+        }
+        
+        return null;
+    }
+
+    private String extractIdCard(String text, String keyword) {
+        if (text == null || keyword == null) return null;
+        
+        int idx = text.indexOf(keyword);
+        if (idx < 0) return null;
+        
+        int start = idx;
+        int end = Math.min(start + 250, text.length());
+        String segment = text.substring(start, end);
+        
+        // 匹配身份证号：15位或18位
+        Pattern p = Pattern.compile("(?:身份证(?:号)?|证件号)[：:]?\\s*([1-9]\\d{5}(?:\\d{2}[0-9X]){2}[0-9X])");
+        Matcher m = p.matcher(segment);
+        if (m.find()) {
+            return m.group(1);
+        }
+        
+        // 直接在文本中查找身份证号格式
+        p = Pattern.compile("\\b([1-9]\\d{5}\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{3}[0-9X])\\b");
+        m = p.matcher(segment);
+        if (m.find()) {
+            return m.group(1);
+        }
+        
+        return null;
+    }
+
+    private String extractClaimBasis(String text) {
+        if (text == null) return null;
+        
+        // 匹配"依据"或"根据"相关法条
+        Pattern p = Pattern.compile("(?:依据|根据)[：:]?\\s*《?([^《》，,。；\\n]{5,100})》?");
+        Matcher m = p.matcher(text);
+        if (m.find()) {
+            String basis = m.group(1).trim();
+            // 清理多余内容
+            basis = basis.replaceAll("\\s+", " ");
+            if (basis.length() >= 5) {
+                return basis;
+            }
+        }
+        
+        // 匹配法条引用格式
+        p = Pattern.compile("《([^《》]{2,30})法》第(\\d+)条");
+        StringBuilder laws = new StringBuilder();
+        m = p.matcher(text);
+        while (m.find()) {
+            if (laws.length() > 0) laws.append("、");
+            laws.append(m.group(1)).append("第").append(m.group(2)).append("条");
+        }
+        if (laws.length() > 0) {
+            return laws.toString();
+        }
+        
+        return null;
+    }
+
+    private String extractEvidence(String text) {
+        if (text == null) return null;
+        
+        // 匹配"证据"部分
+        Pattern p = Pattern.compile("(?:证据|证据材料|证据清单)[：:]?[\\s\\S]{0,50}((?=(?:事实|理由|此致|$))[\\s\\S]{10,1000})");
+        Matcher m = p.matcher(text);
+        if (m.find()) {
+            String evidence = m.group(1).trim();
+            // 清理格式
+            evidence = evidence.replaceAll("^(?:1[、.．]|一[、.．])", "").trim();
+            if (evidence.length() >= 5) {
+                return evidence;
+            }
+        }
+        
+        // 匹配证据列表
+        p = Pattern.compile("(?:1[、.．][\\s\\S]{5,200}){1,5}");
+        m = p.matcher(text);
+        if (m.find()) {
+            String evidence = m.group().trim();
+            if (evidence.length() >= 10) {
+                return evidence;
             }
         }
         

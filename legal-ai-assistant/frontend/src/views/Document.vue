@@ -238,7 +238,7 @@
         />
         <div class="paste-tips">
           <el-tag type="success" size="small">本地识别</el-tag>
-          <span>粘贴内容越完整，识别越准确。支持识别：当事人姓名/名称、地址、金额、事实描述、法院名称、入职日期、工资、争议类型等。</span>
+          <span>支持识别：当事人、地址、身份证号、电话、金额、诉讼请求、事实理由、法院、案件类型、争议类型、劳动信息、法律依据、证据等全部字段。</span>
         </div>
       </div>
       <template #footer>
@@ -473,7 +473,8 @@ const handleExtractInfo = async () => {
         info.plaintiffName, info.plaintiffAddress, info.defendantName, info.defendantAddress,
         info.claimAmount, info.claimDescription, info.facts, info.courtName,
         info.employerName, info.employeeName, info.workContent, info.salary,
-        info.startDate, info.disputeType
+        info.startDate, info.disputeType, info.caseType, info.plaintiffPhone,
+        info.defendantPhone, info.claimBasis, info.evidence
       ].filter(v => v !== null && v !== undefined && String(v).trim() !== '').length
 
       if (totalFilled > 0) {
