@@ -50,7 +50,7 @@
             size="large"
             class="submit-btn"
             :loading="loading"
-            @click="handleLogin"
+            @click="() => { console.log('Button clicked'); handleLogin() }"
           >
             登 录 后 台
           </el-button>
