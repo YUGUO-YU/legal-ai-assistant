@@ -309,7 +309,37 @@ public class DocumentService {
             + "本地模板生成的内容：\n" + localContent;
 
         log.info("[Document] AI优化文书，prompt 长度={}", prompt.length());
-        return llmClient.chat(prompt);
+        String result = llmClient.chat(prompt);
+        return cleanDocumentContent(result);
+    }
+
+    private String cleanDocumentContent(String content) {
+        if (content == null || content.isEmpty()) return content;
+        
+        content = content.trim();
+        
+        // 移除 Markdown 代码块标记
+        content = content.replaceAll("^```(?:json|text|)?\\s*", "");
+        content = content.replaceAll("\\s*```$", "");
+        
+        // 移除常见的AI解释性前缀
+        String[] prefixesToRemove = {
+            "以下是文书正文：",
+            "以下是生成的文书：",
+            "文书正文如下：",
+            "根据您的要求，生成如下文书：",
+            "根据案件信息，生成如下法律文书："
+        };
+        for (String prefix : prefixesToRemove) {
+            if (content.startsWith(prefix)) {
+                content = content.substring(prefix.length()).trim();
+            }
+        }
+        
+        // 移除开头的解释性文字（到第一个换行或特定标记）
+        content = content.replaceAll("^(?:根据|按照|依据)[^，,\n]{0,30}(?:如下|生成|输出)[：:]", "");
+        
+        return content.trim();
     }
 
     public List<TemplateInfo> getTemplates() {
