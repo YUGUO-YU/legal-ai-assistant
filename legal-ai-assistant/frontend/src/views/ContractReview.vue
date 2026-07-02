@@ -364,8 +364,28 @@ const goToDetail = () => {
   router.push(`/contract-risk/${reviewResult.value.reviewUuid}`)
 }
 
-const handleFileChange = (file) => {
+const handleFileChange = async (file) => {
   fileList.value.push(file)
+  
+  if (file.raw) {
+    try {
+      const text = await readFileAsText(file.raw)
+      contractText.value = text
+      ElMessage.success('文件已读取：' + file.name)
+    } catch (e) {
+      console.error('读取文件失败:', e)
+      ElMessage.error('读取文件失败，请手动复制内容')
+    }
+  }
+}
+
+const readFileAsText = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => resolve(e.target.result)
+    reader.onerror = (e) => reject(e)
+    reader.readAsText(file)
+  })
 }
 
 const resetForm = () => {
