@@ -185,23 +185,12 @@
 
     <el-drawer v-model="showResult" title="生成结果" size="60%" direction="rtl">
       <div v-if="draftResult" class="result-content">
-        <div class="source-banner" v-if="draftResult.contentSource">
-          <el-tag :type="draftResult.contentSource.includes('AI') && !draftResult.contentSource.includes('回退') ? 'success' : 'info'" size="small">
-            <el-icon><MagicStick v-if="draftResult.contentSource.includes('AI') && !draftResult.contentSource.includes('回退')" /><Document v-else /></el-icon>
-            {{ draftResult.contentSource }}
-          </el-tag>
-        </div>
         <el-tabs v-model="activeTab">
           <el-tab-pane label="文书正文" name="content">
             <pre class="document-content">{{ draftResult.documentContent }}</pre>
           </el-tab-pane>
           <el-tab-pane label="风险提示" name="risk">
             <div class="risk-content" v-html="draftResult.riskPrompt"></div>
-          </el-tab-pane>
-          <el-tab-pane label="免责声明" name="disclaimer">
-            <el-alert type="warning" :closable="false" show-icon>
-              <template #title>{{ draftResult.disclaimer }}</template>
-            </el-alert>
           </el-tab-pane>
           <el-tab-pane label="法律依据" name="laws">
             <div class="laws-list">
