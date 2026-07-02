@@ -22,7 +22,7 @@
         :model="form"
         :rules="rules"
         class="login-form"
-        @keyup.enter="handleLogin"
+        @submit.prevent
       >
         <el-form-item prop="username">
           <el-input
@@ -50,7 +50,7 @@
             size="large"
             class="submit-btn"
             :loading="loading"
-            @click="() => { console.log('Button clicked'); handleLogin() }"
+            @click.prevent="handleLogin"
           >
             登 录 后 台
           </el-button>
