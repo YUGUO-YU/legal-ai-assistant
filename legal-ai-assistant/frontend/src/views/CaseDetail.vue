@@ -288,8 +288,36 @@ const generateAnalysis = () => {
   showAnalysisDialog.value = true
 }
 
-const generatePpt = () => {
-  ElMessage.info('PPT生成功能开发中...')
+const generatePpt = async () => {
+  if (!caseData.value) {
+    ElMessage.warning('案例数据加载中，请稍候')
+    return
+  }
+
+  const data = {
+    title: caseData.value.title || caseData.value.caseName || '案例分析PPT',
+    content: [
+      { type: 'title', text: caseData.value.title || caseData.value.caseName },
+      { type: 'section', title: '基本信息', items: [
+        caseData.value.caseNo ? `案号：${caseData.value.caseNo}` : null,
+        caseData.value.court ? `法院：${caseData.value.court}` : null,
+        caseData.value.judgeDate ? `裁判日期：${caseData.value.judgeDate}` : null,
+        caseData.value.trialProcedure ? `程序：${caseData.value.trialProcedure}` : null,
+        caseData.value.caseType ? `案件类型：${caseData.value.caseType}` : null,
+        caseData.value.caseCause ? `案由：${caseData.value.caseCause}` : null,
+      ].filter(Boolean) },
+      { type: 'section', title: '案件摘要', items: [
+        caseData.value.keyFacts || caseData.value.summary || '无'
+      ]},
+      { type: 'section', title: '裁判结果', items: [
+        caseData.value.judgmentResult || '无'
+      ]}
+    ]
+  }
+
+  localStorage.setItem('ppt_draft_data', JSON.stringify(data))
+  router.push('/ppt-editor')
+  ElMessage.success('正在跳转PPT编辑器')
 }
 
 onMounted(() => {
