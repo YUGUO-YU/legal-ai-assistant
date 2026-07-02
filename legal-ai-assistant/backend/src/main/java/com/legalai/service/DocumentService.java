@@ -214,27 +214,8 @@ public class DocumentService {
             throw new IllegalArgumentException("不支持的文书模板: " + request.getTemplateCode());
         }
 
-        String content;
-        String contentSource;
-        if (mockEnabled || llmClient == null) {
-            content = generateDocumentContent(template, request);
-            contentSource = "本地模板生成";
-        } else {
-            try {
-                String aiContent = generateDocumentContentByLLM(template, request);
-                if (aiContent != null && !aiContent.trim().isEmpty()) {
-                    content = aiContent;
-                    contentSource = "AI 智能生成";
-                } else {
-                    content = generateDocumentContent(template, request);
-                    contentSource = "AI 兜底回退到本地模板";
-                }
-            } catch (Exception e) {
-                log.warn("[Document] LLM 生成失败，回退本地模板: {}", e.getMessage());
-                content = generateDocumentContent(template, request);
-                contentSource = "AI 失败回退到本地模板";
-            }
-        }
+        String content = generateDocumentContent(template, request);
+        String contentSource = "本地模板生成";
 
         String riskPrompt = generateRiskPrompt(template, request);
         String disclaimer = generateDisclaimer(template, request.getCaseData());
@@ -528,18 +509,16 @@ public class DocumentService {
             info.setDefendantName(cleanName(defendant));
 
             String plaintiffAddr = firstMatch(text,
-                "原告[\\s\\S]{0,40}?(?:住|住所地|住所位于|地址)[\\s]*[：:]?\\s*([\\u4e00-\\u9fa5A-Za-z0-9省市区县路街道号弄室栋楼幢-—、]{4,80})",
+                "原告[^\\n]{5,100}", "原告[：:,，][^\\n]{5,120}", "申请人[^\\n]{5,100}",
                 "原告[：:,，]\\s*([^，,\\n。；;]{4,80}?(?:省|市|区|县|路|街|道|镇|乡))");
             info.setPlaintiffAddress(cleanAddress(plaintiffAddr));
 
             String defendantAddr = firstMatch(text,
-                "被告[\\s\\S]{0,40}?(?:住|住所地|住所位于|地址)[\\s]*[：:]?\\s*([\\u4e00-\\u9fa5A-Za-z0-9省市区县路街道号弄室栋楼幢-—、]{4,80})",
-                "被告[：:,，]\\s*([^，,\\n。；;]{4,80}?(?:省|市|区|县|路|街|道|镇|乡))");
+                "被告[^\n]{5,100}", "被告[：:,，][^\n]{5,120}", "被申请人[^\n]{5,100}");
             info.setDefendantAddress(cleanAddress(defendantAddr));
 
             String court = firstMatch(text,
-                "(?:管辖法院|受案法院|移送|由)\\s*([\\u4e00-\\u9fa5A-Za-z]{2,30}?(?:人民法院|法院))",
-                "([\\u4e00-\\u9fa5A-Za-z]{2,30}人民法院)");
+                "(?:管辖法院|受案法院|移送|由)[^\n]{5,50}", "[\u4e00-\u9fa5A-Za-z]{2,20}法院", "法院[^\n]{0,50}");
             info.setCourtName(cleanCourt(court));
 
             BigDecimal amount = parseAmount(text);
@@ -548,27 +527,11 @@ public class DocumentService {
             }
 
             String claimDesc = firstMatch(text,
-                "诉讼请求[：:]\\s*([\\s\\S]{1,400}?)(?:事实|理由|此致|$)");
-            if (claimDesc == null) {
-                claimDesc = firstMatch(text,
-                    "请求[：:]\\s*([\\s\\S]{1,400}?)(?:事实|理由|此致|$)");
-            }
-            if (claimDesc == null) {
-                claimDesc = firstMatch(text,
-                    "仲裁请求[：:]\\s*([\\s\\S]{1,400}?)(?:事实|理由|此致|$)");
-            }
+                "(?:诉讼请求|请求|仲裁请求)[：:][^\n]{1,500}");
             info.setClaimDescription(claimDesc == null ? "" : claimDesc.trim());
 
             String facts = firstMatch(text,
-                "事实[与与]理由[：:]\\s*([\\s\\S]{1,800}?)(?:此致|此呈|人民法院|仲裁委员会|$)");
-            if (facts == null) {
-                facts = firstMatch(text,
-                    "事实[：:]\\s*([\\s\\S]{1,800}?)(?:此致|此呈|人民法院|仲裁委员会|$)");
-            }
-            if (facts == null) {
-                facts = firstMatch(text,
-                    "案情简介[：:]\\s*([\\s\\S]{1,800}?)(?:此致|此呈|$)");
-            }
+                "(?:事实|理由|案情)[：:][^\n]{10,2000}");
             info.setFacts(facts == null ? "" : facts.trim());
 
             String employer = firstMatch(text,
