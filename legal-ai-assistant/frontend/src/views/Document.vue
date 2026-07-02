@@ -162,6 +162,38 @@
               </el-input>
             </el-form-item>
 
+            <el-divider content-position="left">企业信息（选填）</el-divider>
+
+            <el-form-item label="统一社会信用代码">
+              <el-input v-model="formData.unifiedSocialCreditCode" placeholder="请输入统一社会信用代码">
+                <template #prefix><el-icon><Document /></el-icon></template>
+              </el-input>
+            </el-form-item>
+
+            <el-form-item label="法定代表人">
+              <el-input v-model="formData.legalRepresentative" placeholder="请输入法定代表人姓名">
+                <template #prefix><el-icon><User /></el-icon></template>
+              </el-input>
+            </el-form-item>
+
+            <el-form-item label="职务">
+              <el-input v-model="formData.position" placeholder="请输入职务">
+                <template #prefix><el-icon><Message /></el-icon></template>
+              </el-input>
+            </el-form-item>
+
+            <el-form-item label="住所地">
+              <el-input v-model="formData.residenceAddress" placeholder="请输入住所地">
+                <template #prefix><el-icon><OfficeBuilding /></el-icon></template>
+              </el-input>
+            </el-form-item>
+
+            <el-form-item label="联系电话">
+              <el-input v-model="formData.plaintiffPhone" placeholder="请输入联系电话">
+                <template #prefix><el-icon><Message /></el-icon></template>
+              </el-input>
+            </el-form-item>
+
             <el-form-item>
               <el-button type="primary" @click="handleDraft" :loading="loading" :disabled="!selectedTemplate">
                 <el-icon v-if="!loading"><Document /></el-icon>
@@ -286,8 +318,12 @@ const extracting = ref(false)
 const formData = reactive({
   plaintiffName: '',
   plaintiffAddress: '',
+  plaintiffPhone: '',
+  plaintiffIdCard: '',
   defendantName: '',
   defendantAddress: '',
+  defendantPhone: '',
+  defendantIdCard: '',
   caseType: 'contract',
   claimAmount: 0,
   claimDescription: '',
@@ -298,7 +334,11 @@ const formData = reactive({
   workContent: '',
   salary: '',
   startDate: '',
-  disputeType: ''
+  disputeType: '',
+  unifiedSocialCreditCode: '',
+  legalRepresentative: '',
+  position: '',
+  residenceAddress: ''
 })
 
 const formRules = {
@@ -351,18 +391,33 @@ const handleDraft = async () => {
         caseData: {
           plaintiffName: formData.plaintiffName,
           plaintiffAddress: formData.plaintiffAddress,
+          plaintiffPhone: formData.plaintiffPhone,
+          plaintiffIdCard: formData.plaintiffIdCard,
           defendantName: formData.defendantName,
           defendantAddress: formData.defendantAddress,
+          defendantPhone: formData.defendantPhone,
+          defendantIdCard: formData.defendantIdCard,
           claimAmount: formData.claimAmount,
           claimDescription: formData.claimDescription,
           facts: formData.facts,
-          courtName: formData.courtName
+          courtName: formData.courtName,
+          employerName: formData.employerName,
+          employeeName: formData.employeeName,
+          workContent: formData.workContent,
+          salary: formData.salary,
+          startDate: formData.startDate,
+          disputeType: formData.disputeType,
+          unifiedSocialCreditCode: formData.unifiedSocialCreditCode,
+          legalRepresentative: formData.legalRepresentative,
+          position: formData.position,
+          residenceAddress: formData.residenceAddress
         },
         includeRiskPrompt: true
       })
 
       draftResult.value = res.data
       showResult.value = true
+      activeTab.value = 'content'
       ElMessage.success('文书生成成功')
     } catch (e) {
       console.error(e)
@@ -452,8 +507,12 @@ const handleExtractInfo = async () => {
       const info = res.data
       if (info.plaintiffName) formData.plaintiffName = info.plaintiffName
       if (info.plaintiffAddress) formData.plaintiffAddress = info.plaintiffAddress
+      if (info.plaintiffPhone) formData.plaintiffPhone = info.plaintiffPhone
+      if (info.plaintiffIdCard) formData.plaintiffIdCard = info.plaintiffIdCard
       if (info.defendantName) formData.defendantName = info.defendantName
       if (info.defendantAddress) formData.defendantAddress = info.defendantAddress
+      if (info.defendantPhone) formData.defendantPhone = info.defendantPhone
+      if (info.defendantIdCard) formData.defendantIdCard = info.defendantIdCard
       if (info.claimAmount !== null && info.claimAmount !== undefined && info.claimAmount !== '') {
         const amt = Number(info.claimAmount)
         if (!Number.isNaN(amt)) formData.claimAmount = amt
@@ -467,6 +526,11 @@ const handleExtractInfo = async () => {
       if (info.salary) formData.salary = info.salary
       if (info.startDate) formData.startDate = info.startDate
       if (info.disputeType) formData.disputeType = info.disputeType
+      if (info.caseType) formData.caseType = info.caseType
+      if (info.unifiedSocialCreditCode) formData.unifiedSocialCreditCode = info.unifiedSocialCreditCode
+      if (info.legalRepresentative) formData.legalRepresentative = info.legalRepresentative
+      if (info.position) formData.position = info.position
+      if (info.residenceAddress) formData.residenceAddress = info.residenceAddress
 
       const totalFilled = [
         info.plaintiffName, info.plaintiffAddress, info.defendantName, info.defendantAddress,
