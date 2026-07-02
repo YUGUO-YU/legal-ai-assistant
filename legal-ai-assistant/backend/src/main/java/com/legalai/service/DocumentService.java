@@ -669,8 +669,7 @@ public class DocumentService {
         }
         
         // 匹配公司名：XX有限公司 / XX公司 / XX集团
-        p = Pattern.compile("^[\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{4,50}(?:有限公司|公司|集团|企业|合作社|协会)?
-                (?:住所|地址|注册地)?");
+        p = Pattern.compile("^[\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{4,50}(?:有限公司|公司|集团|企业|合作社|协会)?(?:住所|地址|注册地)?");
         m = p.matcher(segment);
         if (m.find()) {
             String name = m.group().trim();
