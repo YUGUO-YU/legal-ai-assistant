@@ -11,7 +11,7 @@
         <el-table-column prop="rule_type" label="规则类型" width="120"><template #default="{row}"><el-tag size="small">{{row.rule_type}}</el-tag></template></el-table-column>
         <el-table-column label="条件" width="190"><template #default="{row}"><span class="mono">{{row.rule_type}} {{operLabel(row.operator)}} {{row.threshold}}</span></template></el-table-column>
         <el-table-column prop="trigger_action" label="触发动作" width="110"><template #default="{row}"><el-tag size="small" type="warning">{{row.trigger_action}}</el-tag></template></el-table-column>
-        <el-table-column label="状态" width="80"><template #default="{row}"><el-tag :type="row.status===1?'success':'info'" size="small">{{row.status===1?'启用':'停用'}}</el-tag></template></el-table-column>
+        <el-table-column label="状态" width="80"><template #default="{row}"><el-switch :model-value="row.status===1" @change="toggleRule(row)" size="small" /></template></el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="170" />
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{row}"><el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button><el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button></template>
@@ -45,8 +45,9 @@ function operLabel(o){return({gt:'>',gte:'>=',lt:'<',lte:'<=',eq:'=='}[o]||o)}
 async function load(){loading.value=true;try{const res=await api.get('/admin/biz/mod03/review-rules');rows.value=res.data?.list||[]}catch(e){rows.value=[]}finally{loading.value=false}}
 function openCreate(){Object.assign(form,{id:null,template_code:'',rule_type:'word_count',operator:'gt',threshold:500,trigger_action:'warn',status:1});showDialog.value=true}
 function openEdit(row){Object.assign(form,{...row});showDialog.value=true}
-async function handleSave(){if(!form.template_code||!form.rule_type){ElMessage.warning('模板代码和规则类型必填');return}const p={...form};delete p.id;try{const res=form.id?await api.post(`/admin/{table}/${form.id}/update`.replace('{table}','doc_review_rule'),p):await api.post('/admin/{table}/create'.replace('{table}','doc_review_rule'),p);if(res.data?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else ElMessage.error(res.data?.error||'保存失败')}catch(e){ElMessage.error('保存失败')}}
-async function handleDelete(row){try{await ElMessageBox.confirm(`删除规则？`,'确认',{type:'warning'});await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}','doc_review_rule'));ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
+async function handleSave(){if(!form.template_code||!form.rule_type){ElMessage.warning('模板代码和规则类型必填');return}const p={...form};delete p.id;try{let res;if(form.id){res=await api.post(`/admin/doc_review_rule/${form.id}/update`,p)}else{res=await api.post('/admin/doc_review_rule/create',p)}if(res.data?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else{ElMessage.error(res.data?.error||'保存失败')}}catch(e){ElMessage.error('保存失败')}}
+async function handleDelete(row){try{await ElMessageBox.confirm(`删除规则：「${row.rule_name}」？`,'确认删除',{type:'warning'});await api.post(`/admin/doc_review_rule/${row.id}/delete`);ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
+async function toggleRule(row){try{await api.post(`/admin/doc_review_rule/${row.id}/toggle`,{status:row.status===1?0:1});ElMessage.success(row.status===1?'已停用':'已启用');load()}catch(e){ElMessage.error('切换失败')}}
 onMounted(load)
 </script>
 <style lang="scss" scoped>

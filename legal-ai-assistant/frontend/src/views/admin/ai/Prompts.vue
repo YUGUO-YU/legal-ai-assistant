@@ -131,11 +131,79 @@
             <el-tag v-else-if="detail.is_gray === 1" type="warning" size="small">灰度中</el-tag>
             <el-tag v-else type="info" size="small">未激活</el-tag>
           </el-descriptions-item>
+          <el-descriptions-item label="采纳率" v-if="detail.adopt_rate != null">{{ (Number(detail.adopt_rate) * 100).toFixed(1) }}%</el-descriptions-item>
+          <el-descriptions-item label="评分" v-if="detail.feedback_score != null">{{ detail.feedback_score }}</el-descriptions-item>
         </el-descriptions>
         <h4 style="margin-top:20px">内容</h4>
         <pre class="prompt-content">{{ detail.content }}</pre>
+        <div v-if="detail.variables" style="margin-top:16px">
+          <h4>变量定义</h4>
+          <div class="var-tags">
+            <el-tag v-for="v in parseVars(detail.variables)" :key="v" size="small" style="margin:2px">{{ v }}</el-tag>
+          </div>
+        </div>
+        <div v-if="relatedVersions.length" style="margin-top:20px">
+          <h4>同代码其他版本</h4>
+          <el-table :data="relatedVersions" size="small" stripe>
+            <el-table-column prop="version" label="版本" width="100" />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag v-if="row.is_active === 1 && row.is_gray !== 1" type="success" size="small">已激活</el-tag>
+                <el-tag v-else-if="row.is_gray === 1" type="warning" size="small">灰度中</el-tag>
+                <el-tag v-else type="info" size="small">未激活</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="adopt_rate" label="采纳率" width="100">
+              <template #default="{ row }">
+                <span v-if="row.adopt_rate != null">{{ (Number(row.adopt_rate) * 100).toFixed(1) }}%</span>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="feedback_score" label="评分" width="80" />
+            <el-table-column label="操作" width="120">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="compareVersion(row)">对比</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </div>
     </el-drawer>
+
+    <!-- 版本对比 -->
+    <el-dialog v-model="showCompare" title="版本对比" width="900px">
+      <div v-if="compareData" class="compare-container">
+        <div class="compare-header">
+          <el-tag type="info">{{ compareData.old?.version || '旧版本' }}</el-tag>
+          <span style="margin:0 12px;color:#64748b">VS</span>
+          <el-tag type="success">{{ compareData.new?.version || '新版本' }}</el-tag>
+        </div>
+        <el-tabs>
+          <el-tab-pane label="内容对比">
+            <div class="diff-content">
+              <div class="diff-old"><pre>{{ compareData.old?.content || '(无)' }}</pre></div>
+              <div class="diff-new"><pre>{{ compareData.new?.content || '(无)' }}</pre></div>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="变量对比">
+            <div class="diff-content">
+              <div class="diff-old">
+                <div class="var-tags">
+                  <el-tag v-for="v in parseVars(compareData.old?.variables)" :key="v" size="small" style="margin:2px">{{ v }}</el-tag>
+                  <span v-if="!parseVars(compareData.old?.variables).length" style="color:#9ca3af">无变量</span>
+                </div>
+              </div>
+              <div class="diff-new">
+                <div class="var-tags">
+                  <el-tag v-for="v in parseVars(compareData.new?.variables)" :key="v" size="small" style="margin:2px">{{ v }}</el-tag>
+                  <span v-if="!parseVars(compareData.new?.variables).length" style="color:#9ca3af">无变量</span>
+                </div>
+              </div>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -152,9 +220,18 @@ const filter = reactive({ page: 1, pageSize: 50, keyword: '', module: '' })
 const showCreate = ref(false)
 const showGray = ref(false)
 const showDetail = ref(false)
+const showCompare = ref(false)
 const detail = ref(null)
+const relatedVersions = ref([])
+const compareData = ref(null)
 const form = reactive({ prompt_code: '', module: 'MOD-01', scene: '', version: 'v1.0', content: '', variables: '' })
 const grayForm = reactive({ id: null, code: '', version: '', ratio: 10, teams: '' })
+
+function parseVars(v) {
+  if (!v) return []
+  if (Array.isArray(v)) return v
+  try { return JSON.parse(v) } catch { return [] }
+}
 
 async function load() {
   loading.value = true
@@ -186,7 +263,7 @@ async function handleCreate() {
     catch (e) { /* keep as string */ }
   }
   try {
-    const res = await api.post('/admin/{table}/create'.replace('{table}', 'prompt_template'), payload)
+    const res = await api.post('/admin/prompt_template/create', payload)
     if (res.data?.ok) {
       ElMessage.success('已创建')
       showCreate.value = false
@@ -201,13 +278,30 @@ async function handleCreate() {
 
 async function openDetail(row) {
   try {
-    const res = await api.get(`/admin/{table}/${row.id}`.replace('{table}', 'prompt_template'))
+    const res = await api.get(`/admin/prompt_template/${row.id}`)
     detail.value = res.data?.data || row
     showDetail.value = true
+    loadRelatedVersions(row.prompt_code, row.id)
   } catch (e) {
     detail.value = row
     showDetail.value = true
+    relatedVersions.value = []
   }
+}
+
+async function loadRelatedVersions(code, excludeId) {
+  try {
+    const allRes = await api.get('/admin/prompt_template/list')
+    const all = allRes.data?.list || []
+    relatedVersions.value = all.filter(r => r.prompt_code === code && r.id !== excludeId)
+  } catch (e) {
+    relatedVersions.value = []
+  }
+}
+
+function compareVersion(otherRow) {
+  compareData.value = { old: otherRow, new: detail.value }
+  showCompare.value = true
 }
 
 async function handlePublish(row) {
@@ -282,4 +376,14 @@ onMounted(load)
   line-height: 1.6;
   border: 1px solid #e2e8f0;
 }
+.var-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.compare-container { padding: 0 8px; }
+.compare-header { display: flex; align-items: center; margin-bottom: 16px; justify-content: center; }
+.diff-content { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.diff-old pre, .diff-new pre {
+  background: #fef2f2; padding: 12px; border-radius: 6px; white-space: pre-wrap;
+  font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 12px; line-height: 1.6;
+  border: 1px solid #fecaca; height: 300px; overflow-y: auto;
+}
+.diff-new pre { background: #f0fdf4; border: 1px solid #bbf7d0; }
 </style>

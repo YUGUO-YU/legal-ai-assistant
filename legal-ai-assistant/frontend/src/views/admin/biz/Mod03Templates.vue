@@ -49,6 +49,7 @@
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
             <el-button link type="success" size="small" @click="previewTemplate(row)">预览</el-button>
+            <el-button link type="warning" size="small" @click="copyTemplate(row)">复制</el-button>
             <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -216,7 +217,7 @@ function extractVars() {
 async function load() {
   loading.value = true
   try {
-    const res = await api.get('/admin/{table}/list'.replace('{table}', 'doc_template'), { params: { module: filter.category || undefined } })
+    const res = await api.get('/admin/doc_template/list', { params: { category: filter.category || undefined } })
     rows.value = res.data?.list || []
   } catch (e) { rows.value = [] }
   finally { loading.value = false }
@@ -242,9 +243,9 @@ async function handleSave() {
   try {
     let res
     if (form.id) {
-      res = await api.post(`/admin/{table}/${form.id}/update`.replace('{table}', 'doc_template'), payload)
+      res = await api.post(`/admin/doc_template/${form.id}/update`, payload)
     } else {
-      res = await api.post('/admin/{table}/create'.replace('{table}', 'doc_template'), payload)
+      res = await api.post('/admin/doc_template/create', payload)
     }
     if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
     else ElMessage.error(res.data?.error || '保存失败')
@@ -254,7 +255,7 @@ async function handleSave() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除模板「${row.template_name}」？`, '确认', { type: 'warning' })
-    await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}', 'doc_template'))
+    await api.post(`/admin/doc_template/${row.id}/delete`)
     ElMessage.success('已删除')
     load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
@@ -262,9 +263,28 @@ async function handleDelete(row) {
 
 async function toggleTpl(row) {
   try {
-    await api.post(`/admin/{table}/${row.id}/toggle`.replace('{table}', 'doc_template'), { status: row.status === 1 ? 0 : 1 })
+    await api.post(`/admin/doc_template/${row.id}/toggle`, { status: row.status === 1 ? 0 : 1 })
     row.status = row.status === 1 ? 0 : 1
   } catch (e) { ElMessage.error('切换失败') }
+}
+
+async function copyTemplate(row) {
+  try {
+    const newCode = row.template_code + '_copy_' + Date.now()
+    const payload = {
+      template_code: newCode,
+      template_name: row.template_name + ' (副本)',
+      category: row.category,
+      schema_json: row.schema_json,
+      risk_rules: row.risk_rules,
+      review_required: row.review_required,
+      status: 0,
+      version: row.version + '.copy'
+    }
+    const res = await api.post('/admin/doc_template/create', payload)
+    if (res.data?.ok) { ElMessage.success('已复制为新模板'); load() }
+    else ElMessage.error(res.data?.error || '复制失败')
+  } catch (e) { ElMessage.error('复制失败') }
 }
 
 function previewTemplate(row) {
