@@ -1025,14 +1025,14 @@ public class DocumentService {
         String addr = address.trim();
 
         // 省/自治区/直辖市
-        String province = extractByRegex(addr, "(?:([^省\s]+省)|([^省\s]+自治区)|(北京市)|(天津市)|(上海市)|(重庆市)|(香港)|(澳门))");
+        String province = matchRegex(addr, "(?:([^省\s]+省)|([^省\s]+自治区)|(北京市)|(天津市)|(上海市)|(重庆市)|(香港)|(澳门))");
         if (province != null) {
             result.put("province", province);
             addr = addr.substring(addr.indexOf(province) + province.length());
         }
 
         // 市/地区/自治州
-        String city = extractByRegex(addr, "([^省\s]{2,10}?(?:市|地区|自治州|盟|特别行政区))");
+        String city = matchRegex(addr, "([^省\s]{2,10}?(?:市|地区|自治州|盟|特别行政区))");
         if (city != null) {
             result.put("city", city);
             int cityIdx = addr.indexOf(city);
@@ -1040,7 +1040,7 @@ public class DocumentService {
         }
 
         // 区/县/县级市
-        String district = extractByRegex(addr, "([^市\s]{2,10}?(?:区|县|市|旗|林|特区))");
+        String district = matchRegex(addr, "([^市\s]{2,10}?(?:区|县|市|旗|林|特区))");
         if (district != null) {
             result.put("district", district);
             int distIdx = addr.indexOf(district);
@@ -1048,7 +1048,7 @@ public class DocumentService {
         }
 
         // 街道/路/巷/道
-        String street = extractByRegex(addr, "([\\u4e00-\\u9fa5]+(?:街道|路|巷|道|街|镇|乡))");
+        String street = matchRegex(addr, "([\\u4e00-\\u9fa5]+(?:街道|路|巷|道|街|镇|乡))");
         if (street != null) {
             result.put("street", street);
             int streetIdx = addr.indexOf(street);
@@ -1056,7 +1056,7 @@ public class DocumentService {
         }
 
         // 门牌号/栋/单元/室
-        String number = extractByRegex(addr, "([\\d零一二三四五六七八九十百]+(?:号|栋|幢|单元|层|室|弄))");
+        String number = matchRegex(addr, "([\\d零一二三四五六七八九十百]+(?:号|栋|幢|单元|层|室|弄))");
         if (number != null) {
             result.put("number", number);
         }
@@ -1072,7 +1072,7 @@ public class DocumentService {
         return result;
     }
 
-    private String extractByRegex(String text, String regex) {
+    private String matchRegex(String text, String regex) {
         if (text == null || regex == null) return null;
         try {
             Pattern p = Pattern.compile(regex);
