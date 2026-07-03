@@ -26,6 +26,12 @@
             </el-button>
           </div>
 
+          <el-alert v-if="errorMsg" :title="errorMsg" type="error" show-icon :closable="true" @close="errorMsg = ''" style="margin-bottom: 16px;">
+            <template #default>
+              <el-button size="small" type="primary" @click="errorMsg = ''; handleAsk()">重试</el-button>
+            </template>
+          </el-alert>
+
           <div class="chat-messages" ref="chatContainer">
             <div v-if="messages.length === 0" class="empty-state">
               <div class="empty-icon">
@@ -87,6 +93,11 @@
                   <div class="message-time">{{ msg.time }}</div>
                 </div>
               </div>
+            </div>
+
+            <div v-if="suggestedQuestions.length > 0 && lastAssistantMsg" class="suggested-questions">
+              <div class="suggested-label">追问建议</div>
+              <el-tag v-for="q in suggestedQuestions" :key="q" @click="fillQuestion(q)" class="suggested-tag">{{ q }}</el-tag>
             </div>
 
             <div v-if="loading" class="message assistant">
@@ -173,6 +184,9 @@
                   <span class="session-title">{{ s.title }}</span>
                   <span class="session-date">{{ s.date }}</span>
                 </div>
+                <el-icon class="session-continue-btn" @click.stop="restoreSession(s)" title="继续对话">
+                  <VideoPlay />
+                </el-icon>
                 <el-icon class="session-detail-btn" @click.stop="goSessionDetail(s)" title="查看详情">
                   <View />
                 </el-icon>
@@ -222,7 +236,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, nextTick, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -245,7 +259,8 @@ import {
   InfoFilled,
   Switch,
   Key,
-  View
+  View,
+  VideoPlay
 } from '@element-plus/icons-vue'
 import api from '../api'
 
@@ -261,8 +276,17 @@ const showKbSelector = ref(false)
 const selectedKb = ref('')
 const loading = ref(false)
 const kbList = ref([])
+const errorMsg = ref('')
 
 const sessions = ref([])
+const suggestedQuestions = ref([])
+
+const lastAssistantMsg = computed(() => {
+  for (let i = messages.value.length - 1; i >= 0; i--) {
+    if (messages.value[i].role === 'assistant') return messages.value[i]
+  }
+  return null
+})
 
 const loadSessions = async () => {
   try {
@@ -312,7 +336,22 @@ const formatContent = (content) => {
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
 }
 
+const generateSuggestions = (q) => {
+  if (q.includes('合同')) {
+    suggestedQuestions.value = ['合同审查的标准是什么？', '如何避免合同纠纷？', '合同违约怎么处理？']
+  } else if (q.includes('劳动')) {
+    suggestedQuestions.value = ['劳动仲裁流程是什么？', '如何申请劳动仲裁？', '劳动合同注意事项有哪些？']
+  } else {
+    suggestedQuestions.value = ['请详细说明相关法律规定？', '有哪些类似案例可参考？', '我还需要注意哪些关键点？']
+  }
+}
+
+const fillQuestion = (q) => {
+  question.value = q
+}
+
 const handleAsk = async () => {
+  errorMsg.value = ''
   if (!question.value.trim() || loading.value) return
 
   const userMsg = {
@@ -397,10 +436,12 @@ const handleAsk = async () => {
     }
 
     await flushUpdate()
+    generateSuggestions(q)
     await loadSessions()
   } catch (e) {
     aiMsg.content = '回答生成失败，请稍后重试'
     ElMessage.error('回答生成失败，请稍后重试')
+    errorMsg.value = '网络错误，请检查网络连接或稍后重试'
   } finally {
     loading.value = false
     await nextTick()
@@ -470,6 +511,33 @@ const goSessionDetail = (s) => {
     return
   }
   router.push(`/qa-session/${id}`)
+}
+
+const restoreSession = async (session) => {
+  currentSession.value = session.id
+  sessionId.value = session.sessionUuid || session.id
+  messages.value = []
+
+  try {
+    const res = await api.docQa.getSessionHistory(session.sessionUuid || session.id)
+    if (res.data && res.data.length > 0) {
+      messages.value = res.data.map((msg, idx) => ({
+        id: idx,
+        role: msg.role,
+        content: msg.content,
+        time: msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : ''
+      }))
+    }
+  } catch (e) {
+    console.error('加载会话消息失败:', e)
+    ElMessage.error('加载会话消息失败')
+  }
+
+  await nextTick()
+  if (chatContainer.value) {
+    chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+  }
+  ElMessage.success('已恢复会话')
 }
 
 onMounted(() => {
@@ -888,6 +956,38 @@ onMounted(() => {
   }
 }
 
+.suggested-questions {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: #f0f4ff;
+  border-radius: 12px;
+  border: 1px dashed #c7d2fe;
+
+  .suggested-label {
+    font-size: 12px;
+    color: #6366f1;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  :deep(.suggested-tag) {
+    margin-right: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    background: #fff;
+    border: 1px solid #e0e7ff;
+    color: #4f46e5;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #6366f1;
+      border-color: #6366f1;
+      color: #fff;
+      transform: translateY(-1px);
+    }
+  }
+}
+
 .context-card {
   border: none;
   border-radius: 20px;
@@ -983,6 +1083,20 @@ onMounted(() => {
     }
     &.active .session-detail-btn { color: #fff; }
     &.active .session-detail-btn:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
+
+    .session-continue-btn {
+      padding: 4px;
+      border-radius: 6px;
+      color: #9ca3af;
+      cursor: pointer;
+      transition: all 0.2s;
+      &:hover {
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+      }
+    }
+    &.active .session-continue-btn { color: #fff; }
+    &.active .session-continue-btn:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
 
     .session-icon {
       width: 36px;
