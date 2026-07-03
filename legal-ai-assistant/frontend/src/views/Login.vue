@@ -81,13 +81,6 @@
         <el-link type="primary" @click="$router.push('/register')">立即注册</el-link>
       </div>
 
-      <div class="admin-quick-link">
-        <el-link type="info" underline="never" @click="goAdmin">
-          <el-icon><Setting /></el-icon>
-          管理员登录
-        </el-link>
-      </div>
-
       <div class="demo-accounts">
         <el-divider>
           <span class="demo-divider-text">演示账号</span>
@@ -104,30 +97,16 @@
         </div>
       </div>
 
-      <div class="admin-entry">
-        <el-divider>
-          <span class="admin-divider-text">快速入口</span>
-        </el-divider>
-        <div class="entry-buttons">
-          <el-button
-            v-if="isLoggedIn"
-            type="primary"
-            size="large"
-            class="entry-btn dashboard-btn"
-            @click="goDashboard"
-          >
-            <el-icon><Odometer /></el-icon>
-            <span>进入工作台</span>
-          </el-button>
-          <el-button
-            size="large"
-            class="entry-btn admin-btn"
-            @click="goAdmin"
-          >
-            <el-icon><Setting /></el-icon>
-            <span>后台管理</span>
-          </el-button>
-        </div>
+      <div class="dashboard-entry" v-if="isLoggedIn">
+        <el-button
+          type="primary"
+          size="large"
+          class="entry-btn dashboard-btn"
+          @click="goDashboard"
+        >
+          <el-icon><Odometer /></el-icon>
+          <span>进入工作台</span>
+        </el-button>
       </div>
     </div>
   </div>
@@ -137,7 +116,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, CircleCheck, Sunny, Setting, Odometer } from '@element-plus/icons-vue'
+import { User, Lock, CircleCheck, Sunny, Odometer } from '@element-plus/icons-vue'
 import api from '../api'
 
 const router = useRouter()
@@ -230,10 +209,6 @@ onMounted(() => {
 
 const goDashboard = () => {
   router.push('/dashboard')
-}
-
-const goAdmin = () => {
-  router.push('/admin/login')
 }
 
 onMounted(() => {
@@ -466,8 +441,6 @@ onMounted(() => {
 
 .demo-accounts {
   margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #f3f4f6;
 
   :deep(.el-divider) {
     margin: 16px 0;
@@ -492,33 +465,17 @@ onMounted(() => {
     gap: 8px;
 
     .demo-value {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
       color: #4b5563;
       font-weight: 500;
     }
   }
 }
 
-.admin-entry {
+.dashboard-entry {
   margin-top: 24px;
-
-  :deep(.el-divider) {
-    margin: 16px 0;
-
-    .el-divider__text {
-      background: #fff;
-      color: #9ca3af;
-      font-size: 12px;
-      padding: 0 12px;
-    }
-  }
-
-  .entry-buttons {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
+  display: flex;
+  justify-content: center;
 
   .entry-btn {
     height: 44px;
@@ -544,18 +501,6 @@ onMounted(() => {
 
     &:hover {
       box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-    }
-  }
-
-  .admin-btn {
-    background: #fff;
-    border: 2px solid #e5e7eb;
-    color: #4b5563;
-
-    &:hover {
-      border-color: #667eea;
-      color: #667eea;
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
     }
   }
 }
