@@ -562,7 +562,7 @@ public class AdminController {
     }
 
     @GetMapping("/law/category-types/{id}")
-    public ApiResponse<Map<String, Object>> getCategoryType(@PathVariable Long id) {
+    public ApiResponse<LawCategoryType> getCategoryType(@PathVariable Long id) {
         return ApiResponse.success(lawCategoryService.getType(id));
     }
 
