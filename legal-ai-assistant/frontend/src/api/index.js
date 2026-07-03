@@ -57,13 +57,13 @@ api.interceptors.response.use(
           ElMessage.error('权限不足')
           break
         case 404:
-          ElMessage.error('资源不存在')
+          ElMessage.error('资源不存在或接口未定义')
           break
         case 429:
           ElMessage.warning('请求过于频繁，请稍后重试')
           break
         case 500:
-          ElMessage.error('服务器内部错误')
+          ElMessage.error('服务器内部错误：' + (error.response.data?.message || ''))
           break
         case 502:
         case 503:
@@ -71,12 +71,14 @@ api.interceptors.response.use(
           ElMessage.error('服务暂时不可用，请稍后重试')
           break
         default:
-          ElMessage.error('请求失败：' + error.message)
+          ElMessage.error('请求失败：' + (error.response.data?.message || error.message))
       }
     } else if (error.code === 'ECONNABORTED') {
       ElMessage.error('请求超时，请检查网络连接')
+    } else if (error.code === 'ERR_NETWORK') {
+      ElMessage.error('无法连接到服务器，请确认后端服务已启动')
     } else if (error.request) {
-      ElMessage.error('网络错误，请检查网络连接')
+      ElMessage.error('网络错误，请检查网络连接和后端服务状态')
     }
     return Promise.reject(error)
   }

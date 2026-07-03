@@ -188,7 +188,7 @@ const handleGetCode = async () => {
       ElMessage.success('验证码已生成，请查收')
     } catch (e) {
       console.error('获取验证码失败:', e)
-      ElMessage.error(e?.message || e?.response?.data?.message || '获取验证码失败')
+      ElMessage.error(e?.response?.data?.message || e?.message || '获取验证码失败')
     } finally {
       loading.value = false
     }
@@ -209,7 +209,7 @@ const handleReset = async () => {
       router.push('/')
     } catch (e) {
       console.error('重置密码失败:', e)
-      ElMessage.error(e?.message || e?.response?.data?.message || '重置失败')
+      ElMessage.error(e?.response?.data?.message || e?.message || '重置失败')
     } finally {
       loading.value = false
     }
