@@ -205,10 +205,6 @@ const handleLogin = async () => {
   }
 }
 
-onMounted(() => {
-  refreshCaptcha()
-})
-
 const goDashboard = () => {
   router.push('/dashboard')
 }
