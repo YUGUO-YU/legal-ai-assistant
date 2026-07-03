@@ -154,41 +154,41 @@
             </el-breadcrumb>
           </div>
 
-              <div class="header-actions">
-                <el-button :icon="Bell" circle class="header-btn" />
-                <el-button :icon="isDark ? Sunny : Moon" circle class="header-btn" @click="toggleTheme" />
-                <el-button :icon="Setting" circle class="header-btn" />
+            <div class="header-actions">
+              <el-button :icon="Bell" circle class="header-btn" />
+              <el-button :icon="isDark ? Sunny : Moon" circle class="header-btn" @click="toggleTheme" />
+              <el-button :icon="Setting" circle class="header-btn" />
 
-            <el-dropdown @command="handleCommand" trigger="click">
-              <div class="user-info">
-                <el-avatar :size="36" class="user-avatar">
-                  <el-icon><UserFilled /></el-icon>
-                </el-avatar>
-                <div class="user-detail">
-                  <span class="username">{{ username }}</span>
-                  <span class="user-role">法律顾问</span>
+              <el-dropdown @command="handleCommand" trigger="click">
+                <div class="user-info">
+                  <el-avatar :size="36" class="user-avatar">
+                    <el-icon><UserFilled /></el-icon>
+                  </el-avatar>
+                  <div class="user-detail">
+                    <span class="username">{{ username }}</span>
+                    <span class="user-role">法律顾问</span>
+                  </div>
+                  <el-icon class="user-arrow"><ArrowDown /></el-icon>
                 </div>
-                <el-icon class="user-arrow"><ArrowDown /></el-icon>
-              </div>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="profile">
-                    <el-icon><User /></el-icon>
-                    个人设置
-                  </el-dropdown-item>
-                  <el-dropdown-item command="help">
-                    <el-icon><QuestionFilled /></el-icon>
-                    使用帮助
-                  </el-dropdown-item>
-                  <el-dropdown-item divided command="logout">
-                    <el-icon><SwitchButton /></el-icon>
-                    退出登录
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </el-header>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="profile">
+                      <el-icon><User /></el-icon>
+                      个人设置
+                    </el-dropdown-item>
+                    <el-dropdown-item command="help">
+                      <el-icon><QuestionFilled /></el-icon>
+                      使用帮助
+                    </el-dropdown-item>
+                    <el-dropdown-item divided command="logout">
+                      <el-icon><SwitchButton /></el-icon>
+                      退出登录
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
+          </el-header>
 
         <el-main class="main-content">
           <router-view v-slot="{ Component }">
