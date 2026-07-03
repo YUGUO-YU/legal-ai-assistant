@@ -272,53 +272,6 @@
           </div>
         </el-card>
 
-    <el-card class="usage-memory-card" style="margin-top: 24px">
-      <template #header>
-        <div class="card-header">
-          <div class="header-title">
-            <el-icon><Operation /></el-icon>
-            <span>使用记忆</span>
-          </div>
-          <div class="header-actions">
-            <el-tag v-if="memoryCount > 0" type="info" size="small">{{ memoryCount }} 条</el-tag>
-            <el-button v-if="memoryCount > 0" type="danger" size="small" link @click="handleClearMemory">清空</el-button>
-          </div>
-        </div>
-      </template>
-      <div v-if="justCleared" class="cleared-notice">
-        <el-icon><CircleCheck /></el-icon>
-        <span>使用记忆已清空</span>
-      </div>
-      <div v-else-if="memoryCount === 0" class="empty-memory">
-        <el-icon><Clock /></el-icon>
-        <span>暂无使用记录</span>
-        <p>搜索、起草文书、审查合同等操作会被自动记录</p>
-      </div>
-      <div v-else class="memory-list">
-        <div v-for="group in memoryGroups" :key="group.date" class="memory-group">
-          <div class="memory-date">{{ formatMemoryDate(group.date) }}</div>
-          <div
-            v-for="item in group.items"
-            :key="item.id"
-            class="memory-item"
-            @click="handleMemoryClick(item)"
-          >
-            <div class="memory-item-icon" :style="{ background: getTypeColor(item.type) + '22' }">
-              <el-icon><component :is="getTypeIcon(item.type)" /></el-icon>
-            </div>
-            <div class="memory-item-info">
-              <span class="memory-item-title">{{ item.title }}</span>
-              <span class="memory-item-desc">{{ item.desc }}</span>
-            </div>
-            <span class="memory-item-time">{{ formatAge(item.timestamp) }}</span>
-            <el-button link size="small" type="danger" @click.stop="handleRemoveMemory(item.id)">
-              <el-icon><Close /></el-icon>
-            </el-button>
-          </div>
-        </div>
-      </div>
-    </el-card>
-
     <el-drawer
       v-model="detailDrawerVisible"
       :title="activeDetailCard?.title"
