@@ -217,22 +217,7 @@
 
     <el-drawer v-model="showResult" title="生成结果" size="60%" direction="rtl">
       <div v-if="draftResult" class="result-content">
-        <el-tabs v-model="activeTab">
-          <el-tab-pane label="文书正文" name="content">
-            <pre class="document-content">{{ draftResult.documentContent }}</pre>
-          </el-tab-pane>
-          <el-tab-pane label="风险提示" name="risk">
-            <div class="risk-content" v-html="draftResult.riskPrompt"></div>
-          </el-tab-pane>
-          <el-tab-pane label="法律依据" name="laws">
-            <div class="laws-list">
-              <div v-for="law in draftResult.referencedLaws" :key="law" class="law-item">
-                <el-icon><Document /></el-icon>
-                {{ law }}
-              </div>
-            </div>
-          </el-tab-pane>
-        </el-tabs>
+        <pre class="document-content">{{ draftResult.documentContent }}</pre>
 
         <div class="actions">
           <el-button type="primary" @click="copyDocument">
