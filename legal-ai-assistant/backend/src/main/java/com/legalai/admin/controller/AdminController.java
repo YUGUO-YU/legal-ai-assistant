@@ -134,6 +134,42 @@ public class AdminController {
     }
 
     // ============================================================
+    // PROMPT_TEMPLATE CRUD (alias endpoints for frontend compatibility)
+    // ============================================================
+
+    @GetMapping("/prompt_template/list")
+    public ApiResponse<Map<String, Object>> listPromptTemplates(
+            @RequestParam(required = false) String module,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "50") int pageSize,
+            @RequestParam(required = false) String keyword) {
+        return ApiResponse.success(adminDataService.list("prompt_template", module, page, pageSize, keyword));
+    }
+
+    @GetMapping("/prompt_template/{id}")
+    public ApiResponse<Map<String, Object>> promptTemplateDetail(@PathVariable Long id) {
+        return ApiResponse.success(adminDataService.detail("prompt_template", id));
+    }
+
+    @PostMapping("/prompt_template/create")
+    public ApiResponse<Map<String, Object>> createPromptTemplate(@RequestBody Map<String, Object> data) {
+        recordAudit("create", "prompt_template", null);
+        return ApiResponse.success(adminDataService.createPromptTemplate(data));
+    }
+
+    @PostMapping("/prompt_template/{id}/update")
+    public ApiResponse<Map<String, Object>> updatePromptTemplate(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        recordAudit("update", "prompt_template", String.valueOf(id));
+        return ApiResponse.success(adminDataService.updatePromptTemplate(id, data));
+    }
+
+    @PostMapping("/prompt_template/{id}/delete")
+    public ApiResponse<Map<String, Object>> deletePromptTemplate(@PathVariable Long id) {
+        recordAudit("delete", "prompt_template", String.valueOf(id));
+        return ApiResponse.success(adminDataService.deletePromptTemplate(id));
+    }
+
+    // ============================================================
     // 监控概览 + LLM 健康 + Milvus 状态
     // ============================================================
 
@@ -620,6 +656,76 @@ public class AdminController {
     @PostMapping("/law/document-categories/{lawId}")
     public ApiResponse<Void> setDocumentCategories(@PathVariable Long lawId, @RequestBody Map<String, List<Long>> body) {
         lawCategoryService.setDocumentCategories(lawId, body.get("categoryIds"));
+        return ApiResponse.success(null);
+    }
+
+    // ============================================================
+    // DOC_TEMPLATE (Mod03) CRUD
+    // ============================================================
+
+    @GetMapping("/doc_template/list")
+    public ApiResponse<Map<String, Object>> listDocTemplates(
+            @RequestParam(required = false) String category) {
+        return ApiResponse.success(adminDataService.listDocTemplates(category));
+    }
+
+    @PostMapping("/doc_template/create")
+    public ApiResponse<Void> createDocTemplate(@RequestBody Map<String, Object> data) {
+        adminDataService.createDocTemplate(data);
+        recordAudit("create", "doc_template", null);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/doc_template/{id}/update")
+    public ApiResponse<Void> updateDocTemplate(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        adminDataService.updateDocTemplate(id, data);
+        recordAudit("update", "doc_template", String.valueOf(id));
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/doc_template/{id}/delete")
+    public ApiResponse<Void> deleteDocTemplate(@PathVariable Long id) {
+        adminDataService.deleteDocTemplate(id);
+        recordAudit("delete", "doc_template", String.valueOf(id));
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/doc_template/{id}/toggle")
+    public ApiResponse<Void> toggleDocTemplate(@PathVariable Long id, @RequestBody Map<String, Integer> data) {
+        adminDataService.toggleDocTemplate(id, data.get("status"));
+        recordAudit("toggle", "doc_template", String.valueOf(id));
+        return ApiResponse.success(null);
+    }
+
+    // ============================================================
+    // DOC_REVIEW_RULE CRUD
+    // ============================================================
+
+    @PostMapping("/doc_review_rule/create")
+    public ApiResponse<Void> createDocReviewRule(@RequestBody Map<String, Object> data) {
+        adminDataService.createDocReviewRule(data);
+        recordAudit("create", "doc_review_rule", null);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/doc_review_rule/{id}/update")
+    public ApiResponse<Void> updateDocReviewRule(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        adminDataService.updateDocReviewRule(id, data);
+        recordAudit("update", "doc_review_rule", String.valueOf(id));
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/doc_review_rule/{id}/delete")
+    public ApiResponse<Void> deleteDocReviewRule(@PathVariable Long id) {
+        adminDataService.deleteDocReviewRule(id);
+        recordAudit("delete", "doc_review_rule", String.valueOf(id));
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/doc_review_rule/{id}/toggle")
+    public ApiResponse<Void> toggleDocReviewRule(@PathVariable Long id, @RequestBody Map<String, Integer> data) {
+        adminDataService.toggleDocReviewRule(id, data.get("status"));
+        recordAudit("toggle", "doc_review_rule", String.valueOf(id));
         return ApiResponse.success(null);
     }
 

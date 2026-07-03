@@ -632,4 +632,222 @@ public class AdminDataService {
         }
         return null;
     }
+
+    // ============================================================
+    // DOC_TEMPLATE (Mod03) CRUD
+    // ============================================================
+
+    public Map<String, Object> listDocTemplates(String category) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE biz_module = 'MOD-03' ");
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (category != null && !category.isEmpty()) {
+                where.append(" AND category = ? ");
+                args.add(category);
+            }
+            Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM doc_template " + where, Integer.class, args.toArray());
+            StringBuilder q = new StringBuilder("SELECT * FROM doc_template ").append(where).append(" ORDER BY id DESC LIMIT 100 OFFSET 0");
+            List<Map<String, Object>> rows = jdbc.queryForList(q.toString(), args.toArray());
+            result.put("total", total == null ? 0 : total);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.error("查询 doc_template 失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public void createDocTemplate(Map<String, Object> data) {
+        String sql = """
+            INSERT INTO doc_template (template_code, template_name, category, schema_json, risk_rules, review_required, status, version, biz_module)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'MOD-03')
+            """;
+        jdbc.update(sql,
+            data.get("template_code"),
+            data.get("template_name"),
+            data.get("category"),
+            data.get("schema_json"),
+            data.get("risk_rules"),
+            data.get("review_required") != null ? data.get("review_required") : 1,
+            data.get("status") != null ? data.get("status") : 1,
+            data.get("version")
+        );
+        log.info("创建文书模板: {}", data.get("template_code"));
+    }
+
+    public void updateDocTemplate(Long id, Map<String, Object> data) {
+        StringBuilder sql = new StringBuilder("UPDATE doc_template SET ");
+        java.util.List<Object> args = new java.util.ArrayList<>();
+        if (data.get("template_name") != null) { sql.append("template_name = ?, "); args.add(data.get("template_name")); }
+        if (data.get("category") != null) { sql.append("category = ?, "); args.add(data.get("category")); }
+        if (data.get("schema_json") != null) { sql.append("schema_json = ?, "); args.add(data.get("schema_json")); }
+        if (data.get("risk_rules") != null) { sql.append("risk_rules = ?, "); args.add(data.get("risk_rules")); }
+        if (data.get("review_required") != null) { sql.append("review_required = ?, "); args.add(data.get("review_required")); }
+        if (data.get("status") != null) { sql.append("status = ?, "); args.add(data.get("status")); }
+        if (data.get("version") != null) { sql.append("version = ?, "); args.add(data.get("version")); }
+        if (args.isEmpty()) return;
+        sql.setLength(sql.length() - 2);
+        sql.append(" WHERE id = ?");
+        args.add(id);
+        jdbc.update(sql.toString(), args.toArray());
+        log.info("更新文书模板 id={}", id);
+    }
+
+    public void deleteDocTemplate(Long id) {
+        jdbc.update("DELETE FROM doc_template WHERE id = ?", id);
+        log.info("删除文书模板 id={}", id);
+    }
+
+    public void toggleDocTemplate(Long id, Integer status) {
+        jdbc.update("UPDATE doc_template SET status = ? WHERE id = ?", status, id);
+        log.info("切换文书模板 id={} status={}", id, status);
+    }
+
+    // ============================================================
+    // DOC_REVIEW_RULE CRUD
+    // ============================================================
+
+    public void createDocReviewRule(Map<String, Object> data) {
+        String sql = """
+            INSERT INTO doc_review_rule (template_code, rule_type, operator, threshold, trigger_action, status, rule_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """;
+        jdbc.update(sql,
+            data.get("template_code"),
+            data.get("rule_type"),
+            data.get("operator"),
+            data.get("threshold"),
+            data.get("trigger_action"),
+            data.get("status") != null ? data.get("status") : 1,
+            data.get("rule_name") != null ? data.get("rule_name") : data.get("template_code")
+        );
+        log.info("创建文书复核规则: {}", data.get("template_code"));
+    }
+
+    public void updateDocReviewRule(Long id, Map<String, Object> data) {
+        StringBuilder sql = new StringBuilder("UPDATE doc_review_rule SET ");
+        java.util.List<Object> args = new java.util.ArrayList<>();
+        if (data.get("template_code") != null) { sql.append("template_code = ?, "); args.add(data.get("template_code")); }
+        if (data.get("rule_type") != null) { sql.append("rule_type = ?, "); args.add(data.get("rule_type")); }
+        if (data.get("operator") != null) { sql.append("operator = ?, "); args.add(data.get("operator")); }
+        if (data.get("threshold") != null) { sql.append("threshold = ?, "); args.add(data.get("threshold")); }
+        if (data.get("trigger_action") != null) { sql.append("trigger_action = ?, "); args.add(data.get("trigger_action")); }
+        if (data.get("status") != null) { sql.append("status = ?, "); args.add(data.get("status")); }
+        if (data.get("rule_name") != null) { sql.append("rule_name = ?, "); args.add(data.get("rule_name")); }
+        if (args.isEmpty()) return;
+        sql.setLength(sql.length() - 2);
+        sql.append(" WHERE id = ?");
+        args.add(id);
+        jdbc.update(sql.toString(), args.toArray());
+        log.info("更新文书复核规则 id={}", id);
+    }
+
+    public void deleteDocReviewRule(Long id) {
+        jdbc.update("DELETE FROM doc_review_rule WHERE id = ?", id);
+        log.info("删除文书复核规则 id={}", id);
+    }
+
+    public void toggleDocReviewRule(Long id, Integer status) {
+        jdbc.update("UPDATE doc_review_rule SET status = ? WHERE id = ?", status, id);
+        log.info("切换文书复核规则 id={} status={}", id, status);
+    }
+
+    // ============================================================
+    // PROMPT_TEMPLATE CRUD
+    // ============================================================
+
+    public Long createPromptTemplate(Map<String, Object> data) {
+        String sql = """
+            INSERT INTO prompt_template (prompt_code, module, scene, version, content, variables, is_active, is_gray, gray_ratio, adopt_rate, feedback_score, biz_module)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+        jdbc.update(sql,
+            data.get("prompt_code"),
+            data.get("module"),
+            data.get("scene"),
+            data.get("version"),
+            data.get("content"),
+            data.get("variables"),
+            0,
+            0,
+            0,
+            data.get("adopt_rate") != null ? data.get("adopt_rate") : 0.0,
+            data.get("feedback_score") != null ? data.get("feedback_score") : 0.0,
+            data.get("module") != null ? data.get("module") : "MOD-01"
+        );
+        log.info("创建 Prompt 模板: {}", data.get("prompt_code"));
+        List<Map<String, Object>> rows = jdbc.queryForList("SELECT LAST_INSERT_ID() as id");
+        return rows.isEmpty() ? null : (Long) rows.get(0).get("id");
+    }
+
+    public void updatePromptTemplate(Long id, Map<String, Object> data) {
+        StringBuilder sql = new StringBuilder("UPDATE prompt_template SET ");
+        java.util.List<Object> args = new java.util.ArrayList<>();
+        if (data.get("prompt_code") != null) { sql.append("prompt_code = ?, "); args.add(data.get("prompt_code")); }
+        if (data.get("module") != null) { sql.append("module = ?, "); args.add(data.get("module")); }
+        if (data.get("scene") != null) { sql.append("scene = ?, "); args.add(data.get("scene")); }
+        if (data.get("version") != null) { sql.append("version = ?, "); args.add(data.get("version")); }
+        if (data.get("content") != null) { sql.append("content = ?, "); args.add(data.get("content")); }
+        if (data.get("variables") != null) { sql.append("variables = ?, "); args.add(data.get("variables")); }
+        if (data.get("adopt_rate") != null) { sql.append("adopt_rate = ?, "); args.add(data.get("adopt_rate")); }
+        if (data.get("feedback_score") != null) { sql.append("feedback_score = ?, "); args.add(data.get("feedback_score")); }
+        if (args.isEmpty()) return;
+        sql.setLength(sql.length() - 2);
+        sql.append(" WHERE id = ?");
+        args.add(id);
+        jdbc.update(sql.toString(), args.toArray());
+        log.info("更新 Prompt 模板 id={}", id);
+    }
+
+    public void deletePromptTemplate(Long id) {
+        jdbc.update("DELETE FROM prompt_template WHERE id = ?", id);
+        log.info("删除 Prompt 模板 id={}", id);
+    }
+
+    public Map<String, Object> publishPrompt(Long id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            jdbc.update("UPDATE prompt_template SET is_active = 0 WHERE prompt_code = (SELECT prompt_code FROM (SELECT prompt_code FROM prompt_template WHERE id = ?) as t)", id);
+            jdbc.update("UPDATE prompt_template SET is_active = 1 WHERE id = ?", id);
+            result.put("ok", true);
+            log.info("发布 Prompt 模板 id={}", id);
+        } catch (Exception e) {
+            log.error("发布 Prompt 失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> grayPrompt(Long id, int ratio, String teams) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            jdbc.update("UPDATE prompt_template SET is_gray = 1, gray_ratio = ?, gray_teams = ? WHERE id = ?", ratio, teams, id);
+            result.put("ok", true);
+            log.info("灰度发布 Prompt 模板 id={}, ratio={}", id, ratio);
+        } catch (Exception e) {
+            log.error("灰度发布失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> rollbackPrompt(Long id, String reason) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            jdbc.update("UPDATE prompt_template SET is_active = 1, is_gray = 0 WHERE id = ?", id);
+            result.put("ok", true);
+            log.info("回滚 Prompt 模板 id={}, reason={}", id, reason);
+        } catch (Exception e) {
+            log.error("回滚 Prompt 失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
 }
