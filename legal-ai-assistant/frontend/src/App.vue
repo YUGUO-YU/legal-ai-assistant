@@ -156,7 +156,7 @@
 
               <div class="header-actions">
                 <el-button :icon="Bell" circle class="header-btn" />
-                <el-button :icon="Sunny" circle class="header-btn" />
+                <el-button :icon="isDark ? Sunny : Moon" circle class="header-btn" @click="toggleTheme" />
                 <el-button :icon="Setting" circle class="header-btn" />
 
             <el-dropdown @command="handleCommand" trigger="click">
@@ -236,7 +236,14 @@ import {
 const route = useRoute()
 const router = useRouter()
 
+const isDark = ref(false)
 let themeTimer = null
+
+const toggleTheme = () => {
+  const newTheme = isDark.value ? 'light' : 'dark'
+  applyTheme(newTheme)
+  isDark.value = !isDark.value
+}
 
 const getInitialTheme = () => {
   const saved = localStorage.getItem('theme')
@@ -274,6 +281,7 @@ const scheduleNextThemeSwitch = () => {
 onMounted(() => {
   const theme = getInitialTheme()
   applyTheme(theme)
+  isDark.value = theme === 'dark'
   scheduleNextThemeSwitch()
 })
 
@@ -727,7 +735,7 @@ onMounted(() => {
 <style>
 [data-theme="dark"] {
   .sidebar {
-    background: #1e293b !important;
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
   }
   .aside-header {
     background: #0f172a !important;
@@ -749,6 +757,13 @@ onMounted(() => {
   .main-container {
     background: #0f172a !important;
   }
+  .header {
+    background: #1e293b !important;
+    border-bottom-color: #334155 !important;
+  }
+  .header .page-title {
+    color: #f1f5f9 !important;
+  }
   .header-btn {
     background: #334155 !important;
     border-color: #475569 !important;
@@ -759,12 +774,24 @@ onMounted(() => {
       background: rgba(102, 126, 234, 0.1) !important;
     }
   }
+  .user-info {
+    background: #334155 !important;
+    &:hover {
+      background: #475569 !important;
+    }
+    .username {
+      color: #f1f5f9 !important;
+    }
+    .user-role {
+      color: #94a3b8 !important;
+    }
+  }
   .page-card {
     background: #1e293b !important;
     border-color: #334155 !important;
   }
   .page-header h2 {
-    color: #e2e8f0 !important;
+    color: #f1f5f9 !important;
   }
   .page-header p {
     color: #94a3b8 !important;
@@ -772,6 +799,93 @@ onMounted(() => {
   .result-item {
     background: #1e293b !important;
     border-color: #334155 !important;
+  }
+  .el-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    --el-card-bg-color: #1e293b;
+  }
+  .el-table {
+    background: #1e293b !important;
+    --el-table-bg-color: #1e293b;
+    --el-table-tr-bg-color: #1e293b;
+    --el-table-header-bg-color: #0f172a;
+    color: #f1f5f9 !important;
+  }
+  .el-input__wrapper {
+    background: #334155 !important;
+    box-shadow: none !important;
+  }
+  .el-input__inner {
+    color: #f1f5f9 !important;
+  }
+  .el-input__inner::placeholder {
+    color: #64748b !important;
+  }
+  .el-select__wrapper {
+    background: #334155 !important;
+    box-shadow: none !important;
+  }
+  .el-textarea__inner {
+    background: #334155 !important;
+    color: #f1f5f9 !important;
+    box-shadow: none !important;
+  }
+  .el-dialog {
+    --el-dialog-bg-color: #1e293b;
+  }
+  .el-message-box {
+    --el-messagebox-bg-color: #1e293b;
+  }
+  .el-dropdown-menu {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+  .el-dropdown-menu__item {
+    color: #f1f5f9 !important;
+    &:hover {
+      background: #334155 !important;
+    }
+  }
+  .el-tabs__item {
+    color: #94a3b8 !important;
+    &.is-active {
+      color: #667eea !important;
+    }
+  }
+  .el-tabs__nav-wrap::after {
+    background: #334155 !important;
+  }
+  .el-tag {
+    --el-tag-bg-color: #334155;
+    --el-tag-border-color: #475569;
+    --el-tag-text-color: #f1f5f9;
+  }
+  .el-alert {
+    --el-alert-bg-color: #1e293b;
+    border-color: #334155 !important;
+  }
+  .el-pagination {
+    --el-pagination-bg-color: #1e293b;
+    --el-pagination-button-bg-color: #334155;
+    color: #f1f5f9 !important;
+  }
+  .empty-state {
+    background: #1e293b !important;
+    .empty-title {
+      color: #f1f5f9 !important;
+    }
+    .empty-desc {
+      color: #94a3b8 !important;
+    }
+  }
+  .loading-container {
+    background: #0f172a !important;
+  }
+  .analysis-report {
+    .el-tabs__content {
+      background: #1e293b !important;
+    }
   }
 }
 </style>
