@@ -436,6 +436,8 @@ public class DocumentService {
         merged.setSalary(coalesce(primary.getSalary(), fallback.getSalary()));
         merged.setStartDate(coalesce(primary.getStartDate(), fallback.getStartDate()));
         merged.setDisputeType(coalesce(primary.getDisputeType(), fallback.getDisputeType()));
+        merged.setUnifiedSocialCreditCode(coalesce(primary.getUnifiedSocialCreditCode(), fallback.getUnifiedSocialCreditCode()));
+        merged.setLegalRepresentative(coalesce(primary.getLegalRepresentative(), fallback.getLegalRepresentative()));
         merged.setSuccess(true);
         merged.setErrorMessage(null);
         merged.setDataSource(primary.getDataSource() != null ? primary.getDataSource() : "AI 智能识别");
@@ -468,23 +470,30 @@ public class DocumentService {
     }
 
     private ExtractedInfo extractByLLM(String text, String templateCode) throws Exception {
-        String prompt = "你是法律文本关键信息抽取助手。请从以下案件相关文本中抽取关键字段，以 JSON 格式返回。\n"
+        String prompt = "你是法律文本关键信息抽取助手。请从以下案件文本中严格抽取各字段，注意字段边界不要混淆。\n"
+            + "【重要规则】\n"
+            + "1. claimDescription（诉讼请求）只包含具体的请求内容，如'归还借款本金X元''支付货款X元''解除劳动合同'，不包含任何事实描述\n"
+            + "2. facts（事实与理由）只包含客观发生的事情描述，不包含诉讼请求\n"
+            + "3. 地址只提取省市区街道门牌号等地理信息，不包含当事人姓名或代码\n"
+            + "4. 统一社会信用代码是18位字符，如91110000XXXXXXXX\n\n"
             + "JSON 字段（缺失填空字符串或 null）：\n"
-            + "plaintiffName（原告/申请人姓名）\n"
-            + "plaintiffAddress（原告地址）\n"
+            + "plaintiffName（原告/申请人姓名/单位名称）\n"
+            + "plaintiffAddress（原告地址，仅地理地址）\n"
             + "defendantName（被告/被申请人姓名/单位名称）\n"
-            + "defendantAddress（被告地址）\n"
+            + "defendantAddress（被告地址，仅地理地址）\n"
             + "claimAmount（诉讼金额，数字，单位元，不要带\"元\"字符）\n"
-            + "claimDescription（诉讼请求/仲裁请求描述）\n"
-            + "facts（事实与理由概述）\n"
-            + "courtName（管辖法院）\n"
-            + "employerName（用人单位）\n"
-            + "employeeName（劳动者/员工姓名）\n"
+            + "claimDescription（诉讼请求，仅请求内容，不含事实与理由）\n"
+            + "facts（事实与理由，仅客观事实描述，不含诉讼请求）\n"
+            + "courtName（管辖法院名称）\n"
+            + "unifiedSocialCreditCode（企业统一社会信用代码，18位）\n"
+            + "legalRepresentative（法定代表人姓名）\n"
+            + "employerName（用人单位名称）\n"
+            + "employeeName（劳动者姓名）\n"
             + "workContent（工作岗位/工作内容）\n"
-            + "salary（月薪/工资数字与单位）\n"
+            + "salary（月薪/工资金额与单位）\n"
             + "startDate（入职/起始日期）\n"
             + "disputeType（争议类型）\n\n"
-            + "仅输出 JSON，不要解释：\n\n"
+            + "仅输出 JSON，不要任何解释：\n\n"
             + "原文：\n" + text;
         if (templateCode != null && !templateCode.isEmpty()) {
             prompt += "\n\n参考文书类型：" + templateCode;
@@ -692,75 +701,132 @@ public class DocumentService {
 
     private String extractPartyName(String text, String keyword) {
         if (text == null || keyword == null) return null;
-        
-        // 找到关键字位置
+
         int idx = text.indexOf(keyword);
         if (idx < 0) return null;
-        
-        // 关键字后一段文字（到换行或足够长）
+
         int start = idx + keyword.length();
-        int end = Math.min(start + 80, text.length());
+        int end = Math.min(start + 200, text.length());
         String segment = text.substring(start, end);
-        
-        // 移除常见前缀词
+
         segment = segment.replaceAll("^[：:,，\\s为叫字]+", "");
-        
-        // 匹配姓名或单位名
-        // 中文姓名：2-4个汉字+可选的·+2-4个汉字
-        Pattern p = Pattern.compile("^[\\u4e00-\\u9fa5]{2,4}(?:[·•][\\u4e00-\\u9fa5]{2,4})?");
-        Matcher m = p.matcher(segment);
-        if (m.find()) {
-            String name = m.group().trim();
-            // 去掉常见后缀
-            name = name.replaceAll("(住所|地址|住|男|女|族|身份证号|住址|出生|汉族|公司|有限|有限公司| Corporation).*$", "");
-            if (name.length() >= 2) return name;
+
+        String cleanedSegment = segment;
+
+        // 移除"统一社会信用代码"及其后面的内容
+        cleanedSegment = cleanedSegment.replaceAll("统一社会信用代码[^\n，,，、；;]{0,50}", "");
+        // 移除住所、地址
+        cleanedSegment = cleanedSegment.replaceAll("[住所]宅?[：:]\s*[^\n，,]{5,100}", "");
+        cleanedSegment = cleanedSegment.replaceAll("地址[^\n，,]{5,100}", "");
+        // 移除身份证号
+        cleanedSegment = cleanedSegment.replaceAll("身份证[号]?[^\n，,]{10,30}", "");
+        // 移除出生日期
+        cleanedSegment = cleanedSegment.replaceAll("出生[日期][^\n，,]{5,20}", "");
+
+        // 先取第一行（到换行或特定分隔符）
+        int lineEnd = cleanedSegment.indexOf('\n');
+        if (lineEnd > 0) {
+            cleanedSegment = cleanedSegment.substring(0, lineEnd);
         }
-        
-        // 匹配公司名：XX有限公司 / XX公司 / XX集团
-        p = Pattern.compile("^[\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{4,50}(?:有限公司|公司|集团|企业|合作社|协会)?(?:住所|地址|注册地)?");
-        m = p.matcher(segment);
+        int semicolonEnd = cleanedSegment.indexOf('；');
+        if (semicolonEnd > 2) {
+            cleanedSegment = cleanedSegment.substring(0, semicolonEnd);
+        }
+        int commaEnd = cleanedSegment.indexOf('，');
+        if (commaEnd > 50) {
+            cleanedSegment = cleanedSegment.substring(0, commaEnd);
+        }
+
+        cleanedSegment = cleanedSegment.trim();
+
+        // 匹配自然人姓名：2-4个汉字（排除"公司""法院"等词）
+        Pattern p = Pattern.compile("^[\\u4e00-\\u9fa5]{2,4}(?:[·•][\\u4e00-\\u9fa5]{2,4})?");
+        Matcher m = p.matcher(cleanedSegment);
         if (m.find()) {
             String name = m.group().trim();
-            name = name.replaceAll("(住所|地址|住|注册地|统一社会信用代码).*$", "");
+            name = name.replaceAll("(男|女|族)$", "").trim();
+            if (name.length() >= 2 && !isInstitutionalWord(name)) {
+                return name;
+            }
+        }
+
+        // 匹配法定代表人：法定代表人：XXX
+        p = Pattern.compile("^[\\u4e00-\\u9fa5]{2,6}");
+        m = p.matcher(cleanedSegment);
+        if (m.find()) {
+            String name = m.group().trim();
+            if (name.length() >= 2 && !isInstitutionalWord(name)) {
+                return name;
+            }
+        }
+
+        // 匹配公司名：XX有限公司 / XX公司 / XX集团
+        p = Pattern.compile("^[\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{2,30}(?:有限公司|公司|集团|企业|合作社|协会|中心|学校|医院|银行|酒店|商场)");
+        m = p.matcher(cleanedSegment);
+        if (m.find()) {
+            String name = m.group().trim();
+            name = name.replaceAll("(住所|地址|注册地|统一社会信用代码)[^\n]*", "").trim();
             if (name.length() >= 4) return name;
         }
-        
+
         return null;
+    }
+
+    private boolean isInstitutionalWord(String s) {
+        String[] words = {"法院", "检察院", "公安局", "司法局", "人民政府", "委员会", "办公室", "厅", "局", "部", "公司", "集团"};
+        for (String w : words) {
+            if (s.contains(w)) return true;
+        }
+        return false;
     }
 
     private String extractAddress(String text, String keyword) {
         if (text == null || keyword == null) return null;
-        
+
         int idx = text.indexOf(keyword);
         if (idx < 0) return null;
-        
+
         int start = idx + keyword.length();
-        int end = Math.min(start + 150, text.length());
+        int end = Math.min(start + 300, text.length());
         String segment = text.substring(start, end);
-        
-        // 移除前缀标点和空格
+
         segment = segment.replaceAll("^[：:,，\\s为住]+", "");
-        
-        // 找到第一个换行，截取第一行作为地址
+
+        // 移除统一社会信用代码
+        segment = segment.replaceAll("统一社会信用代码[^\n]{10,30}", "");
+        // 移除身份证号
+        segment = segment.replaceAll("身份证[号]?[^\n]{10,30}", "");
+        // 移除法定代表人
+        segment = segment.replaceAll("法定代表人[^\n]{2,20}", "");
+        // 移除电话
+        segment = segment.replaceAll("电话[^\n]{5,20}", "");
+
+        // 找到第一个换行，截取第一行
         int lineEnd = segment.indexOf('\n');
-        if (lineEnd > 0 && lineEnd < 120) {
+        if (lineEnd > 0 && lineEnd < 200) {
             segment = segment.substring(0, lineEnd);
         }
-        
-        // 截取到常见分隔符
+
+        // 截取到顿号、逗号、分号（取第一段）
+        int pauseEnd = segment.indexOf('、');
+        if (pauseEnd > 5 && pauseEnd < 150) {
+            segment = segment.substring(0, pauseEnd);
+        }
         int commaEnd = segment.indexOf('，');
-        if (commaEnd > 10 && commaEnd < 100) {
+        if (commaEnd > 5 && commaEnd < 150) {
             segment = segment.substring(0, commaEnd);
         }
-        
-        // 截取到句号
+        int semicolonEnd = segment.indexOf('；');
+        if (semicolonEnd > 5 && semicolonEnd < 150) {
+            segment = segment.substring(0, semicolonEnd);
+        }
         int periodEnd = segment.indexOf('。');
-        if (periodEnd > 10 && periodEnd < 100) {
+        if (periodEnd > 5 && periodEnd < 150) {
             segment = segment.substring(0, periodEnd);
         }
-        
+
         segment = segment.trim();
-        
+
         // 验证是否是有效地址（包含省/市/区/县/路/街/道/镇/乡/号等）
         if (segment.length() >= 6 && (
             segment.contains("省") || segment.contains("市") || segment.contains("区") ||
@@ -771,68 +837,104 @@ public class DocumentService {
         )) {
             return segment;
         }
-        
-        // 如果不包含地址关键词但长度合适也返回
-        if (segment.length() >= 8 && segment.length() <= 120) {
+
+        // 如果地址关键词不包含但长度在合理范围也返回
+        if (segment.length() >= 8 && segment.length() <= 120 && !segment.matches(".*[0-9A-Z]{15,}.*")) {
             return segment;
         }
-        
+
         return null;
     }
 
     private String extractCourtName(String text) {
         if (text == null) return null;
-        
-        // 优先匹配"XX市XX人民法院"格式
-        Pattern p = Pattern.compile("([\\u4e00-\\u9fa5]{2,6}人民法院)");
-        Matcher m = p.matcher(text);
-        if (m.find()) {
-            return m.group(1);
+
+        // 按优先级从高到低匹配各种法院格式
+        String[] patterns = {
+            // 1. 带"管辖""受案""起诉至""向""移送"语义的标注行
+            "(?:管辖法院|受案法院|起诉至|诉至|向法院|移送至|立案法院)[：:\\s]*([\\u4e00-\\u9fa5]{2,10}(?:人民法院|中级法院|高级法院|专门法院|铁路法院|军事法院|法院))",
+            // 2. 此致后面的法院（最常见）
+            "此致\\s*([\\u4e00-\\u9fa5]{2,10}(?:人民法院|中级法院|高级法院|专门法院|铁路法院|军事法院))",
+            // 3. XX省XX市人民法院
+            "([\\u4e00-\\u9fa5]{2,6}人民法院)",
+            // 4. XX市XX人民法院
+            "([\\u4e00-\\u9fa5]{2,8}人民法院)",
+            // 5. XX市XX法院
+            "([\\u4e00-\\u9fa5]{2,10}法院)",
+            // 6. 专门的法院名称
+            "(?:互联网法院|金融法院|知识产权法院|破产法院|铁路法院|军事法院|海事法院|森林法院|铁路运输法院)"
+        };
+
+        for (String pStr : patterns) {
+            try {
+                Pattern p = Pattern.compile(pStr);
+                Matcher m = p.matcher(text);
+                if (m.find()) {
+                    String court = m.group(m.groupCount()).trim();
+                    // 过滤掉明显不是法院名的词
+                    if (court.length() >= 4 && !court.matches(".*[区县市省路街巷]$")) {
+                        return court;
+                    }
+                }
+            } catch (Exception ignore) {
+            }
         }
-        
-        // 匹配"XX市XX法院"格式
-        p = Pattern.compile("([\\u4e00-\\u9fa5]{2,8}法院)");
-        m = p.matcher(text);
-        if (m.find()) {
-            return m.group(1);
-        }
-        
-        // 匹配"管辖法院：XXX"格式
-        p = Pattern.compile("(?:管辖法院|受案法院|起诉至|向|移送至)[\\s：:]*([\\u4e00-\\u9fa5A-Za-z]{2,15}(?:人民法院|法院))");
-        m = p.matcher(text);
-        if (m.find()) {
-            return m.group(1);
-        }
-        
+
         return null;
     }
 
     private String extractClaimDescription(String text) {
         if (text == null) return null;
-        
-        // 匹配"诉讼请求："或"请求事项："后的内容
-        Pattern p = Pattern.compile("(?:诉讼请求|请求事项|仲裁请求|索赔|请求)[：:][\\s\\S]{1,2000}(?=(?:事实|理由|证据|此致|$))");
+
+        String[] markers = {"诉讼请求", "请求事项", "仲裁请求", "索赔", "请求", "诉讼请求如下"};
+        String[] stoppers = {"事实与理由", "事实和理由", "事实", "理由", "证据", "此致", "具状人", "落款"};
+
+        for (String marker : markers) {
+            int markerIdx = text.indexOf(marker);
+            if (markerIdx < 0) continue;
+
+            int start = markerIdx + marker.length();
+            if (start >= text.length()) continue;
+
+            // 在文本剩余部分找截止边界
+            int bestEnd = text.length();
+            for (String stopper : stoppers) {
+                int stopIdx = text.indexOf(stopper, start);
+                if (stopIdx > start && stopIdx < bestEnd) {
+                    bestEnd = stopIdx;
+                }
+            }
+
+            // 跳过到第一个换行（跳过可能的空行或标题行）
+            while (start < bestEnd && (text.charAt(start) == '\n' || text.charAt(start) == '\r' || text.charAt(start) == ' ' || text.charAt(start) == '　')) {
+                start++;
+            }
+
+            String result = text.substring(start, bestEnd).trim();
+            result = result.replaceAll("^(?::|：|\\s)*", "").trim();
+            result = result.replaceAll("\\n\\s*", "\n").trim();
+
+            // 限制最大长度，防止无限扩展
+            if (result.length() >= 5 && result.length() <= 3000) {
+                return result;
+            }
+        }
+
+        // 匹配列表格式 1. xxx 或 一、xxx
+        Pattern p = Pattern.compile("(?:1[、.．][^\\n]{5,200}(?:\\n|$)){1,10}");
         Matcher m = p.matcher(text);
         if (m.find()) {
-            String result = m.group();
-            result = result.replaceAll("^(?:诉讼请求|请求事项|仲裁请求|索赔|请求)[：:]", "").trim();
-            if (result.length() > 0) return result;
+            String result = m.group().trim();
+            if (result.length() >= 5) return result;
         }
-        
-        // 匹配"1. xxx"格式的列表
-        p = Pattern.compile("(?:1[、.．][\\s\\S]{5,300}){1,5}");
+
+        p = Pattern.compile("(?:[一二三四五六七八九十][、.．][^\\n]{5,200}(?:\\n|$)){1,10}");
         m = p.matcher(text);
         if (m.find()) {
-            return m.group().trim();
+            String result = m.group().trim();
+            if (result.length() >= 5) return result;
         }
-        
-        // 匹配"一、xxx"格式
-        p = Pattern.compile("(?:一[、.．][\\s\\S]{5,300}){1,5}");
-        m = p.matcher(text);
-        if (m.find()) {
-            return m.group().trim();
-        }
-        
+
         return null;
     }
 
@@ -1053,21 +1155,30 @@ public class DocumentService {
 
     private String extractUnifiedSocialCreditCode(String text) {
         if (text == null) return null;
-        
-        // 统一社会信用代码是18位数字和大写字母组合
-        Pattern p = Pattern.compile("(?:统一社会信用代码|信用代码|代码)[：:]?\\s*([1-9A-HJ-NPQRTUWXY]{2}\\d{6}[1-9A-HJ-NPQRTUWXY]{9}[0-9A-Z])");
+
+        // 1. 带标注的格式：统一社会信用代码：91110000XXXXXXXX
+        Pattern p = Pattern.compile("(?:统一社会信用代码)[：:\\s]*([1-9A-HJ-NPQRTUWXY]{2}\\d{6}[1-9A-HJ-NPQRTUWXY]{9}[0-9A-Z])");
         Matcher m = p.matcher(text);
         if (m.find()) {
-            return m.group(1);
+            String code = m.group(1).trim();
+            if (code.length() == 18) return code;
         }
-        
-        // 直接匹配18位统一社会信用代码格式
-        p = Pattern.compile("\\b([1-9A-HJ-NPQRTUWXY]{2}\\d{6}[1-9A-HJ-NPQRTUWXY]{9}[0-9A-Z])\\b");
+
+        // 2. 直接全文扫描18位统一社会信用代码（字母范围严格）
+        p = Pattern.compile("\\b([1-9A-HJ-NPQRTUWXY][1-9A-HJ-NPQRTUWXY]\\d{6}[1-9A-HJ-NPQRTUWXY]{9}[0-9A-Z])\\b");
         m = p.matcher(text);
         if (m.find()) {
-            return m.group(1);
+            return m.group(1).trim();
         }
-        
+
+        // 3. 宽松匹配：冒号或空格后的18位
+        p = Pattern.compile("[：:\\s]([1-9A-HJ-NPQRTUWXY]{2}\\d{6}[1-9A-HJ-NPQRTUWXY]{9}[0-9A-Z])\\b");
+        m = p.matcher(text);
+        if (m.find()) {
+            String code = m.group(1).trim();
+            if (code.length() == 18) return code;
+        }
+
         return null;
     }
 
