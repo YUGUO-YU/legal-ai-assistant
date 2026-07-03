@@ -18,7 +18,7 @@ public class UsageRecordController {
     private UsageRecordService usageRecordService;
 
     @PostMapping("/records")
-    public ApiResponse<UsageRecord> addRecord(@RequestBody Map<String, String> request) {
+    public ApiResponse<?> addRecord(@RequestBody Map<String, String> request) {
         String userId = request.getOrDefault("userId", "anonymous");
         String type = request.getOrDefault("type", "other");
         String title = request.getOrDefault("title", "");
