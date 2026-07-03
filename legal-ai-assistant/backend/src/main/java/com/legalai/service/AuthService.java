@@ -35,8 +35,12 @@ public class AuthService {
 
     private final Map<String, TokenInfo> tokenStore = new ConcurrentHashMap<>();
     private final Map<String, ResetCodeInfo> resetCodeStore = new ConcurrentHashMap<>();
+    private final Map<String, LoginFailureInfo> loginFailures = new ConcurrentHashMap<>();
     private final JdbcTemplate jdbc;
     private final Random random = new Random();
+
+    private static final int MAX_LOGIN_FAILURES = 5;
+    private static final long LOCKOUT_DURATION_MS = 5 * 60 * 1000L;
 
     public AuthService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
@@ -160,8 +164,15 @@ public class AuthService {
     public LoginResponse adminLogin(LoginRequest request) {
         log.info("管理员登录请求: username={}", request.getUsername());
 
+        if (isAccountLocked(request.getUsername())) {
+            long remaining = getLockoutRemainingMs(request.getUsername());
+            long minutes = (remaining + 59999) / 60000;
+            log.warn("管理员账号已被锁定: username={}, 剩余 {} 分钟", request.getUsername(), minutes);
+            throw new RuntimeException("账号已被锁定，请在 " + minutes + " 分钟后重试");
+        }
+
         var rows = jdbc.queryForList(
-            "SELECT id, username, password, real_name, status FROM admin_user WHERE username = ?",
+            "SELECT id, username, password, real_name, status, last_login_at FROM admin_user WHERE username = ?",
             request.getUsername());
 
         if (rows.isEmpty()) {
@@ -178,16 +189,30 @@ public class AuthService {
 
         String dbPassword = (String) user.get("password");
         if (dbPassword == null || !passwordMatches(request.getPassword(), dbPassword)) {
+            recordLoginFailure(request.getUsername());
             String computed = DigestUtils.sha256Hex(request.getPassword().getBytes(StandardCharsets.UTF_8));
             log.warn("管理员密码错误: username={}, storedHashPrefix={}, computedHashPrefix={}",
                     request.getUsername(),
                     dbPassword == null ? "null" : dbPassword.substring(0, Math.min(16, dbPassword.length())),
                     computed.substring(0, 16));
+            if (isAccountLocked(request.getUsername())) {
+                throw new RuntimeException("连续" + MAX_LOGIN_FAILURES + "次登录失败，账号已锁定5分钟");
+            }
             throw new RuntimeException("账号或密码错误");
         }
 
         Long userId = ((Number) user.get("id")).longValue();
         String realName = (String) user.get("real_name");
+        Object lastLoginAt = user.get("last_login_at");
+
+        clearLoginFailures(request.getUsername());
+
+        try {
+            jdbc.update("UPDATE admin_user SET last_login_at = NOW(), last_login_ip = ? WHERE id = ?",
+                request.getIp() != null ? request.getIp() : "unknown", userId);
+        } catch (Exception e) {
+            log.debug("更新最后登录时间失败: {}", e.getMessage());
+        }
 
         String accessToken = "admin_" + UUID.randomUUID().toString().replace("-", "");
         String refreshToken = "admin_" + UUID.randomUUID().toString().replace("-", "");
@@ -213,7 +238,7 @@ public class AuthService {
         userInfo.setRole("admin");
         response.setUserInfo(userInfo);
 
-        log.info("管理员登录成功: username={}, userId={}", request.getUsername(), userId);
+        log.info("管理员登录成功: username={}, userId={}, lastLogin={}", request.getUsername(), userId, lastLoginAt);
         return response;
     }
 
@@ -399,6 +424,89 @@ public class AuthService {
             this.code = code;
             this.expireTime = expireTime;
         }
+    }
+
+    private static class LoginFailureInfo {
+        int attempts;
+        long lockoutUntil;
+        LoginFailureInfo(int attempts, long lockoutUntil) {
+            this.attempts = attempts;
+            this.lockoutUntil = lockoutUntil;
+        }
+    }
+
+    public String validatePasswordStrength(String password) {
+        if (password == null || password.isEmpty()) {
+            return "密码不能为空";
+        }
+        if (password.length() < 8) {
+            return "密码长度至少8位";
+        }
+        if (password.length() > 32) {
+            return "密码长度不能超过32位";
+        }
+        if (!password.matches(".*[A-Z].*")) {
+            return "密码必须包含至少一个大写字母";
+        }
+        if (!password.matches(".*[a-z].*")) {
+            return "密码必须包含至少一个小写字母";
+        }
+        if (!password.matches(".*[0-9].*")) {
+            return "密码必须包含至少一个数字";
+        }
+        if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*")) {
+            return "密码必须包含至少一个特殊字符";
+        }
+        return null;
+    }
+
+    public boolean isAccountLocked(String username) {
+        LoginFailureInfo info = loginFailures.get(username);
+        if (info == null) return false;
+        if (System.currentTimeMillis() > info.lockoutUntil) {
+            loginFailures.remove(username);
+            return false;
+        }
+        return info.attempts >= MAX_LOGIN_FAILURES;
+    }
+
+    public long getLockoutRemainingMs(String username) {
+        LoginFailureInfo info = loginFailures.get(username);
+        if (info == null) return 0;
+        long remaining = info.lockoutUntil - System.currentTimeMillis();
+        return remaining > 0 ? remaining : 0;
+    }
+
+    public void recordLoginFailure(String username) {
+        long now = System.currentTimeMillis();
+        LoginFailureInfo info = loginFailures.compute(username, (k, v) -> {
+            if (v == null || now > v.lockoutUntil) {
+                return new LoginFailureInfo(1, now + LOCKOUT_DURATION_MS);
+            } else {
+                v.attempts++;
+                return v;
+            }
+        });
+        log.warn("登录失败累计: username={}, attempts={}", username, info.attempts);
+    }
+
+    public void clearLoginFailures(String username) {
+        loginFailures.remove(username);
+    }
+
+    public int forceLogoutUser(Long userId) {
+        int count = 0;
+        var tokensToRemove = tokenStore.entrySet().stream()
+            .filter(e -> userId.equals(e.getValue().getUserId()))
+            .map(Map.Entry::getKey)
+            .toList();
+        for (String t : tokensToRemove) {
+            tokenStore.remove(t);
+            removePersistedToken(t);
+            count++;
+        }
+        log.info("强制下线用户 userId={}, 清除 {} 个token", userId, count);
+        return count;
     }
 
     private static class TokenInfo {

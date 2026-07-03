@@ -38,15 +38,13 @@ public class HealthController {
     @GetMapping("/ai-status")
     public Map<String, Object> aiStatus() {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("service", "minimax");
         result.put("model", llmClient.getModel());
         result.put("baseUrl", llmClient.getBaseUrl());
         result.put("timestamp", System.currentTimeMillis());
 
-        String apiKey = System.getenv("MINIMAX_API_KEY");
-        if (apiKey == null || apiKey.isEmpty()) {
+        if (!llmClient.isApiKeyConfigured()) {
             result.put("status", "offline");
-            result.put("message", "MINIMAX_API_KEY 未配置");
+            result.put("message", "未配置 API 密钥，请到后台管理添加");
             return result;
         }
 

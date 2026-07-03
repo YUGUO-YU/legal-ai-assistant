@@ -196,8 +196,10 @@ import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 import PptProgressDialog from '../components/PptProgressDialog.vue'
+import { useUsageMemory } from '@/composables/useUsageMemory'
 
 const router = useRouter()
+const { addRecord } = useUsageMemory()
 const query = ref('')
 const loading = ref(false)
 const results = ref([])
@@ -243,6 +245,7 @@ const handleSearch = async () => {
 
     if (page.value === 1 && res.data.items?.length > 0) {
       loadSuggestedQueries()
+      addRecord('search', query.value, `找到 ${res.data.items.length} 条相关法规`)
     }
   } catch (e) {
     console.error(e)

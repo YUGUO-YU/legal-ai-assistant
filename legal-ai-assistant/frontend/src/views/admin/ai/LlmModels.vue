@@ -22,14 +22,20 @@
           </template>
         </el-table-column>
         <el-table-column prop="endpoint" label="端点" min-width="200" show-overflow-tooltip />
+        <el-table-column label="API Key" width="160">
+          <template #default="{ row }">
+            <span v-if="row.api_key_enc" class="mono masked-key">{{ maskKey(row.api_key_enc) }}</span>
+            <el-tag v-else size="small" type="info">未设置</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="参数" width="180">
           <template #default="{ row }">
             <span class="mono">T={{ row.temperature }} / max={{ row.max_tokens }} / p={{ row.top_p }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="角色" width="130">
+        <el-table-column label="角色" width="140">
           <template #default="{ row }">
-            <el-tag v-if="row.is_primary === 1" type="success" size="small">主模型</el-tag>
+            <el-tag v-if="row.is_primary === 1" type="success" size="small">当前使用</el-tag>
             <el-tag v-if="row.is_fallback === 1" type="warning" size="small" style="margin-left:4px">备用</el-tag>
             <el-tag v-if="row.is_primary !== 1 && row.is_fallback !== 1" type="info" size="small">普通</el-tag>
           </template>
@@ -46,8 +52,10 @@
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="170" />
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
+            <el-button v-if="row.is_primary !== 1" link type="warning" size="small" @click="handleSetActive(row)">设为当前</el-button>
+            <el-button link type="info" size="small" @click="openUpdateKey(row)">更新密钥</el-button>
             <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
             <el-button link type="success" size="small" @click="handleCheck(row)">探测</el-button>
             <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
@@ -120,6 +128,21 @@
         <el-button type="primary" @click="handleSave">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="showKeyDialog" title="更新 API 密钥" width="500px">
+      <el-form label-width="100px">
+        <el-form-item label="模型">
+          <el-input :value="keyForm.modelName" disabled />
+        </el-form-item>
+        <el-form-item label="API 密钥" required>
+          <el-input v-model="keyForm.apiKey" type="password" placeholder="请输入新的 API 密钥" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showKeyDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleUpdateKey">确认更新</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -132,12 +155,19 @@ import api from '../../../api'
 const rows = ref([])
 const loading = ref(false)
 const showDialog = ref(false)
+const showKeyDialog = ref(false)
 const form = reactive({ id: null, model_code: '', model_name: '', provider: 'openai', endpoint: '', api_key_enc: '', temperature: 0.7, max_tokens: 4096, top_p: 0.95, is_primary: 0, is_fallback: 0, status: 1 })
 const isPrimary = ref(false)
 const isFallback = ref(false)
+const keyForm = reactive({ id: null, modelName: '', apiKey: '' })
 
 function healthDot(s) { return { 1: 'dot-success', 2: 'dot-warning', 3: 'dot-danger' }[s] || 'dot-idle' }
 function healthLabel(s) { return { 1: '健康', 2: '降级', 3: '故障' }[s] || '未知' }
+function maskKey(key) {
+  if (!key) return ''
+  if (key.length <= 8) return '***'
+  return key.substring(0, 4) + '***' + key.substring(key.length - 4)
+}
 
 function onRoleChange() {
   form.is_primary = isPrimary.value ? 1 : 0
@@ -207,6 +237,42 @@ async function toggleModel(row) {
   } catch (e) { ElMessage.error('切换失败') }
 }
 
+async function handleSetActive(row) {
+  try {
+    await ElMessageBox.confirm(`将「${row.model_name}」设为当前使用的大模型？`, '确认切换', { type: 'info' })
+    const res = await api.post(`/admin/ai/llm-models/${row.id}/set-active`)
+    if (res.data?.ok) {
+      ElMessage.success('已切换为当前模型')
+      load()
+    } else {
+      ElMessage.error(res.data?.error || '切换失败')
+    }
+  } catch (e) { if (e !== 'cancel') ElMessage.error('切换失败') }
+}
+
+function openUpdateKey(row) {
+  keyForm.id = row.id
+  keyForm.modelName = row.model_name
+  keyForm.apiKey = ''
+  showKeyDialog.value = true
+}
+
+async function handleUpdateKey() {
+  if (!keyForm.apiKey || !keyForm.apiKey.trim()) {
+    ElMessage.warning('请输入 API 密钥')
+    return
+  }
+  try {
+    const res = await api.post(`/admin/ai/llm-models/${keyForm.id}/update-key`, { apiKey: keyForm.apiKey })
+    if (res.data?.ok) {
+      ElMessage.success('API 密钥已更新')
+      showKeyDialog.value = false
+    } else {
+      ElMessage.error(res.data?.error || '更新失败')
+    }
+  } catch (e) { ElMessage.error('更新失败') }
+}
+
 onMounted(load)
 </script>
 
@@ -223,4 +289,5 @@ onMounted(load)
 .dot-warning { background:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,0.18); }
 .dot-danger { background:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,0.18); }
 .dot-idle { background:#cbd5e1; }
+.masked-key { color: #64748b; font-size: 12px; letter-spacing: 0.5px; }
 </style>

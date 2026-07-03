@@ -2,6 +2,7 @@ package com.legalai.admin.controller;
 
 import com.legalai.admin.service.AdminDataService;
 import com.legalai.dto.ApiResponse;
+import com.legalai.service.CacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,9 @@ public class AdminController {
 
     @Autowired
     private AdminDataService adminDataService;
+
+    @Autowired(required = false)
+    private CacheService cacheService;
 
     // ============================================================
     // 通用：列表 / 详情 / 统计
@@ -203,6 +207,44 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
+    @PostMapping("/infra/users/{userId}/roles")
+    public ApiResponse<Map<String, Object>> setUserRoles(
+            @PathVariable Long userId,
+            @RequestBody Map<String, Object> payload) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            @SuppressWarnings("unchecked")
+            var roleIds = (java.util.List<Integer>) payload.get("role_ids");
+            if (roleIds == null) roleIds = java.util.Collections.emptyList();
+            adminDataService.jdbc().update("DELETE FROM admin_user_role WHERE user_id = ?", userId);
+            for (Integer rid : roleIds) {
+                adminDataService.jdbc().update(
+                    "INSERT IGNORE INTO admin_user_role (user_id, role_id) VALUES (?, ?)", userId, rid);
+            }
+            result.put("ok", true);
+            result.put("count", roleIds.size());
+        } catch (Exception e) {
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return ApiResponse.success(result);
+    }
+
+    @GetMapping("/infra/users/{userId}/roles")
+    public ApiResponse<Map<String, Object>> getUserRoles(@PathVariable Long userId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            var rows = adminDataService.jdbc().queryForList(
+                "SELECT role_id FROM admin_user_role WHERE user_id = ?", userId);
+            var roleIds = rows.stream().map(r -> ((Number) r.get("role_id")).longValue()).toList();
+            result.put("roleIds", roleIds);
+        } catch (Exception e) {
+            result.put("roleIds", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return ApiResponse.success(result);
+    }
+
     @GetMapping("/infra/audit-logs")
     public ApiResponse<Map<String, Object>> listAuditLogs(
             @RequestParam(required = false) String userId,
@@ -340,6 +382,28 @@ public class AdminController {
         return ApiResponse.success(adminDataService.list("llm_model_config", null, 1, 50, null));
     }
 
+    @PostMapping("/ai/llm-models/{id}/set-active")
+    public ApiResponse<Map<String, Object>> setActiveModel(@PathVariable Long id) {
+        boolean ok = adminDataService.setActiveModel(id);
+        if (ok) {
+            return ApiResponse.success(Map.of("ok", true, "message", "已将当前模型切换到 id=" + id));
+        }
+        return ApiResponse.error("设置失败");
+    }
+
+    @PostMapping("/ai/llm-models/{id}/update-key")
+    public ApiResponse<Map<String, Object>> updateModelApiKey(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String apiKey = body.get("apiKey");
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            return ApiResponse.error("API密钥不能为空");
+        }
+        boolean ok = adminDataService.updateModelApiKey(id, apiKey);
+        if (ok) {
+            return ApiResponse.success(Map.of("ok", true, "message", "API密钥已更新"));
+        }
+        return ApiResponse.error("更新失败");
+    }
+
     @GetMapping("/ai/token-usage")
     public ApiResponse<Map<String, Object>> tokenUsage(
             @RequestParam(defaultValue = "1") int page,
@@ -399,9 +463,68 @@ public class AdminController {
         return ApiResponse.success(adminDataService.list("sys_dict", type, page, pageSize, null));
     }
 
+    @PostMapping("/sys/cache/refresh")
+    public ApiResponse<Map<String, Object>> refreshCache() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            if (cacheService != null) {
+                cacheService.invalidateSearchCache();
+                result.put("ok", true);
+                result.put("message", "缓存已刷新");
+            } else {
+                result.put("ok", true);
+                result.put("message", "缓存服务不可用（Redis未配置）");
+            }
+        } catch (Exception e) {
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return ApiResponse.success(result);
+    }
+
     // ============================================================
     // 健康检查
     // ============================================================
+
+    @GetMapping("/infra/mysql-health")
+    public ApiResponse<Map<String, Object>> mysqlHealth() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        long start = System.currentTimeMillis();
+        try {
+            Integer dbOk = adminDataService.jdbc().queryForObject("SELECT 1", Integer.class);
+            boolean ok = dbOk != null && dbOk == 1;
+            result.put("status", ok ? "UP" : "DOWN");
+            result.put("latencyMs", System.currentTimeMillis() - start);
+            result.put("message", ok ? "MySQL 连接正常" : "MySQL 连接失败");
+        } catch (Exception e) {
+            result.put("status", "DOWN");
+            result.put("latencyMs", System.currentTimeMillis() - start);
+            result.put("message", "MySQL 连接失败: " + e.getMessage());
+        }
+        return ApiResponse.success(result);
+    }
+
+    @GetMapping("/infra/redis-health")
+    public ApiResponse<Map<String, Object>> redisHealth() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        long start = System.currentTimeMillis();
+        try {
+            if (cacheService != null && cacheService.isRedisAvailable()) {
+                result.put("status", "UP");
+                result.put("latencyMs", System.currentTimeMillis() - start);
+                result.put("message", "Redis 连接正常");
+            } else {
+                result.put("status", "DOWN");
+                result.put("latencyMs", System.currentTimeMillis() - start);
+                result.put("message", "Redis 未配置或不可用");
+            }
+        } catch (Exception e) {
+            result.put("status", "DOWN");
+            result.put("latencyMs", System.currentTimeMillis() - start);
+            result.put("message", "Redis 连接失败: " + e.getMessage());
+        }
+        return ApiResponse.success(result);
+    }
 
     @GetMapping("/health")
     public ApiResponse<Map<String, Object>> health() {

@@ -156,7 +156,7 @@
 
               <div class="header-actions">
                 <el-button :icon="Bell" circle class="header-btn" />
-                <el-button :icon="isDark ? Sunny : Moon" circle class="header-btn" @click="toggleDark" />
+                <el-button :icon="Sunny" circle class="header-btn" />
                 <el-button :icon="Setting" circle class="header-btn" />
 
             <el-dropdown @command="handleCommand" trigger="click">
@@ -205,7 +205,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -235,26 +235,51 @@ import {
 
 const route = useRoute()
 const router = useRouter()
-const isDark = ref(false)
+
+let themeTimer = null
+
+const getInitialTheme = () => {
+  const saved = localStorage.getItem('theme')
+  if (saved === 'dark' || saved === 'light') return saved
+  const hour = new Date().getHours()
+  return (hour >= 18 || hour < 6) ? 'dark' : 'light'
+}
+
+const applyTheme = (theme) => {
+  document.documentElement.setAttribute('data-theme', theme)
+  localStorage.setItem('theme', theme)
+}
+
+const scheduleNextThemeSwitch = () => {
+  if (themeTimer) clearTimeout(themeTimer)
+  const now = new Date()
+  const currentHour = now.getHours()
+  let nextSwitchHour
+  if (currentHour >= 18 || currentHour < 6) {
+    nextSwitchHour = 6
+  } else {
+    nextSwitchHour = 18
+  }
+  const next = new Date(now)
+  next.setHours(nextSwitchHour, 0, 0, 0)
+  if (next <= now) next.setDate(next.getDate() + 1)
+  const ms = next - now
+  themeTimer = setTimeout(() => {
+    const theme = getInitialTheme()
+    applyTheme(theme)
+    scheduleNextThemeSwitch()
+  }, ms)
+}
 
 onMounted(() => {
-  const saved = localStorage.getItem('darkMode')
-  if (saved === 'true') {
-    isDark.value = true
-    document.documentElement.classList.add('dark')
-  }
+  const theme = getInitialTheme()
+  applyTheme(theme)
+  scheduleNextThemeSwitch()
 })
 
-const toggleDark = () => {
-  isDark.value = !isDark.value
-  if (isDark.value) {
-    document.documentElement.classList.add('dark')
-    localStorage.setItem('darkMode', 'true')
-  } else {
-    document.documentElement.classList.remove('dark')
-    localStorage.setItem('darkMode', 'false')
-  }
-}
+onUnmounted(() => {
+  if (themeTimer) clearTimeout(themeTimer)
+})
 
 const isLoggedIn = computed(() => !!localStorage.getItem('token'))
 const username = computed(() => {
@@ -700,7 +725,7 @@ onMounted(() => {
 </style>
 
 <style>
-html.dark {
+[data-theme="dark"] {
   .sidebar {
     background: #1e293b !important;
   }

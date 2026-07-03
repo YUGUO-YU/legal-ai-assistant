@@ -20,6 +20,31 @@
       </el-col>
     </el-row>
 
+    <el-row :gutter="14" class="llm-row">
+      <el-col :span="24">
+        <el-card class="llm-status-card" :body-style="{ padding: '16px' }">
+          <div class="llm-header">
+            <div class="llm-title">
+              <span class="dot" :class="aiStatus.status === 'online' ? 'dot-success' : 'dot-danger'"></span>
+              <span class="llm-name">{{ aiStatus.model || '未配置' }}</span>
+              <el-tag :type="aiStatus.status === 'online' ? 'success' : 'danger'" size="small">
+                {{ aiStatus.status === 'online' ? '在线' : '离线' }}
+              </el-tag>
+            </div>
+            <div class="llm-meta">
+              <span v-if="aiStatus.baseUrl"><el-icon><Link /></el-icon> {{ aiStatus.baseUrl }}</span>
+              <span v-if="aiStatus.message"><el-icon><InfoFilled /></el-icon> {{ aiStatus.message }}</span>
+              <span class="llm-time">检测于 {{ aiStatus.time || '-' }}</span>
+            </div>
+          </div>
+          <div class="llm-actions">
+            <el-button size="small" @click="loadAiStatus">刷新状态</el-button>
+            <el-button size="small" type="primary" @click="$router.push('/admin/ai/llm-models')">模型管理</el-button>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <el-row :gutter="14" class="charts-row">
       <el-col :xs="24" :md="14">
         <el-card>
@@ -127,13 +152,14 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Refresh } from '@element-plus/icons-vue'
+import { Refresh, Link, InfoFilled } from '@element-plus/icons-vue'
 import api from '../../api'
 
 const counts = ref({})
 const overview = ref({})
 const recentAlerts = ref([])
 const loading = ref(false)
+const aiStatus = ref({ status: 'checking', model: '', baseUrl: '', message: '', time: '' })
 let timer = null
 
 const kpis = computed(() => [
@@ -245,8 +271,24 @@ async function loadOverview() {
 
 async function loadAll() {
   loading.value = true
-  await Promise.all([loadStats(), loadOverview()])
+  await Promise.all([loadStats(), loadOverview(), loadAiStatus()])
   loading.value = false
+}
+
+async function loadAiStatus() {
+  try {
+    const res = await fetch('/api/v1/ai-status')
+    const data = await res.json()
+    aiStatus.value = {
+      status: data.status || 'offline',
+      model: data.model || 'MiniMax-M3',
+      baseUrl: data.baseUrl || '',
+      message: data.message || '',
+      time: new Date().toLocaleTimeString('zh-CN')
+    }
+  } catch (e) {
+    aiStatus.value = { status: 'offline', model: '', baseUrl: '', message: '无法连接', time: new Date().toLocaleTimeString('zh-CN') }
+  }
 }
 
 onMounted(() => {
@@ -402,5 +444,65 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
     font-size: 11px;
     color: #94a3b8;
   }
+}
+
+.llm-row { margin-bottom: 14px; }
+
+.llm-status-card {
+  border-left: 4px solid #8b5cf6;
+
+  .llm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .llm-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .llm-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+  }
+
+  .llm-meta {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 13px;
+    color: #64748b;
+
+    span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .llm-time {
+      color: #94a3b8;
+      font-size: 12px;
+    }
+  }
+
+  .llm-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  &.dot-success { background: #10b981; }
+  &.dot-danger { background: #ef4444; }
 }
 </style>

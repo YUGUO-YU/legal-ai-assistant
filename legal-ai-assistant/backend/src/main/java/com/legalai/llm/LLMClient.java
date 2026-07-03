@@ -5,10 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,6 +34,9 @@ import java.util.function.Supplier;
 public class LLMClient {
 
     private static final Logger log = LoggerFactory.getLogger(LLMClient.class);
+
+    @Autowired
+    private ApplicationContext applicationContext;
 
     @Value("${ai.minimax.base-url:https://api.minimax.chat/v1}")
     private String baseUrl;
@@ -74,11 +80,76 @@ public class LLMClient {
     }
 
     public String getModel() {
-        return model;
+        return resolveModel();
     }
 
     public String getBaseUrl() {
+        return resolveBaseUrl();
+    }
+
+    public String getApiKey() {
+        return resolveApiKey();
+    }
+
+    private Map<String, Object> getActiveModelConfig() {
+        try {
+            var adminDataService = applicationContext.getBean("adminDataService",
+                com.legalai.admin.service.AdminDataService.class);
+            return adminDataService.getActiveModelConfigFromDb();
+        } catch (Exception e) {
+            log.debug("从数据库获取活跃模型配置失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String resolveModel() {
+        var cfg = getActiveModelConfig();
+        if (cfg != null && cfg.get("model_code") != null) {
+            return cfg.get("model_code").toString();
+        }
+        return model;
+    }
+
+    private String resolveBaseUrl() {
+        var cfg = getActiveModelConfig();
+        if (cfg != null && cfg.get("endpoint") != null) {
+            String ep = cfg.get("endpoint").toString();
+            if (!ep.endsWith("/")) ep += "/";
+            return ep;
+        }
         return baseUrl;
+    }
+
+    private String resolveApiKey() {
+        var cfg = getActiveModelConfig();
+        if (cfg != null && cfg.get("api_key_enc") != null) {
+            String key = cfg.get("api_key_enc").toString();
+            if (!key.isEmpty()) {
+                return key;
+            }
+        }
+        return apiKey;
+    }
+
+    public Map<String, Object> getResolvedConfig() {
+        Map<String, Object> cfg = new LinkedHashMap<>();
+        cfg.put("model", resolveModel());
+        cfg.put("baseUrl", resolveBaseUrl());
+        cfg.put("apiKey", resolveApiKey());
+        cfg.put("embeddingModel", embeddingModel);
+        cfg.put("timeout", timeout);
+        var dbCfg = getActiveModelConfig();
+        if (dbCfg != null) {
+            cfg.put("isFromDb", true);
+            cfg.put("modelName", dbCfg.get("model_name"));
+            cfg.put("provider", dbCfg.get("provider"));
+            cfg.put("temperature", dbCfg.get("temperature"));
+            cfg.put("maxTokens", dbCfg.get("max_tokens"));
+            cfg.put("topP", dbCfg.get("top_p"));
+        } else {
+            cfg.put("isFromDb", false);
+        }
+        return cfg;
     }
 
     /**
@@ -280,26 +351,28 @@ public class LLMClient {
      * 严格判定：只有 HTTP 2xx 才算在线；401/403/网络异常/超时都算离线。
      */
     public boolean ping() {
-        if (apiKey == null || apiKey.isEmpty()) {
-            log.warn("MiniMax 健康检查失败: api-key 未配置");
+        String resolvedApiKey = resolveApiKey();
+        String resolvedBaseUrl = resolveBaseUrl();
+        if (resolvedApiKey == null || resolvedApiKey.isEmpty()) {
+            log.warn("LLM 健康检查失败: api-key 未配置");
             return false;
         }
         try {
             Request request = new Request.Builder()
-                .url(baseUrl + healthEndpoint)
-                .addHeader("Authorization", "Bearer " + apiKey)
+                .url(resolvedBaseUrl + healthEndpoint)
+                .addHeader("Authorization", "Bearer " + resolvedApiKey)
                 .get()
                 .build();
             try (Response response = healthClient().newCall(request).execute()) {
                 boolean ok = response.isSuccessful();
                 if (!ok) {
-                    log.warn("MiniMax 健康检查失败: code={}, message={}",
+                    log.warn("LLM 健康检查失败: code={}, message={}",
                         response.code(), response.message());
                 }
                 return ok;
             }
         } catch (Exception e) {
-            log.warn("MiniMax 健康检查失败: {}", e.getMessage());
+            log.warn("LLM 健康检查失败: {}", e.getMessage());
             return false;
         }
     }
@@ -308,18 +381,21 @@ public class LLMClient {
      * 探测第一个可用模型名（用于 ai-status 展示）
      */
     public String firstModel() {
-        if (apiKey == null || apiKey.isEmpty()) {
-            return model;
+        String resolvedApiKey = resolveApiKey();
+        String resolvedBaseUrl = resolveBaseUrl();
+        String resolvedModel = resolveModel();
+        if (resolvedApiKey == null || resolvedApiKey.isEmpty()) {
+            return resolvedModel;
         }
         try {
             Request request = new Request.Builder()
-                .url(baseUrl + healthEndpoint)
-                .addHeader("Authorization", "Bearer " + apiKey)
+                .url(resolvedBaseUrl + healthEndpoint)
+                .addHeader("Authorization", "Bearer " + resolvedApiKey)
                 .get()
                 .build();
             try (Response response = healthClient().newCall(request).execute()) {
                 if (!response.isSuccessful() || response.body() == null) {
-                    return model;
+                    return resolvedModel;
                 }
                 JsonNode json = objectMapper.readTree(response.body().string());
                 JsonNode data = json.get("data");
@@ -331,9 +407,9 @@ public class LLMClient {
                 }
             }
         } catch (Exception e) {
-            log.debug("获取 MiniMax 模型列表失败: {}", e.getMessage());
+            log.debug("获取模型列表失败: {}", e.getMessage());
         }
-        return model;
+        return resolvedModel;
     }
 
     /**
@@ -341,28 +417,32 @@ public class LLMClient {
      */
     public Map<String, Object> healthCheck() {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("model", model);
-        result.put("baseUrl", baseUrl);
+        result.put("model", resolveModel());
+        result.put("baseUrl", resolveBaseUrl());
         long start = System.currentTimeMillis();
         boolean healthy = ping();
         long latency = System.currentTimeMillis() - start;
         result.put("healthy", healthy);
         result.put("latencyMs", latency);
-        result.put("apiKeyConfigured", apiKey != null && !apiKey.isEmpty());
+        result.put("apiKeyConfigured", resolveApiKey() != null && !resolveApiKey().isEmpty());
         return result;
     }
 
     public boolean isApiKeyConfigured() {
-        return apiKey != null && !apiKey.isEmpty();
+        return resolveApiKey() != null && !resolveApiKey().isEmpty();
     }
 
     private String executeChatRequest(Map<String, Object> requestBody) throws IOException {
+        String resolvedModel = resolveModel();
+        String resolvedBaseUrl = resolveBaseUrl();
+        String resolvedApiKey = resolveApiKey();
+
         String json = objectMapper.writeValueAsString(requestBody);
         RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
-            .url(baseUrl + "/chat/completions")
-            .addHeader("Authorization", "Bearer " + apiKey)
+            .url(resolvedBaseUrl + "chat/completions")
+            .addHeader("Authorization", "Bearer " + resolvedApiKey)
             .addHeader("Content-Type", "application/json")
             .post(body)
             .build();

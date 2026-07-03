@@ -30,6 +30,8 @@
             placeholder="管理员账号"
             size="large"
             :prefix-icon="User"
+            maxlength="32"
+            show-word-limit
           />
         </el-form-item>
 
@@ -41,7 +43,20 @@
             size="large"
             :prefix-icon="Lock"
             show-password
+            maxlength="32"
+            @keyup.enter="handleLogin"
           />
+        </el-form-item>
+
+        <div v-if="lockoutRemaining > 0" class="lockout-hint">
+          <el-icon><Clock /></el-icon>
+          账号已锁定，请在 {{ lockoutMinutes }} 分钟后重试
+        </div>
+
+        <el-form-item>
+          <div class="form-options">
+            <el-checkbox v-model="rememberMe" label="记住账号" size="small" />
+          </div>
         </el-form-item>
 
         <el-form-item>
@@ -50,6 +65,7 @@
             size="large"
             class="submit-btn"
             :loading="loading"
+            :disabled="lockoutRemaining > 0"
             @click.prevent="handleLogin"
           >
             登 录 后 台
@@ -64,72 +80,130 @@
         </el-link>
       </div>
 
-        <div class="hint-box">
+        <div v-if="lastLoginAt" class="last-login-hint">
+        <el-icon><Clock /></el-icon>
+        <span>上次登录: {{ lastLoginAt }}</span>
+      </div>
+
+      <div class="hint-box">
         <el-icon><InfoFilled /></el-icon>
-        <span>默认账号: admin / admin</span>
+        <span>默认账号: admin / admin123</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, ArrowLeft, InfoFilled } from '@element-plus/icons-vue'
+import { User, Lock, ArrowLeft, InfoFilled, Clock } from '@element-plus/icons-vue'
 import api from '../api'
 
 const router = useRouter()
 const formRef = ref(null)
 const loading = ref(false)
+const lockoutRemaining = ref(0)
+const lastLoginAt = ref('')
+const rememberMe = ref(false)
+let lockoutTimer = null
 
 const form = reactive({
   username: '',
   password: ''
 })
 
+const lockoutMinutes = computed(() => Math.ceil(lockoutRemaining.value / 60000))
+
+function sanitize(str) {
+  if (!str) return ''
+  return String(str).replace(/[<>'"&]/g, '')
+}
+
 const rules = {
-  username: [{ required: true, message: '请输入管理员账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  username: [
+    { required: true, message: '请输入管理员账号', trigger: 'blur' },
+    { min: 2, max: 32, message: '账号长度为2-32位', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 32, message: '密码长度为6-32位', trigger: 'blur' }
+  ]
 }
 
 const handleLogin = async () => {
-  console.log('handleLogin called, formRef:', formRef.value)
-  if (!formRef.value) {
-    console.log('formRef is null')
-    return
-  }
+  if (!formRef.value) return
 
   try {
-    console.log('Validating form...')
     await formRef.value.validate()
-    console.log('Form validation passed')
   } catch (e) {
-    console.log('Form validation failed:', e)
     return
   }
 
-  console.log('Making API call to /auth/admin/login')
+  if (lockoutRemaining.value > 0) {
+    ElMessage.warning('账号已锁定，请稍后再试')
+    return
+  }
+
+  const safeUsername = sanitize(form.username.trim())
+  const safePassword = form.password
+
   loading.value = true
   try {
     const res = await api.auth.adminLogin({
-      username: form.username,
-      password: form.password
+      username: safeUsername,
+      password: safePassword
     })
-    console.log('Login success:', res)
+
     localStorage.setItem('admin_token', res.data.token)
     localStorage.setItem('admin_user', JSON.stringify(res.data.userInfo))
+
+    if (rememberMe.value) {
+      localStorage.setItem('admin_username', safeUsername)
+    } else {
+      localStorage.removeItem('admin_username')
+    }
+
+    if (res.data.lastLoginAt) {
+      localStorage.setItem('admin_last_login', res.data.lastLoginAt)
+    }
+
     ElMessage.success('登录成功')
     router.push('/admin')
   } catch (e) {
-    console.log('Login failed:', e)
-    console.log('Response data:', e?.response?.data)
     const msg = e?.response?.data?.error || e?.response?.data?.message || '登录失败'
     ElMessage.error(msg)
+
+    if (msg.includes('锁定')) {
+      lockoutRemaining.value = 5 * 60 * 1000
+      startLockoutTimer()
+    }
   } finally {
     loading.value = false
   }
 }
+
+function startLockoutTimer() {
+  if (lockoutTimer) clearInterval(lockoutTimer)
+  lockoutTimer = setInterval(() => {
+    lockoutRemaining.value = Math.max(0, lockoutRemaining.value - 1000)
+    if (lockoutRemaining.value <= 0) {
+      clearInterval(lockoutTimer)
+    }
+  }, 1000)
+}
+
+onMounted(() => {
+  const savedUsername = localStorage.getItem('admin_username')
+  if (savedUsername) {
+    form.username = savedUsername
+    rememberMe.value = true
+  }
+  const savedLastLogin = localStorage.getItem('admin_last_login')
+  if (savedLastLogin) {
+    lastLoginAt.value = savedLastLogin
+  }
+})
 </script>
 
 <style lang="scss" scoped>
@@ -282,7 +356,7 @@ const handleLogin = async () => {
 }
 
 .hint-box {
-  margin-top: 24px;
+  margin-top: 16px;
   padding: 12px 16px;
   background: rgba(99, 102, 241, 0.08);
   border: 1px solid rgba(99, 102, 241, 0.12);
@@ -293,5 +367,51 @@ const handleLogin = async () => {
   color: #818cf8;
   font-size: 12px;
   justify-content: center;
+}
+
+.lockout-hint {
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fca5a5;
+  font-size: 13px;
+  justify-content: center;
+  animation: shake 0.4s ease-in-out;
+}
+
+.last-login-hint {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.12);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6ee7b7;
+  font-size: 12px;
+  justify-content: center;
+}
+
+.form-options {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+
+  :deep(.el-checkbox__label) {
+    color: #64748b;
+    font-size: 13px;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 </style>

@@ -319,8 +319,10 @@ import {
   View
 } from '@element-plus/icons-vue'
 import api from '../api'
+import { useUsageMemory } from '@/composables/useUsageMemory'
 
 const router = useRouter()
+const { addRecord } = useUsageMemory()
 
 const inputMode = ref('paste')
 const contractText = ref('')
@@ -348,6 +350,8 @@ const handleReview = async () => {
     })
     reviewResult.value = res.data
     ElMessage.success('审查完成')
+    const riskCount = res.data.risks?.length || 0
+    addRecord('contract', `审查"${reviewOptions.contractType}"合同`, `发现 ${riskCount} 处风险`)
   } catch (e) {
     console.error(e)
     ElMessage.error('审查失败，请稍后重试')

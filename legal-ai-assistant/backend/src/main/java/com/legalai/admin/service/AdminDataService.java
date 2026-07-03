@@ -593,4 +593,43 @@ public class AdminDataService {
         result.put("checkedAt", new java.sql.Timestamp(System.currentTimeMillis()).toString());
         return result;
     }
+
+    public boolean setActiveModel(Long id) {
+        try {
+            jdbc.update("UPDATE llm_model_config SET is_primary = 0");
+            jdbc.update("UPDATE llm_model_config SET is_primary = 1 WHERE id = ?", id);
+            log.info("已将模型 id={} 设为活跃模型", id);
+            return true;
+        } catch (Exception e) {
+            log.error("设置活跃模型失败: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean updateModelApiKey(Long id, String apiKey) {
+        try {
+            if (apiKey == null || apiKey.trim().isEmpty()) {
+                return false;
+            }
+            jdbc.update("UPDATE llm_model_config SET api_key_enc = ? WHERE id = ?", apiKey.trim(), id);
+            log.info("已更新模型 id={} 的API密钥", id);
+            return true;
+        } catch (Exception e) {
+            log.error("更新API密钥失败: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public Map<String, Object> getActiveModelConfigFromDb() {
+        try {
+            var list = jdbc.queryForList(
+                "SELECT * FROM llm_model_config WHERE is_primary = 1 AND status = 1 LIMIT 1");
+            if (!list.isEmpty()) {
+                return list.get(0);
+            }
+        } catch (Exception e) {
+            log.warn("获取活跃模型失败: {}", e.getMessage());
+        }
+        return null;
+    }
 }

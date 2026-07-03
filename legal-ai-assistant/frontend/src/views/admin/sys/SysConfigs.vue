@@ -7,6 +7,7 @@
       </div>
       <div class="header-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
+        <el-button type="warning" @click="handleRefreshCache" :loading="refreshing">刷新缓存</el-button>
         <el-button type="primary" @click="openCreate">新增</el-button>
       </div>
     </div>
@@ -91,6 +92,7 @@ import api from '../../../api'
 
 const rows = ref([])
 const loading = ref(false)
+const refreshing = ref(false)
 const filter = reactive({ group: '' })
 const groups = ['common', 'llm', 'cache', 'rate_limit', 'feature']
 const showDialog = ref(false)
@@ -156,6 +158,22 @@ async function handleDelete(row) {
     }
   } catch (e) {
     if (e !== 'cancel') ElMessage.error('删除失败：' + (e.message || ''))
+  }
+}
+
+async function handleRefreshCache() {
+  refreshing.value = true
+  try {
+    const res = await api.post('/admin/sys/cache/refresh')
+    if (res.data?.ok) {
+      ElMessage.success(res.data?.message || '缓存已刷新')
+    } else {
+      ElMessage.error(res.data?.error || '刷新失败')
+    }
+  } catch (e) {
+    ElMessage.error('刷新失败')
+  } finally {
+    refreshing.value = false
   }
 }
 

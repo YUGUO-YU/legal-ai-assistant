@@ -11,7 +11,7 @@
     </div>
 
     <el-row :gutter="16">
-      <el-col :span="8">
+      <el-col :span="6">
         <el-card class="health-card">
           <div class="health-head">
             <span class="dot" :class="healthClass(llmStatus)"></span>
@@ -25,13 +25,47 @@
             <el-descriptions-item label="7 日 Token">{{ llmSummary?.weekTokens?.toLocaleString() ?? '-' }}</el-descriptions-item>
           </el-descriptions>
           <div class="health-actions">
-            <el-button type="primary" size="small" @click="loadLLM" :loading="llmLoading">探测健康</el-button>
+            <el-button type="primary" size="small" @click="loadLLM" :loading="llmLoading">探测</el-button>
             <el-button size="small" @click="$router.push('/admin/ai/llm-models')">模型列表</el-button>
           </div>
         </el-card>
       </el-col>
 
-      <el-col :span="8">
+      <el-col :span="6">
+        <el-card class="health-card">
+          <div class="health-head">
+            <span class="dot" :class="healthClass(mysqlStatus)"></span>
+            <h3>MySQL</h3>
+            <el-tag :type="healthTagType(mysqlStatus)" size="small">{{ healthLabel(mysqlStatus) }}</el-tag>
+          </div>
+          <el-descriptions :column="1" border size="small">
+            <el-descriptions-item label="连接状态">{{ mysqlSummary?.message || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="延迟">{{ mysqlSummary?.latencyMs != null ? mysqlSummary.latencyMs + ' ms' : '-' }}</el-descriptions-item>
+          </el-descriptions>
+          <div class="health-actions">
+            <el-button type="primary" size="small" @click="loadMysql" :loading="mysqlLoading">探测</el-button>
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :span="6">
+        <el-card class="health-card">
+          <div class="health-head">
+            <span class="dot" :class="healthClass(redisStatus)"></span>
+            <h3>Redis</h3>
+            <el-tag :type="healthTagType(redisStatus)" size="small">{{ healthLabel(redisStatus) }}</el-tag>
+          </div>
+          <el-descriptions :column="1" border size="small">
+            <el-descriptions-item label="连接状态">{{ redisSummary?.message || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="延迟">{{ redisSummary?.latencyMs != null ? redisSummary.latencyMs + ' ms' : '-' }}</el-descriptions-item>
+          </el-descriptions>
+          <div class="health-actions">
+            <el-button type="primary" size="small" @click="loadRedis" :loading="redisLoading">探测</el-button>
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :span="6">
         <el-card class="health-card">
           <div class="health-head">
             <span class="dot" :class="healthClass(esStatus)"></span>
@@ -45,19 +79,21 @@
             <el-descriptions-item label="文档总量">{{ esSummary?.docsCount?.toLocaleString() ?? '-' }}</el-descriptions-item>
           </el-descriptions>
           <div class="health-actions">
-            <el-button type="primary" size="small" @click="loadES" :loading="esLoading">探测健康</el-button>
+            <el-button type="primary" size="small" @click="loadES" :loading="esLoading">探测</el-button>
           </div>
         </el-card>
       </el-col>
+    </el-row>
 
-      <el-col :span="8">
+    <el-row :gutter="16" style="margin-top:16px">
+      <el-col :span="24">
         <el-card class="health-card">
           <div class="health-head">
             <span class="dot" :class="healthClass(milvusStatus)"></span>
             <h3>Milvus 向量库</h3>
             <el-tag :type="healthTagType(milvusStatus)" size="small">{{ healthLabel(milvusStatus) }}</el-tag>
           </div>
-          <el-descriptions :column="1" border size="small">
+          <el-descriptions :column="1" border size="small" style="margin-bottom:12px">
             <el-descriptions-item label="集合数">{{ milvusSummary?.collections ?? '-' }}</el-descriptions-item>
             <el-descriptions-item label="向量总数">{{ milvusSummary?.vectors?.toLocaleString() ?? '-' }}</el-descriptions-item>
             <el-descriptions-item label="版本">{{ milvusSummary?.version || '-' }}</el-descriptions-item>
@@ -106,15 +142,21 @@ const loading = ref(false)
 const llmLoading = ref(false)
 const esLoading = ref(false)
 const milvusLoading = ref(false)
+const mysqlLoading = ref(false)
+const redisLoading = ref(false)
 
 const llmStatus = ref(-1)
 const esStatus = ref(-1)
 const milvusStatus = ref(-1)
+const mysqlStatus = ref(-1)
+const redisStatus = ref(-1)
 
 const llmSummary = ref(null)
 const esSummary = ref(null)
 const milvusSummary = ref(null)
 const llmModels = ref([])
+const mysqlSummary = ref(null)
+const redisSummary = ref(null)
 
 function healthClass(v) {
   if (v === 1) return 'dot-success'
@@ -175,9 +217,35 @@ async function loadMilvus() {
   }
 }
 
+async function loadMysql() {
+  mysqlLoading.value = true
+  try {
+    const res = await api.get('/admin/infra/mysql-health')
+    mysqlSummary.value = res.data || {}
+    mysqlStatus.value = res.data?.status === 'UP' ? 1 : 3
+  } catch (e) {
+    mysqlStatus.value = 3
+  } finally {
+    mysqlLoading.value = false
+  }
+}
+
+async function loadRedis() {
+  redisLoading.value = true
+  try {
+    const res = await api.get('/admin/infra/redis-health')
+    redisSummary.value = res.data || {}
+    redisStatus.value = res.data?.status === 'UP' ? 1 : 3
+  } catch (e) {
+    redisStatus.value = 3
+  } finally {
+    redisLoading.value = false
+  }
+}
+
 async function loadAll() {
   loading.value = true
-  await Promise.allSettled([loadLLM(), loadES(), loadMilvus()])
+  await Promise.allSettled([loadLLM(), loadES(), loadMilvus(), loadMysql(), loadRedis()])
   loading.value = false
 }
 

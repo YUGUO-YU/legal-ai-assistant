@@ -54,9 +54,10 @@
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="170" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
+            <el-button link type="warning" size="small" @click="openAssignRoles(row)">分配角色</el-button>
             <el-button link :type="row.status === 1 ? 'warning' : 'success'" size="small" @click="toggleUser(row)">{{ row.status === 1 ? '停用' : '启用' }}</el-button>
             <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
@@ -114,6 +115,23 @@
         <el-button type="primary" @click="handleSave">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="showRoleDialog" title="分配角色" width="480px">
+      <el-form label-width="80px">
+        <el-form-item label="用户">
+          <el-input :value="roleForm.username + '（' + roleForm.realName + '）'" disabled />
+        </el-form-item>
+        <el-form-item label="角色">
+          <el-checkbox-group v-model="roleForm.selectedRoles">
+            <el-checkbox v-for="r in allRoles" :key="r.id" :label="r.id">{{ r.role_name }}</el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showRoleDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleAssignRoles">确认分配</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -127,7 +145,10 @@ const rows = ref([])
 const loading = ref(false)
 const filter = reactive({ keyword: '', status: '' })
 const showDialog = ref(false)
+const showRoleDialog = ref(false)
 const form = reactive({ id: null, username: '', password: '', real_name: '', mobile: '', email: '', user_type: 1, feishu_union_id: '', status: 1 })
+const roleForm = reactive({ userId: null, username: '', realName: '', selectedRoles: [] })
+const allRoles = ref([])
 
 function statusLabel(s) { return ({ 1: '启用', 0: '停用', 2: '锁定' }[s] || s) }
 function statusTag(s) { return ({ 1: 'success', 0: 'info', 2: 'danger' }[s] || '') }
@@ -185,6 +206,38 @@ async function toggleUser(row) {
     row.status = newStatus
     ElMessage.success(statusLabel(newStatus))
   } catch (e) { ElMessage.error('操作失败') }
+}
+
+async function openAssignRoles(row) {
+  roleForm.userId = row.id
+  roleForm.username = row.username
+  roleForm.realName = row.real_name
+  roleForm.selectedRoles = []
+  showRoleDialog.value = true
+  try {
+    const [rolesRes, userRolesRes] = await Promise.all([
+      api.get('/admin/infra/roles', { params: { page: 1, pageSize: 100 } }),
+      api.get(`/admin/infra/users/${row.id}/roles`)
+    ])
+    allRoles.value = rolesRes.data?.list || []
+    roleForm.selectedRoles = userRolesRes.data?.roleIds || []
+  } catch (e) {
+    allRoles.value = []
+  }
+}
+
+async function handleAssignRoles() {
+  try {
+    const res = await api.post(`/admin/infra/users/${roleForm.userId}/roles`, {
+      role_ids: roleForm.selectedRoles
+    })
+    if (res.data?.ok) {
+      ElMessage.success('角色分配成功')
+      showRoleDialog.value = false
+    } else {
+      ElMessage.error(res.data?.error || '分配失败')
+    }
+  } catch (e) { ElMessage.error('分配失败') }
 }
 
 function reset() { filter.keyword = ''; filter.status = ''; load() }

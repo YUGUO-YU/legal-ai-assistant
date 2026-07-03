@@ -206,9 +206,12 @@
 
     <el-dialog v-model="showKbSelector" title="选择知识库" width="480px" class="kb-dialog">
       <el-select v-model="selectedKb" placeholder="请选择知识库" style="width: 100%">
-        <el-option label="劳动法法规库" value="KB-001" />
-        <el-option label="合同纠纷案例" value="KB-002" />
-        <el-option label="知识产权法规" value="KB-003" />
+        <el-option
+          v-for="kb in kbList"
+          :key="kb.id"
+          :label="kb.name"
+          :value="kb.id"
+        />
       </el-select>
       <template #footer>
         <el-button @click="showKbSelector = false">取消</el-button>
@@ -253,10 +256,11 @@ const messages = ref([])
 const chatContainer = ref(null)
 const currentSession = ref(null)
 const sessionId = ref(null)
-const currentKb = ref('劳动法法规库')
+const currentKb = ref('')
 const showKbSelector = ref(false)
-const selectedKb = ref('KB-001')
+const selectedKb = ref('')
 const loading = ref(false)
+const kbList = ref([])
 
 const sessions = ref([])
 
@@ -273,6 +277,24 @@ const loadSessions = async () => {
     }
   } catch (e) {
     console.error('加载会话列表失败:', e)
+  }
+}
+
+const loadKbList = async () => {
+  try {
+    const res = await api.knowledgeBase.list()
+    if (res.data && res.data.length > 0) {
+      kbList.value = res.data.map(kb => ({
+        id: kb.id,
+        name: kb.name
+      }))
+      if (kbList.value.length > 0 && !selectedKb.value) {
+        selectedKb.value = kbList.value[0].id
+        currentKb.value = kbList.value[0].name
+      }
+    }
+  } catch (e) {
+    console.error('加载知识库列表失败:', e)
   }
 }
 
@@ -435,12 +457,9 @@ const confirmKb = async () => {
 
 const scrollToCitation = (c) => {
   if (c?.documentId) {
-    const kbMap = {
-      'KB-001': '劳动法法规库',
-      'KB-002': '合同纠纷案例',
-      'KB-003': '知识产权法规'
-    }
-    ElMessage.info(`正在定位文档: ${kbMap[c.documentId] || c.documentId}`)
+    const kb = kbList.value.find(k => k.id === c.documentId)
+    const kbName = kb ? kb.name : c.documentId
+    ElMessage.info(`正在定位文档: ${kbName}`)
   }
 }
 
@@ -454,6 +473,7 @@ const goSessionDetail = (s) => {
 }
 
 onMounted(() => {
+  loadKbList()
   if (route.query.kbId) {
     selectedKb.value = route.query.kbId
     currentKb.value = '已加载知识库'
