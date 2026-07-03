@@ -198,6 +198,9 @@ import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 import AnalysisReport from '../components/AnalysisReport.vue'
+import { useUsageMemory } from '@/composables/useUsageMemory'
+
+const { addRecord } = useUsageMemory()
 
 const router = useRouter()
 const caseDescription = ref('')
@@ -224,6 +227,7 @@ const handleSearch = async () => {
     })
     results.value = res.data.items || []
     statistics.value = res.data.statistics || {}
+    addRecord('case', `类案检索"${caseDescription.value.slice(0, 20)}..."`, `找到 ${results.value.length} 个相似案例`)
   } catch (e) {
     console.error(e)
     ElMessage.error('检索失败，请稍后重试')

@@ -563,13 +563,16 @@ const quickAccess = [
   { path: '/data-manager', title: '数据管理', desc: 'AI 导入法律法规', icon: 'DataAnalysis', gradient: 'linear-gradient(135deg, #11998e, #38ef7d)', shadow: '0 8px 20px rgba(17, 153, 142, 0.35)' }
 ]
 
-const recentActivities = ref([
-  { id: 1, title: '检索"合同欺诈认定"', desc: '找到了 12 条相关法规和 8 个类案', time: '10分钟前', icon: 'Search', gradient: 'rgba(102, 126, 234, 0.15)' },
-  { id: 2, title: '起草"民事起诉状"', desc: '已生成起诉状模板，正在编辑', time: '30分钟前', icon: 'DocumentCopy', gradient: 'rgba(79, 172, 254, 0.15)' },
-  { id: 3, title: '审查"采购合同"', desc: '发现 3 处风险条款', time: '1小时前', icon: 'Stamp', gradient: 'rgba(161, 140, 209, 0.15)' },
-  { id: 4, title: '查询"北京某科技公司"', desc: '企业风险等级：中等', time: '2小时前', icon: 'OfficeBuilding', gradient: 'rgba(250, 112, 154, 0.15)' },
-  { id: 5, title: '类案检索"装修合同纠纷"', desc: '相似度 > 85% 的案例 5 个', time: '3小时前', icon: 'Connection', gradient: 'rgba(245, 87, 108, 0.15)' }
-])
+const recentActivities = computed(() => {
+  return memoryRecords.value.slice(0, 10).map(record => ({
+    id: record.id,
+    title: record.title,
+    desc: record.desc,
+    time: formatAge(record.timestamp),
+    icon: getTypeIcon(record.type),
+    gradient: `${getTypeColor(record.type)}25`
+  }))
+})
 
 const hotTopics = ref([
   { title: '合同欺诈认定', count: 1256, percentage: 95, color: '#ff4d4f' },

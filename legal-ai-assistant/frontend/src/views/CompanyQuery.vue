@@ -410,6 +410,9 @@ import {
 } from '@element-plus/icons-vue'
 import api from '../api'
 import EmptyState from '../components/EmptyState.vue'
+import { useUsageMemory } from '@/composables/useUsageMemory'
+
+const { addRecord } = useUsageMemory()
 
 const router = useRouter()
 const companyName = ref('')
@@ -465,6 +468,7 @@ const handleQuery = async () => {
     const existing = queryHistory.value.filter(h => h.name !== companyName.value)
     queryHistory.value = [historyItem, ...existing].slice(0, 10)
     localStorage.setItem('companyQueryHistory', JSON.stringify(queryHistory.value))
+    addRecord('company', `查询"${companyName.value}"`, `风险等级：${res.data.riskLevel || '未知'}`)
   } catch (e) {
     console.error(e)
     ElMessage.error('查询失败，请稍后重试')
