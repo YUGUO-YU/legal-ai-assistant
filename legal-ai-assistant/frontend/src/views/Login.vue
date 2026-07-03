@@ -79,6 +79,8 @@
       <div class="login-footer">
         <span>还没有账号？</span>
         <el-link type="primary" @click="$router.push('/register')">立即注册</el-link>
+        <span class="footer-divider">|</span>
+        <el-link type="warning" @click="$router.push('/admin/login')">后台管理登录</el-link>
       </div>
 
       <div class="demo-accounts">
@@ -419,6 +421,14 @@ onMounted(() => {
   margin-top: 20px;
   color: #6b7280;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.footer-divider {
+  color: #d1d5db;
 }
 
 .admin-quick-link {
