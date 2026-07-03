@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 
 @Service
 public class AdminDataService {
@@ -834,6 +835,200 @@ public class AdminDataService {
             result.put("ok", true);
         } catch (Exception e) {
             log.error("删除 Prompt 模板失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> listFrontendUsers(int page, int pageSize, String keyword) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (keyword != null && !keyword.isEmpty()) {
+                where.append(" AND (id LIKE ? OR username LIKE ? OR real_name LIKE ? OR email LIKE ? OR phone LIKE ?)");
+                String like = "%" + keyword + "%";
+                args.add(like);
+                args.add(like);
+                args.add(like);
+                args.add(like);
+                args.add(like);
+            }
+            Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM frontend_user" + where, Integer.class, args.toArray());
+            int offset = Math.max(0, (page - 1) * pageSize);
+            String sql = "SELECT * FROM frontend_user" + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+            args.add(pageSize);
+            args.add(offset);
+            List<Map<String, Object>> rows = jdbc.queryForList(sql, args.toArray());
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 前端用户列表查询失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> createFrontendUser(Map<String, Object> payload) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (payload == null || payload.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "payload 为空");
+            return result;
+        }
+        String username = (String) payload.get("username");
+        String password = (String) payload.get("password");
+        String realName = (String) payload.get("real_name");
+        String email = (String) payload.get("email");
+        String phone = (String) payload.get("phone");
+        if (username == null || username.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "用户名为空");
+            return result;
+        }
+        if (password == null || password.length() < 6) {
+            result.put("ok", false);
+            result.put("error", "密码长度需至少6位");
+            return result;
+        }
+        try {
+            var existing = jdbc.queryForList("SELECT id FROM frontend_user WHERE username = ?", username);
+            if (!existing.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "用户名已被注册");
+                return result;
+            }
+            if (email != null && !email.isEmpty()) {
+                var existingEmail = jdbc.queryForList("SELECT id FROM frontend_user WHERE email = ?", email);
+                if (!existingEmail.isEmpty()) {
+                    result.put("ok", false);
+                    result.put("error", "邮箱已被注册");
+                    return result;
+                }
+            }
+            String userId = "u-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+            String hashedPassword = org.apache.commons.codec.digest.DigestUtils.sha256Hex(password.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            jdbc.update(
+                "INSERT INTO frontend_user (id, username, password, real_name, email, phone, status) VALUES (?, ?, ?, ?, ?, ?, 1)",
+                userId, username, hashedPassword, realName, email, phone);
+            log.info("创建前端用户: username={}, userId={}", username, userId);
+            result.put("ok", true);
+            result.put("id", userId);
+        } catch (Exception e) {
+            log.warn("[Admin] 创建前端用户失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> updateFrontendUser(String id, Map<String, Object> payload) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (payload == null || payload.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "payload 为空");
+            return result;
+        }
+        try {
+            var existing = jdbc.queryForList("SELECT id FROM frontend_user WHERE id = ?", id);
+            if (existing.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "用户不存在");
+                return result;
+            }
+            java.util.List<String> sets = new java.util.ArrayList<>();
+            java.util.List<Object> vals = new java.util.ArrayList<>();
+            if (payload.containsKey("real_name")) {
+                sets.add("real_name = ?");
+                vals.add(payload.get("real_name"));
+            }
+            if (payload.containsKey("email")) {
+                String email = (String) payload.get("email");
+                if (email != null && !email.isEmpty()) {
+                    var existingEmail = jdbc.queryForList("SELECT id FROM frontend_user WHERE email = ? AND id != ?", email, id);
+                    if (!existingEmail.isEmpty()) {
+                        result.put("ok", false);
+                        result.put("error", "邮箱已被其他用户使用");
+                        return result;
+                    }
+                }
+                sets.add("email = ?");
+                vals.add(email);
+            }
+            if (payload.containsKey("phone")) {
+                sets.add("phone = ?");
+                vals.add(payload.get("phone"));
+            }
+            if (payload.containsKey("status")) {
+                sets.add("status = ?");
+                vals.add(payload.get("status"));
+            }
+            if (payload.containsKey("password") && payload.get("password") != null && !((String) payload.get("password")).isEmpty()) {
+                String pwd = (String) payload.get("password");
+                if (pwd.length() < 6) {
+                    result.put("ok", false);
+                    result.put("error", "密码长度需至少6位");
+                    return result;
+                }
+                sets.add("password = ?");
+                vals.add(org.apache.commons.codec.digest.DigestUtils.sha256Hex(pwd.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            }
+            if (sets.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "无可更新字段");
+                return result;
+            }
+            vals.add(id);
+            String sql = "UPDATE frontend_user SET " + String.join(", ", sets) + " WHERE id = ?";
+            int n = jdbc.update(sql, vals.toArray());
+            result.put("ok", n > 0);
+            result.put("affected", n);
+        } catch (Exception e) {
+            log.warn("[Admin] 更新前端用户失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> deleteFrontendUser(String id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            int n = jdbc.update("DELETE FROM frontend_user WHERE id = ?", id);
+            result.put("ok", n > 0);
+            result.put("affected", n);
+        } catch (Exception e) {
+            log.warn("[Admin] 删除前端用户失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> toggleFrontendUserStatus(String id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            var rows = jdbc.queryForList("SELECT status FROM frontend_user WHERE id = ?", id);
+            if (rows.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "用户不存在");
+                return result;
+            }
+            Object cur = rows.get(0).get("status");
+            int next = (cur != null && Integer.parseInt(String.valueOf(cur)) == 1) ? 0 : 1;
+            jdbc.update("UPDATE frontend_user SET status = ? WHERE id = ?", next, id);
+            result.put("ok", true);
+            result.put("status", next);
+        } catch (Exception e) {
+            log.warn("[Admin] 切换前端用户状态失败 id={}: {}", id, e.getMessage());
             result.put("ok", false);
             result.put("error", e.getMessage());
         }

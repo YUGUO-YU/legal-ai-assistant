@@ -138,6 +138,7 @@ const routes = [
       { path: 'law/import', component: () => import('../views/admin/biz/LawImport.vue') },
 
       { path: 'infra/users', component: () => import('../views/admin/infra/Users.vue') },
+      { path: 'infra/frontend-users', component: () => import('../views/admin/infra/FrontendUsers.vue') },
       { path: 'infra/roles', component: () => import('../views/admin/infra/Roles.vue') },
       { path: 'infra/menus', component: () => import('../views/admin/infra/Menus.vue') },
       { path: 'infra/audit', component: () => import('../views/admin/infra/AuditLogs.vue') },

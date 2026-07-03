@@ -298,6 +298,42 @@ public class AdminController {
         return ApiResponse.success(adminDataService.audit(userId, operation, module, page, pageSize));
     }
 
+    @GetMapping("/infra/frontend-users")
+    public ApiResponse<Map<String, Object>> listFrontendUsers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) String keyword) {
+        return ApiResponse.success(adminDataService.listFrontendUsers(page, pageSize, keyword));
+    }
+
+    @PostMapping("/infra/frontend-users")
+    public ApiResponse<Map<String, Object>> createFrontendUser(@RequestBody Map<String, Object> payload) {
+        Map<String, Object> data = adminDataService.createFrontendUser(payload);
+        recordAudit("CREATE", "frontend_user", String.valueOf(data.get("id")));
+        return ApiResponse.success(data);
+    }
+
+    @PutMapping("/infra/frontend-users/{id}")
+    public ApiResponse<Map<String, Object>> updateFrontendUser(@PathVariable String id, @RequestBody Map<String, Object> payload) {
+        Map<String, Object> data = adminDataService.updateFrontendUser(id, payload);
+        recordAudit("UPDATE", "frontend_user", id);
+        return ApiResponse.success(data);
+    }
+
+    @DeleteMapping("/infra/frontend-users/{id}")
+    public ApiResponse<Map<String, Object>> deleteFrontendUser(@PathVariable String id) {
+        Map<String, Object> data = adminDataService.deleteFrontendUser(id);
+        recordAudit("DELETE", "frontend_user", id);
+        return ApiResponse.success(data);
+    }
+
+    @PostMapping("/infra/frontend-users/{id}/toggle")
+    public ApiResponse<Map<String, Object>> toggleFrontendUserStatus(@PathVariable String id) {
+        Map<String, Object> data = adminDataService.toggleFrontendUserStatus(id);
+        recordAudit("TOGGLE", "frontend_user", id);
+        return ApiResponse.success(data);
+    }
+
     // ============================================================
     // 域 02 数据资产：MOD-01..MOD-10 各模块数据
     // ============================================================
