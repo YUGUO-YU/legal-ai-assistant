@@ -2,7 +2,7 @@
   <div class="dashboard">
     <div class="page-header">
       <div class="welcome-section">
-        <h2>👋 {{ greeting }}，{{ username }}</h2>
+        <h2><el-icon class="wave-icon"><ChatDotRound /></el-icon> {{ greeting }}，{{ username }}</h2>
         <p>今天是 {{ today }}，为您准备了一些快捷功能</p>
       </div>
       <div class="header-stats">
@@ -29,7 +29,7 @@
 
     <el-row :gutter="24" class="stats-row">
       <el-col :span="6" v-for="(stat, index) in statsData" :key="index">
-        <el-card class="stat-card" :class="stat.class" @click="goTo(stat.path)">
+        <el-card class="stat-card card-hover" :class="stat.class" @click="goTo(stat.path)">
           <div class="stat-content">
             <div class="stat-icon" :style="{ background: stat.gradient }">
               <el-icon :size="24"><component :is="stat.icon" /></el-icon>
@@ -63,7 +63,7 @@
           </template>
           <el-row :gutter="16">
             <el-col :span="8" v-for="item in quickAccess" :key="item.path">
-              <div class="quick-item" @click="$router.push(item.path)">
+              <div class="quick-item card-hover" @click="$router.push(item.path)">
                 <div class="quick-icon" :style="{ background: item.gradient, boxShadow: item.shadow }">
                   <el-icon :size="24"><component :is="item.icon" /></el-icon>
                 </div>
@@ -91,7 +91,7 @@
             </div>
           </template>
           <div class="activity-list">
-            <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
+            <div v-for="activity in recentActivities" :key="activity.id" class="activity-item stagger-item">
               <div class="activity-icon" :style="{ background: activity.gradient }">
                 <el-icon><component :is="activity.icon" /></el-icon>
               </div>
@@ -205,7 +205,7 @@
       </template>
       <el-row :gutter="20">
         <el-col :span="6" v-for="card in detailCards" :key="card.key">
-          <div class="detail-card" :class="card.class" @click="openDetail(card)">
+          <div class="detail-card card-hover" :class="card.class" @click="openDetail(card)">
             <div class="detail-card-header">
               <div class="detail-card-icon" :style="{ background: card.gradient }">
                 <el-icon :size="22"><component :is="card.icon" /></el-icon>
@@ -864,6 +864,18 @@ const loadMore = () => {
 <style lang="scss" scoped>
 .dashboard {
   animation: fadeIn 0.5s ease;
+}
+
+.wave-icon {
+  display: inline-block;
+  animation: wave 1.2s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(20deg); }
+  75% { transform: rotate(-20deg); }
 }
 
 @keyframes fadeIn {
