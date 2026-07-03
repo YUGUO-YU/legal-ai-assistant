@@ -328,7 +328,12 @@ public class DocumentService {
             "以下是生成的文书：",
             "文书正文如下：",
             "根据您的要求，生成如下文书：",
-            "根据案件信息，生成如下法律文书："
+            "根据案件信息，生成如下法律文书：",
+            "【文书正文】",
+            "【生成结果】",
+            "生成结果如下：",
+            "文书内容如下：",
+            "以下是法律文书："
         };
         for (String prefix : prefixesToRemove) {
             if (content.startsWith(prefix)) {
@@ -336,8 +341,11 @@ public class DocumentService {
             }
         }
         
-        // 移除开头的解释性文字（到第一个换行或特定标记）
-        content = content.replaceAll("^(?:根据|按照|依据)[^，,\n]{0,30}(?:如下|生成|输出)[：:]", "");
+        // 移除开头的解释性文字
+        content = content.replaceAll("^(?:根据|按照|依据|为了)[^，,\n]{0,50}(?:如下|生成|输出|提供)[：:]", "");
+        
+        // 移除末尾的解释性文字
+        content = content.replaceAll("(?:以上|上述)[^。\\n]{0,50}(?:文书|内容|结果)[。]?\\s*$", "");
         
         return content.trim();
     }
