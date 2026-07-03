@@ -18,7 +18,7 @@ import java.util.*;
 public class CompanyService {
     private static final Logger log = LoggerFactory.getLogger(CompanyService.class);
 
-    @Value("${mock.enabled:true}")
+    @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
     @Autowired

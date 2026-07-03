@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 public class ContractService {
     private static final Logger log = LoggerFactory.getLogger(ContractService.class);
 
-    @Value("${mock.enabled:true}")
+    @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
     @Autowired

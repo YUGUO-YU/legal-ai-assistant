@@ -39,7 +39,7 @@ public class LegalResearchService {
         "3. 识别法规时效性，提示可能已修订\n" +
         "4. 风险评估需明确等级和防控建议\n";
 
-    @Value("${mock.enabled:true}")
+    @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
     @Autowired

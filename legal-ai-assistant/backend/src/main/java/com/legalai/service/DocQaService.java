@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class DocQaService {
     private static final Logger log = LoggerFactory.getLogger(DocQaService.class);
 
-    @Value("${mock.enabled:true}")
+    @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
     @Autowired

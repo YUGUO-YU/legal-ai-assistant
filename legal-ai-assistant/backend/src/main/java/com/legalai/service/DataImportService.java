@@ -17,7 +17,7 @@ public class DataImportService {
 
     private static final Logger log = LoggerFactory.getLogger(DataImportService.class);
 
-    @Value("${mock.enabled:true}")
+    @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
     @Autowired

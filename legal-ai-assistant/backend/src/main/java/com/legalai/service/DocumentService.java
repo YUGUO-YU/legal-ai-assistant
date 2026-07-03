@@ -203,7 +203,7 @@ public class DocumentService {
     @Autowired(required = false)
     private LLMClient llmClient;
 
-    @Value("${mock.enabled:true}")
+    @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
     public DocumentDraftResponse draftDocument(DocumentDraftRequest request) {

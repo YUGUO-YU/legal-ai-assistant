@@ -30,7 +30,7 @@ public class CaseAnalysisService {
         "4. 风险提示需明确等级（LOW/MEDIUM/HIGH）\n" +
         "5. 输出为 JSON 格式，结构清晰\n";
 
-    @Value("${mock.enabled:true}")
+    @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
     @Autowired

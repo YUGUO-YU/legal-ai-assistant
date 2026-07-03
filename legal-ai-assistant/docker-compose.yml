@@ -96,6 +96,9 @@ services:
       - ELASTICSEARCH_URIS=http://elasticsearch:9200
       - MILVUS_HOST=milvus
       - MILVUS_PORT=19530
+      - MOCK_ENABLED=false
+      - MILVUS_ENABLED=false
+      - ELASTICSEARCH_ENABLED=false
     depends_on:
       mysql:
         condition: service_healthy

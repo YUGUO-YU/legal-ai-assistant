@@ -21,7 +21,7 @@ public class KnowledgeBaseService {
     private static final int CHUNK_SIZE = 512;
     private static final int CHUNK_OVERLAP = 64;
 
-    @Value("${mock.enabled:true}")
+    @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
     private final JdbcTemplate jdbc;

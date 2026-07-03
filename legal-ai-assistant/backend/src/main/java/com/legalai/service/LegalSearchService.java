@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 public class LegalSearchService {
     private static final Logger log = LoggerFactory.getLogger(LegalSearchService.class);
 
-    @Value("${mock.enabled:true}")
+    @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
     private final ElasticsearchService elasticsearchService;

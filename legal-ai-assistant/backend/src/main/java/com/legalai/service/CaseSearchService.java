@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 public class CaseSearchService {
     private static final Logger log = LoggerFactory.getLogger(CaseSearchService.class);
 
-    @Value("${mock.enabled:true}")
+    @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
     @Autowired
