@@ -195,7 +195,7 @@
             </el-form-item>
 
             <el-form-item>
-              <el-button type="primary" @click="handleDraft" :loading="loading" :disabled="!selectedTemplate">
+              <el-button type="primary" @click="handleDraft" :loading="loading" :disabled="!selectedTemplate" class="ripple-effect btn-press">
                 <el-icon v-if="!loading"><Document /></el-icon>
                 生成文书
               </el-button>
@@ -640,16 +640,58 @@ onMounted(() => {
 }
 
 .category-tabs {
+  :deep(.el-tabs__header) {
+    position: relative;
+  }
+
+  :deep(.el-tabs__nav-wrap::after) {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--color-border);
+    z-index: 0;
+  }
+
   :deep(.el-tabs__item) {
     font-weight: 500;
+    position: relative;
+    transition: color var(--transition-base);
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%) scaleX(0);
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      transition: transform var(--transition-smooth);
+      z-index: 1;
+    }
 
     &.is-active {
       color: #667eea;
+
+      &::after {
+        transform: translateX(-50%) scaleX(1);
+      }
+    }
+
+    &:hover {
+      color: #667eea;
+
+      &::after {
+        transform: translateX(-50%) scaleX(0.5);
+      }
     }
   }
 
   :deep(.el-tabs__active-bar) {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: none;
   }
 }
 
@@ -676,7 +718,8 @@ onMounted(() => {
   }
 
   &.active {
-    border-color: #667eea;
+    transform: scale(1.02);
+    border: 2px solid var(--color-primary);
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
   }
