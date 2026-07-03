@@ -6,9 +6,24 @@
         <p>实时指标 · 待办 · 趋势 · 6 大域 / 27 张管理表</p>
       </div>
       <div class="header-actions">
+        <el-tag v-if="dbStatus.connected" type="success" size="small">数据库已连接</el-tag>
+        <el-tag v-else type="danger" size="small">数据库未连接</el-tag>
         <el-button :icon="Refresh" @click="loadAll">刷新</el-button>
       </div>
     </div>
+
+    <el-alert v-if="!dbStatus.connected" type="warning" :closable="false" show-icon class="db-alert">
+      <template #title>
+        <span>数据库未连接或未初始化。请确保：</span>
+        <ol style="margin: 8px 0 0 16px;">
+          <li>MySQL 服务已启动</li>
+          <li>数据库 <code>legal_ai</code> 已创建</li>
+          <li>后端已执行 schema.sql 初始化表和数据</li>
+        </ol>
+        <el-button size="small" type="warning" style="margin-top:8px" @click="checkDbStatus">重新检测</el-button>
+        <el-button size="small" type="primary" style="margin-top:8px;margin-left:8px" @click="initDb">初始化数据库</el-button>
+      </template>
+    </el-alert>
 
     <el-row :gutter="14" class="kpi-row">
       <el-col :xs="12" :sm="8" :md="6" :lg="4" v-for="m in kpis" :key="m.label">
@@ -153,6 +168,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Refresh, Link, InfoFilled } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import api from '../../api'
 
 const counts = ref({})
@@ -160,6 +176,7 @@ const overview = ref({})
 const recentAlerts = ref([])
 const loading = ref(false)
 const aiStatus = ref({ status: 'checking', model: '', baseUrl: '', message: '', time: '' })
+const dbStatus = ref({ connected: false, message: '' })
 let timer = null
 
 const kpis = computed(() => [
@@ -271,8 +288,24 @@ async function loadOverview() {
 
 async function loadAll() {
   loading.value = true
-  await Promise.all([loadStats(), loadOverview(), loadAiStatus()])
+  await Promise.all([checkDbStatus(), loadStats(), loadOverview(), loadAiStatus()])
   loading.value = false
+}
+
+async function checkDbStatus() {
+  try {
+    const res = await api.get('/admin/db/health')
+    dbStatus.value = {
+      connected: res.data?.connected || false,
+      message: res.data?.message || ''
+    }
+  } catch (e) {
+    dbStatus.value = { connected: false, message: '无法连接后端服务' }
+  }
+}
+
+async function initDb() {
+  ElMessage.info('请在 MySQL 命令行中执行：source backend/src/main/resources/schema.sql')
 }
 
 async function loadAiStatus() {
@@ -311,6 +344,13 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
   .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
   .header-content p { margin: 0; color: #64748b; font-size: 13px; }
+}
+
+.db-alert {
+  margin-bottom: 16px;
+  :deep(.el-alert__title) {
+    font-size: 13px;
+  }
 }
 
 .kpi-row { margin-bottom: 14px; }
