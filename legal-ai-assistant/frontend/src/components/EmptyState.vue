@@ -45,20 +45,20 @@ defineEmits(['action'])
 
   .empty-icon {
     font-size: 64px;
-    color: #d9d9d9;
+    color: var(--color-text-muted);
     margin-bottom: 16px;
   }
 
   .empty-title {
     margin: 0 0 8px 0;
     font-size: 16px;
-    color: #333;
+    color: var(--color-text);
   }
 
   .empty-desc {
     margin: 0 0 24px 0;
     font-size: 14px;
-    color: #999;
+    color: var(--color-text-muted);
   }
 }
 </style>
