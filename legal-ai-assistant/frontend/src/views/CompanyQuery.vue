@@ -8,6 +8,14 @@
     </div>
 
     <el-card class="search-card">
+      <div v-if="queryHistory.length > 0" class="query-history">
+        <div class="history-label">最近查询</div>
+        <div class="history-items">
+          <el-tag v-for="h in queryHistory.slice(0, 5)" :key="h.timestamp" @click="restoreQuery(h)" class="history-item">
+            {{ h.name }}
+          </el-tag>
+        </div>
+      </div>
       <div class="search-box">
         <div class="search-input-wrapper">
           <el-icon class="search-icon"><OfficeBuilding /></el-icon>
@@ -26,20 +34,12 @@
     </el-card>
 
     <div v-if="loading" class="search-progress">
-      <el-card class="info-card progress-card">
-        <div class="progress-steps">
-          <div class="progress-step" :class="searchStep >= 1 ? 'active' : ''">
-            <div class="step-number">1</div>
-            <span>联网搜索企业信息...</span>
-          </div>
-          <div class="step-connector" :class="searchStep >= 2 ? 'active' : ''"></div>
-          <div class="progress-step" :class="searchStep >= 2 ? 'active' : ''">
-            <div class="step-number">2</div>
-            <span>AI 结构化整理...</span>
-          </div>
-        </div>
-        <div class="progress-tip">首次查询约需 10-30 秒，请耐心等待</div>
-      </el-card>
+      <el-steps v-if="loading" :active="queryStep" finish-status="success" simple style="margin: 20px 0;">
+        <el-step title="输入验证" />
+        <el-step title="API查询" />
+        <el-step title="数据分析" />
+        <el-step title="结果展示" />
+      </el-steps>
     </div>
 
     <template v-else-if="companyInfo">
@@ -78,8 +78,8 @@
         </div>
       </el-card>
 
-      <el-row :gutter="24">
-        <el-col :span="16">
+      <el-tabs v-model="activeTab" class="result-tabs">
+        <el-tab-pane label="基本信息" name="basic">
           <el-card class="info-card">
             <template #header>
               <div class="card-header">
@@ -142,9 +142,7 @@
               </div>
             </div>
           </el-card>
-        </el-col>
 
-        <el-col :span="8">
           <el-card class="info-card" v-if="companyInfo.shareholders?.length">
             <template #header>
               <div class="card-header">
@@ -195,8 +193,58 @@
               </div>
             </div>
           </el-card>
-        </el-col>
-      </el-row>
+        </el-tab-pane>
+
+        <el-tab-pane label="司法风险" name="legal">
+          <el-card class="info-card">
+            <template #header>
+              <div class="card-header">
+                <el-icon><Warning /></el-icon>
+                <span>司法风险</span>
+              </div>
+            </template>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>失信被执行数</label>
+                <span>{{ companyInfo.dishonestCount ?? '暂无数据' }}</span>
+              </div>
+              <div class="info-item">
+                <label>法律诉讼数</label>
+                <span>{{ companyInfo.litigationCount ?? '暂无数据' }}</span>
+              </div>
+              <div class="info-item">
+                <label>限消数据</label>
+                <span>{{ companyInfo.restrictedConsumerCount ?? '暂无数据' }}</span>
+              </div>
+            </div>
+          </el-card>
+        </el-tab-pane>
+
+        <el-tab-pane label="经营状况" name="business">
+          <el-card class="info-card">
+            <template #header>
+              <div class="card-header">
+                <el-icon><OfficeBuilding /></el-icon>
+                <span>经营状况</span>
+              </div>
+            </template>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>商标数</label>
+                <span>{{ companyInfo.trademarkCount ?? '暂无数据' }}</span>
+              </div>
+              <div class="info-item">
+                <label>专利数</label>
+                <span>{{ companyInfo.patentCount ?? '暂无数据' }}</span>
+              </div>
+              <div class="info-item">
+                <label>招聘趋势</label>
+                <span>{{ companyInfo.recruitmentTrend ?? '暂无数据' }}</span>
+              </div>
+            </div>
+          </el-card>
+        </el-tab-pane>
+      </el-tabs>
     </template>
 
     <empty-state
@@ -205,7 +253,7 @@
       title="未找到相关企业"
       description="未找到该企业信息，请检查输入是否正确"
       action-text="清除搜索"
-      @action="companyName = ''; companyInfo = null; hasSearched = false"
+      @action="companyName = ''; companyInfo = null; hasSearched = false; queryStep = 0"
     />
   </div>
 </template>
@@ -233,8 +281,16 @@ const router = useRouter()
 const companyName = ref('')
 const loading = ref(false)
 const searchStep = ref(0)
+const queryStep = ref(0)
 const companyInfo = ref(null)
 const hasSearched = ref(false)
+const activeTab = ref('basic')
+const queryHistory = ref(JSON.parse(localStorage.getItem('companyQueryHistory') || '[]'))
+
+const restoreQuery = (item) => {
+  companyName.value = item.name
+  handleQuery()
+}
 
 const goShareholder = (name) => {
   if (!companyInfo.value?.queryUuid) {
@@ -259,19 +315,28 @@ const handleQuery = async () => {
   }
 
   loading.value = true
-  searchStep.value = 0
+  queryStep.value = 0
   hasSearched.value = true
   try {
-    searchStep.value = 1
+    queryStep.value = 1
     const res = await api.company.query({ companyName: companyName.value })
-    searchStep.value = 2
+    queryStep.value = 2
     companyInfo.value = res.data
+    queryStep.value = 3
+    const historyItem = {
+      name: companyName.value,
+      timestamp: Date.now(),
+      riskLevel: res.data.riskLevel || 'unknown'
+    }
+    const existing = queryHistory.value.filter(h => h.name !== companyName.value)
+    queryHistory.value = [historyItem, ...existing].slice(0, 10)
+    localStorage.setItem('companyQueryHistory', JSON.stringify(queryHistory.value))
   } catch (e) {
     console.error(e)
     ElMessage.error('查询失败，请稍后重试')
   } finally {
     loading.value = false
-    searchStep.value = 0
+    queryStep.value = 0
   }
 }
 
@@ -353,6 +418,33 @@ const getRiskItemClass = (level) => {
   }
 }
 
+.query-history {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+
+  .history-label {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 10px;
+  }
+
+  .history-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .history-item {
+      cursor: pointer;
+      transition: all 0.3s;
+
+      &:hover {
+        opacity: 0.8;
+      }
+    }
+  }
+}
+
 .search-box {
   .search-input-wrapper {
     display: flex;
@@ -414,6 +506,40 @@ const getRiskItemClass = (level) => {
 
   :deep(.el-card__body) {
     padding: 24px;
+  }
+}
+
+.result-tabs {
+  :deep(.el-tabs__header) {
+    margin-bottom: 24px;
+  }
+
+  :deep(.el-tabs__nav-wrap::after) {
+    height: 2px;
+  }
+
+  :deep(.el-tabs__item) {
+    font-size: 16px;
+    font-weight: 600;
+    padding: 0 24px;
+    height: 48px;
+    line-height: 48px;
+
+    &.is-active {
+      color: #667eea;
+    }
+  }
+
+  :deep(.el-tabs__active-bar) {
+    height: 3px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 3px;
+  }
+
+  :deep(.el-tabs__nav) {
+    &::before {
+      display: none;
+    }
   }
 }
 

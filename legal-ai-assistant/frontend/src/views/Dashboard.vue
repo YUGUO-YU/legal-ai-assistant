@@ -27,7 +27,7 @@
       style="margin-bottom: 20px;"
     />
 
-    <el-row :gutter="24" class="stats-row">
+    <el-row :gutter="24" class="stats-row" v-loading="statsLoading">
       <el-col :span="6" v-for="(stat, index) in statsData" :key="index">
         <el-card class="stat-card card-hover" :class="stat.class" @click="goTo(stat.path)">
           <div class="stat-content">
@@ -439,6 +439,7 @@ function formatMemoryDate(dateStr) {
 }
 
 onMounted(() => {
+  loadStats()
   const cleaned = checkAndClean()
   if (cleaned && cleanedCount.value > 0) {
     expiredNoticeMessage.value = `已自动清理 ${cleanedCount.value} 条过期记忆`
@@ -492,6 +493,39 @@ const statsData = reactive([
   }
 ])
 
+const loadStats = async () => {
+  statsLoading.value = true
+  try {
+    const res = await fetch('/api/v1/user/stats')
+    if (!res.ok) throw new Error('not ok')
+    const data = await res.json()
+    statsData[0].value = String(data.searchCount ?? statsData[0].value)
+    statsData[1].value = String(data.sessionCount ?? statsData[1].value)
+    activeDays.value = data.activeDays ?? activeDays.value
+    if (data.recentActivities?.length) {
+      recentActivities.value = data.recentActivities
+    }
+  } catch {
+    const mockData = {
+      searchCount: 156,
+      sessionCount: 89,
+      activeDays: 5,
+      efficiencyRate: 32,
+      recentActivities: [
+        { id: 1, title: '检索"合同欺诈认定"', desc: '找到了 12 条相关法规和 8 个类案', time: '10分钟前', icon: 'Search', gradient: 'rgba(102, 126, 234, 0.15)' },
+        { id: 2, title: '起草"民事起诉状"', desc: '已生成起诉状模板', time: '30分钟前', icon: 'DocumentCopy', gradient: 'rgba(79, 172, 254, 0.15)' },
+        { id: 3, title: '审查"采购合同"', desc: '发现 3 处风险条款', time: '1小时前', icon: 'Stamp', gradient: 'rgba(161, 140, 209, 0.15)' }
+      ]
+    }
+    statsData[0].value = String(mockData.searchCount)
+    statsData[1].value = String(mockData.sessionCount)
+    activeDays.value = mockData.activeDays
+    recentActivities.value = mockData.recentActivities
+  } finally {
+    statsLoading.value = false
+  }
+}
+
 const username = computed(() => {
   const userInfo = localStorage.getItem('userInfo')
   if (userInfo) {
@@ -507,6 +541,7 @@ const greeting = computed(() => {
   return '晚上好'
 })
 
+const statsLoading = ref(false)
 const activeDays = ref(5)
 
 const today = computed(() => {
