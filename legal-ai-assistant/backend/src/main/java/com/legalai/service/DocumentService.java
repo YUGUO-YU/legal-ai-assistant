@@ -1921,11 +1921,18 @@ public class DocumentService {
     private BigDecimal parseAmount(String text) {
         if (text == null || text.isEmpty()) return null;
 
-        // 预处理：OCR纠错，把全角数字转半角
-        text = text.replaceAll("[０-９]", d -> String.valueOf((char)(d.group().charAt(0) - '０' + '0')));
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c >= '０' && c <= '９') {
+                sb.append((char)(c - '０' + '0'));
+            } else {
+                sb.append(c);
+            }
+        }
+        text = sb.toString();
 
-        // 预处理：统一分隔符
-        text = text.replaceAll("[，,]", ".");
+        text = text.replace("，", ".").replace(",", ".");
 
         // 策略1：处理金额区间 10万-20万 / 10-20万元，取第一个数
         Pattern rangeP = Pattern.compile("[万一亿]+(?:[\\d][\u4e00-\u9fa5]*-)?[\\d]+[\u4e00-\u9fa5]*");
