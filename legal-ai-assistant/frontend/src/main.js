@@ -1,4 +1,6 @@
 import { createApp } from 'vue'
+import '@/assets/styles/variables.css'
+import '@/assets/styles/animations.css'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
