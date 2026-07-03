@@ -807,47 +807,4 @@ public class AdminDataService {
         jdbc.update("DELETE FROM prompt_template WHERE id = ?", id);
         log.info("删除 Prompt 模板 id={}", id);
     }
-
-    public Map<String, Object> publishPrompt(Long id) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        try {
-            jdbc.update("UPDATE prompt_template SET is_active = 0 WHERE prompt_code = (SELECT prompt_code FROM (SELECT prompt_code FROM prompt_template WHERE id = ?) as t)", id);
-            jdbc.update("UPDATE prompt_template SET is_active = 1 WHERE id = ?", id);
-            result.put("ok", true);
-            log.info("发布 Prompt 模板 id={}", id);
-        } catch (Exception e) {
-            log.error("发布 Prompt 失败: {}", e.getMessage());
-            result.put("ok", false);
-            result.put("error", e.getMessage());
-        }
-        return result;
-    }
-
-    public Map<String, Object> grayPrompt(Long id, int ratio, String teams) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        try {
-            jdbc.update("UPDATE prompt_template SET is_gray = 1, gray_ratio = ?, gray_teams = ? WHERE id = ?", ratio, teams, id);
-            result.put("ok", true);
-            log.info("灰度发布 Prompt 模板 id={}, ratio={}", id, ratio);
-        } catch (Exception e) {
-            log.error("灰度发布失败: {}", e.getMessage());
-            result.put("ok", false);
-            result.put("error", e.getMessage());
-        }
-        return result;
-    }
-
-    public Map<String, Object> rollbackPrompt(Long id, String reason) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        try {
-            jdbc.update("UPDATE prompt_template SET is_active = 1, is_gray = 0 WHERE id = ?", id);
-            result.put("ok", true);
-            log.info("回滚 Prompt 模板 id={}, reason={}", id, reason);
-        } catch (Exception e) {
-            log.error("回滚 Prompt 失败: {}", e.getMessage());
-            result.put("ok", false);
-            result.put("error", e.getMessage());
-        }
-        return result;
-    }
 }
