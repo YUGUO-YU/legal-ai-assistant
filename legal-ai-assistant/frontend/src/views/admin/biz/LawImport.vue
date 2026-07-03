@@ -50,7 +50,7 @@
                   <el-option v-for="c in categoryList" :key="c.id" :label="c.categoryName" :value="c.id" />
                 </el-select>
               </el-form-item>
-              <el-form-item v-if="previewData?.chapters?.length" label="章节结构">
+              <el-form-item v-if="previewData?.chapterTree?.length" label="章节结构">
                 <el-tree :data="chapterTree" :props="{ label: 'title' }" default-expand-all style="max-height: 300px; overflow-y: auto;" />
               </el-form-item>
             </el-form>
@@ -91,8 +91,8 @@ const categoryList = ref([])
 const historyData = ref([])
 
 const chapterTree = computed(() => {
-  if (!previewData.value?.chapters) return []
-  return previewData.value.chapters.map(ch => ({ title: ch.title, children: ch.children || [] }))
+  if (!previewData.value?.chapterTree) return []
+  return previewData.value.chapterTree.map(ch => ({ title: ch.title, children: ch.children || [] }))
 })
 
 const handleFileChange = (file) => {
@@ -101,12 +101,12 @@ const handleFileChange = (file) => {
 
 const loadCategories = async () => {
   try {
-    const res = await api.categoryTypes()
-    const types = res.data || []
+    const typesRes = await api.categoryTypes()
+    const types = typesRes.data || []
     const allCats = []
     for (const t of types) {
-      const r = await api.categories(t.id)
-      allCats.push(...(r.data || []))
+      const catsRes = await api.categories(t.id)
+      allCats.push(...(catsRes.data || []))
     }
     categoryList.value = allCats
   } catch (e) {
@@ -122,10 +122,12 @@ const handlePreview = async () => {
     const res = await api.importPreview(formData)
     previewData.value = res.data || res
     previewForm.value = {
-      title: res.data?.title || '',
+      lawTitle: res.data?.lawTitle || '',
+      shortTitle: res.data?.shortTitle || '',
       documentNo: res.data?.documentNo || '',
       issuingAuthority: res.data?.issuingAuthority || '',
-      issueDate: res.data?.issueDate || ''
+      issueDate: res.data?.issueDate || '',
+      effectiveDate: res.data?.effectiveDate || ''
     }
     ElMessage.success('预览生成成功')
   } catch (e) {

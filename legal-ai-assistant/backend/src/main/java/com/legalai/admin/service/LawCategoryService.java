@@ -34,6 +34,23 @@ public class LawCategoryService {
         return types.stream().map(this::toMap).collect(Collectors.toList());
     }
 
+    public LawCategoryType getType(Long id) {
+        return lawCategoryTypeMapper.selectById(id);
+    }
+
+    public void createType(LawCategoryType type) {
+        lawCategoryTypeMapper.insert(type);
+    }
+
+    public void updateType(Long id, LawCategoryType type) {
+        type.setId(id);
+        lawCategoryTypeMapper.updateById(type);
+    }
+
+    public void deleteType(Long id) {
+        lawCategoryTypeMapper.deleteById(id);
+    }
+
     public List<Map<String, Object>> listCategories(Long typeId) {
         LambdaQueryWrapper<LawCategory> wrapper = new LambdaQueryWrapper<>();
         if (typeId != null) {

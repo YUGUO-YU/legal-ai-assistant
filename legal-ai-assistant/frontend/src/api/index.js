@@ -233,15 +233,19 @@ export default {
     stats: () => withRetry(() => api.get('/admin/law-import/stats'))
   },
   categoryTypes: () => withRetry(() => api.get('/admin/law/category-types')),
+  getCategoryType: (id) => withRetry(() => api.get(`/admin/law/category-types/${id}`)),
+  createCategoryType: (data) => withRetry(() => api.post('/admin/law/category-types', data)),
+  updateCategoryType: (id, data) => withRetry(() => api.put(`/admin/law/category-types/${id}`, data)),
+  deleteCategoryType: (id) => withRetry(() => api.delete(`/admin/law/category-types/${id}`)),
   categories: (typeId) => withRetry(() => api.get('/admin/law/categories', { params: { typeId } })),
   createCategory: (data) => withRetry(() => api.post('/admin/law/categories', data)),
   updateCategory: (id, data) => withRetry(() => api.put(`/admin/law/categories/${id}`, data)),
   deleteCategory: (id) => withRetry(() => api.delete(`/admin/law/categories/${id}`)),
   getDocumentCategories: (lawId) => withRetry(() => api.get(`/admin/law/document-categories/${lawId}`)),
   setDocumentCategories: (lawId, categoryIds) => withRetry(() => api.post(`/admin/law/document-categories/${lawId}`, { categoryIds })),
-  importPreview: (formData) => withRetry(() => api.post('/admin/law/import/preview', formData, {
+  importPreview: (formData) => withRetry(() => api.post('/admin/law-import/preview', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })),
-  importConfirm: (data) => withRetry(() => api.post('/admin/law/import/confirm', data)),
+  importConfirm: (data) => withRetry(() => api.post('/admin/law-import/confirm', data)),
   lawImportHistory: () => withRetry(() => api.get('/admin/law-import/history'))
 }

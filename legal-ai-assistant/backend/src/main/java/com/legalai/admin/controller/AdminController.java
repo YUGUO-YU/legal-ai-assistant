@@ -4,6 +4,7 @@ import com.legalai.admin.service.AdminDataService;
 import com.legalai.admin.service.LawCategoryService;
 import com.legalai.dto.ApiResponse;
 import com.legalai.model.LawCategory;
+import com.legalai.model.LawCategoryType;
 import com.legalai.service.CacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -557,6 +558,29 @@ public class AdminController {
     @GetMapping("/law/category-types")
     public ApiResponse<List<Map<String, Object>>> listCategoryTypes() {
         return ApiResponse.success(lawCategoryService.listTypes());
+    }
+
+    @GetMapping("/law/category-types/{id}")
+    public ApiResponse<Map<String, Object>> getCategoryType(@PathVariable Long id) {
+        return ApiResponse.success(lawCategoryService.getType(id));
+    }
+
+    @PostMapping("/law/category-types")
+    public ApiResponse<Void> createCategoryType(@RequestBody LawCategoryType type) {
+        lawCategoryService.createType(type);
+        return ApiResponse.success(null);
+    }
+
+    @PutMapping("/law/category-types/{id}")
+    public ApiResponse<Void> updateCategoryType(@PathVariable Long id, @RequestBody LawCategoryType type) {
+        lawCategoryService.updateType(id, type);
+        return ApiResponse.success(null);
+    }
+
+    @DeleteMapping("/law/category-types/{id}")
+    public ApiResponse<Void> deleteCategoryType(@PathVariable Long id) {
+        lawCategoryService.deleteType(id);
+        return ApiResponse.success(null);
     }
 
     @GetMapping("/law/categories")

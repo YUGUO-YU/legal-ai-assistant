@@ -8,8 +8,10 @@ import com.legalai.dto.LawImportPreview;
 import com.legalai.llm.LLMClient;
 import com.legalai.model.LawArticle;
 import com.legalai.model.LawDocument;
+import com.legalai.model.LawDocumentCategory;
 import com.legalai.repository.LawArticleMapper;
 import com.legalai.repository.LawDocumentMapper;
+import com.legalai.repository.LawDocumentCategoryMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
@@ -132,6 +134,9 @@ public class LawImportService {
 
     @Autowired
     private LawArticleMapper lawArticleMapper;
+
+    @Autowired
+    private LawDocumentCategoryMapper lawDocumentCategoryMapper;
 
     @Value("${mock.enabled:false}")
     private boolean mockEnabled;
@@ -341,6 +346,18 @@ public class LawImportService {
             article.setTitle(ap.getTitle());
             article.setContent(ap.getContent());
             lawArticleMapper.insert(article);
+        }
+
+        // Save document-category associations
+        if (preview.getSuggestedCategories() != null) {
+            for (LawImportPreview.CategorySuggestion cs : preview.getSuggestedCategories()) {
+                if (cs.getCategoryId() != null) {
+                    LawDocumentCategory docCat = new LawDocumentCategory();
+                    docCat.setLawId(doc.getId());
+                    docCat.setCategoryId(cs.getCategoryId());
+                    lawDocumentCategoryMapper.insert(docCat);
+                }
+            }
         }
 
         LawImportJob job = new LawImportJob();

@@ -77,9 +77,9 @@ const openDialog = (row) => {
 const handleSave = async () => {
   try {
     if (form.value.id) {
-      await api.updateCategory(form.value.id, form.value)
+      await api.updateCategoryType(form.value.id, form.value)
     } else {
-      await api.createCategory(form.value)
+      await api.createCategoryType(form.value)
     }
     dialogVisible.value = false
     loadData()
@@ -92,7 +92,7 @@ const handleSave = async () => {
 const handleDelete = async (id) => {
   await ElMessageBox.confirm('确认删除?', '提示')
   try {
-    await api.deleteCategory(id)
+    await api.deleteCategoryType(id)
     loadData()
     ElMessage.success('删除成功')
   } catch (e) {
