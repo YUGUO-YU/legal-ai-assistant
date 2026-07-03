@@ -133,6 +133,10 @@ const routes = [
     children: [
       { path: '', component: () => import('../views/admin/AdminDashboard.vue') },
 
+      { path: 'law/category-types', component: () => import('../views/admin/biz/LawCategoryTypes.vue') },
+      { path: 'law/categories', component: () => import('../views/admin/biz/LawCategories.vue') },
+      { path: 'law/import', component: () => import('../views/admin/biz/LawImport.vue') },
+
       { path: 'infra/users', component: () => import('../views/admin/infra/Users.vue') },
       { path: 'infra/roles', component: () => import('../views/admin/infra/Roles.vue') },
       { path: 'infra/menus', component: () => import('../views/admin/infra/Menus.vue') },

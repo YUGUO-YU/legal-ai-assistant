@@ -2,6 +2,7 @@ package com.legalai.controller;
 
 import com.legalai.dto.ApiResponse;
 import com.legalai.dto.LawImportJob;
+import com.legalai.dto.LawImportPreview;
 import com.legalai.service.LawImportService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -102,5 +103,27 @@ public class LawImportController {
     @GetMapping("/stats")
     public ApiResponse<Map<String, Long>> stats() {
         return ApiResponse.success(lawImportService.stats());
+    }
+
+    @PostMapping("/preview")
+    public ApiResponse<LawImportPreview> previewImport(@RequestParam("file") MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return ApiResponse.error(400, "文件不能为空");
+        }
+        String filename = file.getOriginalFilename();
+        if (filename == null || (!filename.endsWith(".docx") && !filename.endsWith(".doc"))) {
+            return ApiResponse.error(400, "只支持 Word 文档(.docx/.doc)");
+        }
+        LawImportPreview preview = lawImportService.previewImport(file);
+        return ApiResponse.success(preview);
+    }
+
+    @PostMapping("/confirm")
+    public ApiResponse<LawImportJob> confirmImport(@RequestBody LawImportPreview preview) {
+        if (preview == null || preview.getLawTitle() == null) {
+            return ApiResponse.error(400, "预览数据不能为空");
+        }
+        LawImportJob job = lawImportService.confirmImport(preview, "admin");
+        return ApiResponse.success(job);
     }
 }

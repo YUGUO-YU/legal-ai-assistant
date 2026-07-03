@@ -23,6 +23,16 @@
           <el-menu-item index="/admin/infra/service-health">服务健康</el-menu-item>
         </el-sub-menu>
 
+        <el-sub-menu index="law">
+          <template #title>
+            <el-icon><Document /></el-icon>
+            <span>法规管理</span>
+          </template>
+          <el-menu-item index="/admin/law/category-types">分类维度</el-menu-item>
+          <el-menu-item index="/admin/law/categories">分类管理</el-menu-item>
+          <el-menu-item index="/admin/law/import">AI导入</el-menu-item>
+        </el-sub-menu>
+
         <el-sub-menu index="biz">
           <template #title>
             <el-icon><Document /></el-icon>

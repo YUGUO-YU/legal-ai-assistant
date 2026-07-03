@@ -231,5 +231,17 @@ export default {
     history: (page = 1, pageSize = 20) => withRetry(() => api.get('/admin/law-import/history', { params: { page, pageSize } })),
     historyById: (id) => withRetry(() => api.get(`/admin/law-import/history/${id}`)),
     stats: () => withRetry(() => api.get('/admin/law-import/stats'))
-  }
+  },
+  categoryTypes: () => withRetry(() => api.get('/admin/law/category-types')),
+  categories: (typeId) => withRetry(() => api.get('/admin/law/categories', { params: { typeId } })),
+  createCategory: (data) => withRetry(() => api.post('/admin/law/categories', data)),
+  updateCategory: (id, data) => withRetry(() => api.put(`/admin/law/categories/${id}`, data)),
+  deleteCategory: (id) => withRetry(() => api.delete(`/admin/law/categories/${id}`)),
+  getDocumentCategories: (lawId) => withRetry(() => api.get(`/admin/law/document-categories/${lawId}`)),
+  setDocumentCategories: (lawId, categoryIds) => withRetry(() => api.post(`/admin/law/document-categories/${lawId}`, { categoryIds })),
+  importPreview: (formData) => withRetry(() => api.post('/admin/law/import/preview', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })),
+  importConfirm: (data) => withRetry(() => api.post('/admin/law/import/confirm', data)),
+  lawImportHistory: () => withRetry(() => api.get('/admin/law-import/history'))
 }

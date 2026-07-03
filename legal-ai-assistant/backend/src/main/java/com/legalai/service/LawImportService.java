@@ -1,15 +1,24 @@
 package com.legalai.service;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.dto.LawImportJob;
+import com.legalai.dto.LawImportPreview;
 import com.legalai.llm.LLMClient;
+import com.legalai.model.LawArticle;
+import com.legalai.model.LawDocument;
+import com.legalai.repository.LawArticleMapper;
+import com.legalai.repository.LawDocumentMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,6 +27,8 @@ import java.security.MessageDigest;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @Slf4j
@@ -115,6 +126,12 @@ public class LawImportService {
 
     @Autowired
     private MilvusService milvusService;
+
+    @Autowired
+    private LawDocumentMapper lawDocumentMapper;
+
+    @Autowired
+    private LawArticleMapper lawArticleMapper;
 
     @Value("${mock.enabled:false}")
     private boolean mockEnabled;
@@ -272,6 +289,170 @@ public class LawImportService {
         }
         Collections.sort(presets);
         return presets;
+    }
+
+    public LawImportPreview previewImport(MultipartFile file) {
+        String content = extractTextFromDocx(file);
+        String lawTitle = extractTitle(content);
+        String shortTitle = extractShortTitle(content);
+
+        String metaPrompt = "分析以下法律文档，提取以下信息并以JSON格式返回：\n" +
+            "{\"documentNo\":\"发文字号(如:国务院令第XXX号)\",\"issuingAuthority\":\"发布机关\"," +
+            "\"issueDate\":\"发布日期(YYYY-MM-DD格式)\",\"effectiveDate\":\"生效日期(YYYY-MM-DD格式)\"}\n" +
+            "只返回JSON，不要其他文字。\n" +
+            content.substring(0, Math.min(3000, content.length()));
+        String metaJson = llmClient.chat(metaPrompt);
+
+        String categoryPrompt = "判断以下法律文档的分类，以JSON数组格式返回：\n" +
+            "[{\"categoryTypeId\":1,\"categoryId\":对应分类ID,\"categoryName\":\"分类名称\",\"confidence\":0.95},...]\n" +
+            "categoryTypeId对应：1=效力层级,2=法律部门,3=行业领域,4=自定义分类\n" +
+            "只返回JSON数组。\n" +
+            content.substring(0, Math.min(3000, content.length()));
+        String categoryJson = llmClient.chat(categoryPrompt);
+
+        String chapterPrompt = "分析以下法律文档的章节结构，以JSON数组格式返回：\n" +
+            "[{\"title\":\"章节标题\",\"level\":1或2或3,\"children\":[...]}]\n" +
+            "level: 1=篇/编, 2=章, 3=节\n" +
+            "只返回JSON数组。\n" +
+            content.substring(0, Math.min(5000, content.length()));
+        String chapterJson = llmClient.chat(chapterPrompt);
+
+        List<LawImportPreview.ArticleParse> articles = extractArticles(content);
+
+        return buildPreview(lawTitle, shortTitle, metaJson, categoryJson, chapterJson, articles);
+    }
+
+    public LawImportJob confirmImport(LawImportPreview preview, String operator) {
+        LawDocument doc = new LawDocument();
+        doc.setLawUuid(UUID.randomUUID().toString());
+        doc.setTitle(preview.getLawTitle());
+        doc.setShortTitle(preview.getShortTitle());
+        doc.setCategoryL1(preview.getSuggestedCategories() == null || preview.getSuggestedCategories().isEmpty() ? "其他" : preview.getSuggestedCategories().get(0).getCategoryName());
+        doc.setIssuingAuthority(preview.getIssuingAuthority() != null ? preview.getIssuingAuthority() : "");
+        doc.setIssueDate(parseDateOrNull(preview.getIssueDate()));
+        doc.setEffectiveDate(parseDateOrNull(preview.getEffectiveDate()));
+        lawDocumentMapper.insert(doc);
+
+        for (LawImportPreview.ArticleParse ap : preview.getArticles()) {
+            LawArticle article = new LawArticle();
+            article.setLawId(doc.getId());
+            article.setArticleUuid(UUID.randomUUID().toString());
+            article.setArticleNo(ap.getArticleNo());
+            article.setTitle(ap.getTitle());
+            article.setContent(ap.getContent());
+            lawArticleMapper.insert(article);
+        }
+
+        LawImportJob job = new LawImportJob();
+        job.setTaskUuid(UUID.randomUUID().toString());
+        job.setLawName(preview.getLawTitle());
+        job.setSource("upload");
+        job.setStatus("success");
+        job.setTotalArticles(preview.getArticles().size());
+        job.setInsertedArticles(preview.getArticles().size());
+        job.setMysqlOk(true);
+        job.setOperator(operator);
+
+        long historyId = createHistory(job.getTaskUuid(), job.getLawName(), job.getSource(), operator);
+        finishHistory(historyId, job.getStatus(), job.getTotalArticles(), job.getInsertedArticles(), 0,
+                job.getMysqlOk(), false, false, null, null);
+        return loadJob(historyId);
+    }
+
+    private String extractTextFromDocx(MultipartFile file) {
+        try (XWPFDocument doc = new XWPFDocument(file.getInputStream())) {
+            XWPFWordExtractor extractor = new XWPFWordExtractor(doc);
+            return extractor.getText();
+        } catch (Exception e) {
+            throw new RuntimeException("Word文档解析失败", e);
+        }
+    }
+
+    private String extractTitle(String content) {
+        return content.lines().filter(s -> !s.trim().isEmpty()).findFirst().orElse("未知标题");
+    }
+
+    private String extractShortTitle(String content) {
+        Pattern p = Pattern.compile("（《(.+?)》）");
+        Matcher m = p.matcher(content);
+        if (m.find()) return m.group(1);
+        return "";
+    }
+
+    private LawImportPreview buildPreview(String lawTitle, String shortTitle, String metaJson, String categoryJson, String chapterJson, List<LawImportPreview.ArticleParse> articles) {
+        LawImportPreview preview = new LawImportPreview();
+        preview.setLawTitle(lawTitle);
+        preview.setShortTitle(shortTitle);
+
+        try {
+            JsonNode metaNode = objectMapper.readTree(metaJson.trim());
+            preview.setDocumentNo(textOr(metaNode, "documentNo", null));
+            preview.setIssuingAuthority(textOr(metaNode, "issuingAuthority", null));
+            preview.setIssueDate(textOr(metaNode, "issueDate", null));
+            preview.setEffectiveDate(textOr(metaNode, "effectiveDate", null));
+        } catch (Exception e) {
+            log.warn("解析元数据JSON失败: {}", e.getMessage());
+        }
+
+        try {
+            JsonNode catNode = objectMapper.readTree(categoryJson.trim());
+            List<LawImportPreview.CategorySuggestion> categories = new ArrayList<>();
+            if (catNode.isArray()) {
+                for (JsonNode n : catNode) {
+                    LawImportPreview.CategorySuggestion cs = new LawImportPreview.CategorySuggestion();
+                    cs.setCategoryTypeId(n.has("categoryTypeId") ? n.get("categoryTypeId").asLong() : 1);
+                    cs.setTypeName(n.has("typeName") ? n.get("typeName").asText() : "");
+                    cs.setCategoryId(n.has("categoryId") ? n.get("categoryId").asLong() : 0);
+                    cs.setCategoryName(n.has("categoryName") ? n.get("categoryName").asText() : "");
+                    cs.setConfidence(n.has("confidence") ? n.get("confidence").asDouble() : 0.0);
+                    categories.add(cs);
+                }
+            }
+            preview.setSuggestedCategories(categories);
+        } catch (Exception e) {
+            log.warn("解析分类JSON失败: {}", e.getMessage());
+        }
+
+        try {
+            JsonNode chapterNode = objectMapper.readTree(chapterJson.trim());
+            List<LawImportPreview.ChapterNode> chapters = parseChapterNodes(chapterNode);
+            preview.setChapterTree(chapters);
+        } catch (Exception e) {
+            log.warn("解析章节JSON失败: {}", e.getMessage());
+        }
+
+        preview.setArticles(articles);
+        return preview;
+    }
+
+    private List<LawImportPreview.ChapterNode> parseChapterNodes(JsonNode node) {
+        List<LawImportPreview.ChapterNode> result = new ArrayList<>();
+        if (node == null || !node.isArray()) return result;
+        for (JsonNode n : node) {
+            LawImportPreview.ChapterNode cn = new LawImportPreview.ChapterNode();
+            cn.setTitle(n.has("title") ? n.get("title").asText() : "");
+            cn.setLevel(n.has("level") ? n.get("level").asInt() : 1);
+            if (n.has("children") && n.get("children").isArray()) {
+                cn.setChildren(parseChapterNodes(n.get("children")));
+            } else {
+                cn.setChildren(new ArrayList<>());
+            }
+            result.add(cn);
+        }
+        return result;
+    }
+
+    private List<LawImportPreview.ArticleParse> extractArticles(String content) {
+        List<LawImportPreview.ArticleParse> articles = new ArrayList<>();
+        Pattern p = Pattern.compile("第([一二三四五六七八九十百千万\\d]+)条[^\\n]*\\n([\\s\\S]*?)(?=(?:第[一二三四五六七八九十百千万\\d]+条)|$)");
+        Matcher m = p.matcher(content);
+        while (m.find()) {
+            LawImportPreview.ArticleParse a = new LawImportPreview.ArticleParse();
+            a.setArticleNo("第" + m.group(1) + "条");
+            a.setContent(m.group(2).trim());
+            articles.add(a);
+        }
+        return articles;
     }
 
     private long createHistory(String taskUuid, String lawName, String source, String operator) {
