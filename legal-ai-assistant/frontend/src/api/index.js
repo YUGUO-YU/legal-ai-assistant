@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
 
 const DEFAULT_RETRY_COUNT = 2
 const DEFAULT_RETRY_DELAY = 1000
@@ -31,7 +32,7 @@ api.interceptors.response.use(
     }
     if (res && typeof res === 'object' && 'code' in res) {
       if (res.code !== 200) {
-        console.error('API Error:', res.message)
+        ElMessage.error(res.message || '请求失败')
         return Promise.reject(new Error(res.message || '请求失败'))
       }
       return res
@@ -42,7 +43,7 @@ api.interceptors.response.use(
     if (error.response) {
       switch (error.response.status) {
         case 400:
-          console.error('参数错误:', error.response.data?.message)
+          ElMessage.error('参数错误：' + (error.response.data?.message || ''))
           break
         case 401:
           localStorage.removeItem('token')
@@ -53,26 +54,29 @@ api.interceptors.response.use(
           window.location.href = isAdminReq ? '/admin/login' : '/'
           break
         case 403:
-          console.error('权限不足')
+          ElMessage.error('权限不足')
           break
         case 404:
-          console.error('资源不存在')
+          ElMessage.error('资源不存在')
+          break
+        case 429:
+          ElMessage.warning('请求过于频繁，请稍后重试')
           break
         case 500:
-          console.error('服务器内部错误')
+          ElMessage.error('服务器内部错误')
           break
         case 502:
         case 503:
         case 504:
-          console.error('服务暂时不可用，请稍后重试')
+          ElMessage.error('服务暂时不可用，请稍后重试')
           break
         default:
-          console.error('请求失败:', error.message)
+          ElMessage.error('请求失败：' + error.message)
       }
     } else if (error.code === 'ECONNABORTED') {
-      console.error('请求超时，请检查网络连接')
+      ElMessage.error('请求超时，请检查网络连接')
     } else if (error.request) {
-      console.error('网络错误，请检查网络连接')
+      ElMessage.error('网络错误，请检查网络连接')
     }
     return Promise.reject(error)
   }
@@ -86,7 +90,7 @@ const withRetry = async (fn, retries = DEFAULT_RETRY_COUNT, delay = DEFAULT_RETR
     } catch (error) {
       lastError = error
       if (i < retries && shouldRetry(error)) {
-        await sleep(delay * (i + 1))
+        await sleep(delay * Math.pow(2, i))
       }
     }
   }
@@ -144,13 +148,13 @@ export default {
     getLawArticles: (uuid) => withRetry(() => api.get(`/law-search/laws/${uuid}/articles`))
   },
   lawFavorite: {
-    add: (lawUuid, lawTitle) => api.post('/law-favorite/add', { lawUuid, lawTitle }),
-    remove: (lawUuid) => api.delete(`/law-favorite/remove/${lawUuid}`),
-    list: () => api.get('/law-favorite/list'),
-    check: (lawUuid) => api.get(`/law-favorite/check/${lawUuid}`)
+    add: (lawUuid, lawTitle) => withRetry(() => api.post('/law-favorite/add', { lawUuid, lawTitle })),
+    remove: (lawUuid) => withRetry(() => api.delete(`/law-favorite/remove/${lawUuid}`)),
+    list: () => withRetry(() => api.get('/law-favorite/list')),
+    check: (lawUuid) => withRetry(() => api.get(`/law-favorite/check/${lawUuid}`))
   },
   lawAnalysis: {
-    analyze: (lawUuid, lawTitle, articles) => api.post('/law-analysis/analyze', { lawUuid, lawTitle, articles })
+    analyze: (lawUuid, lawTitle, articles) => withRetry(() => api.post('/law-analysis/analyze', { lawUuid, lawTitle, articles }))
   },
   legalResearch: {
     createTask: (data) => withRetry(() => api.post('/legal-research/tasks', data)),
@@ -202,15 +206,15 @@ export default {
     enhanceSlide: (data) => withRetry(() => api.post('/ppt/ai-enhance-slide', data))
   },
   auth: {
-    login: (data) => api.post('/auth/login', data),
-    adminLogin: (data) => api.post('/auth/admin/login', data),
-    logout: () => api.post('/auth/logout'),
-    register: (data) => api.post('/auth/register', data),
-    sendVerifyCode: (username) => api.post('/auth/forgot-password', { username }),
-    resetPassword: (data) => api.post('/auth/reset-password', data),
+    login: (data) => withRetry(() => api.post('/auth/login', data)),
+    adminLogin: (data) => withRetry(() => api.post('/auth/admin/login', data)),
+    logout: () => withRetry(() => api.post('/auth/logout')),
+    register: (data) => withRetry(() => api.post('/auth/register', data)),
+    sendVerifyCode: (username) => withRetry(() => api.post('/auth/forgot-password', { username })),
+    resetPassword: (data) => withRetry(() => api.post('/auth/reset-password', data)),
     getUserInfo: () => withRetry(() => api.get('/auth/user-info')),
-    changePassword: (data) => api.put('/auth/password', data),
-    updateProfile: (data) => api.put('/auth/profile', data)
+    changePassword: (data) => withRetry(() => api.put('/auth/password', data)),
+    updateProfile: (data) => withRetry(() => api.put('/auth/profile', data))
   },
   health: () => api.get('/health'),
   dataImport: {
