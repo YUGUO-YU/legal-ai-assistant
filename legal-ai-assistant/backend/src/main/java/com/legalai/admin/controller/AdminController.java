@@ -563,7 +563,7 @@ public class AdminController {
 
     @GetMapping("/law/category-types/{id}")
     public ApiResponse<LawCategoryType> getCategoryType(@PathVariable Long id) {
-        return ApiResponse.success(lawCategoryService.getType(id));
+        return ApiResponse.<LawCategoryType>success(lawCategoryService.getType(id));
     }
 
     @PostMapping("/law/category-types")
@@ -591,7 +591,7 @@ public class AdminController {
 
     @GetMapping("/law/categories/{id}")
     public ApiResponse<Map<String, Object>> getCategory(@PathVariable Long id) {
-        return ApiResponse.success(lawCategoryService.getCategory(id));
+        return ApiResponse.<Map<String, Object>>success(lawCategoryService.getCategory(id));
     }
 
     @PostMapping("/law/categories")
