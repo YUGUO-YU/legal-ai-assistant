@@ -244,6 +244,134 @@
             </div>
           </el-card>
         </el-tab-pane>
+
+        <el-tab-pane label="经营分析" name="analysis" v-if="companyInfo.businessAnalysis">
+          <el-card class="info-card">
+            <template #header>
+              <div class="card-header">
+                <el-icon><DataAnalysis /></el-icon>
+                <span>经营分析</span>
+              </div>
+            </template>
+            <el-row :gutter="20">
+              <el-col :span="6">
+                <div class="analysis-item">
+                  <div class="analysis-label">员工规模</div>
+                  <div class="analysis-value">{{ companyInfo.businessAnalysis.employeeCount || '-' }} 人</div>
+                  <div class="analysis-trend" :class="getTrendClass(companyInfo.businessAnalysis.employeeTrend)">
+                    <el-icon v-if="companyInfo.businessAnalysis.employeeTrend === '上升'"><Top /></el-icon>
+                    <el-icon v-else-if="companyInfo.businessAnalysis.employeeTrend === '下降'"><Bottom /></el-icon>
+                    {{ companyInfo.businessAnalysis.employeeTrend || '-' }}
+                  </div>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="analysis-item">
+                  <div class="analysis-label">实缴资本</div>
+                  <div class="analysis-value">{{ companyInfo.businessAnalysis.paidInCapital || '-' }} 万元</div>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="analysis-item">
+                  <div class="analysis-label">所属行业</div>
+                  <div class="analysis-value">{{ companyInfo.businessAnalysis.industry || '-' }}</div>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="analysis-item">
+                  <div class="analysis-label">行业水平</div>
+                  <div class="analysis-value">{{ companyInfo.businessAnalysis.industryAvgRatio || '-' }}</div>
+                </div>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20" style="margin-top: 20px">
+              <el-col :span="8">
+                <div class="ip-item">
+                  <el-icon><Document /></el-icon>
+                  <span>专利 {{ companyInfo.businessAnalysis.patentCount || 0 }}</span>
+                </div>
+              </el-col>
+              <el-col :span="8">
+                <div class="ip-item">
+                  <el-icon><Collection /></el-icon>
+                  <span>商标 {{ companyInfo.businessAnalysis.trademarkCount || 0 }}</span>
+                </div>
+              </el-col>
+              <el-col :span="8">
+                <div class="ip-item">
+                  <el-icon><Reading /></el-icon>
+                  <span>著作权 {{ companyInfo.businessAnalysis.copyrightCount || 0 }}</span>
+                </div>
+              </el-col>
+            </el-row>
+            <div class="business-scope" v-if="companyInfo.businessAnalysis.businessScope">
+              <div class="scope-label">经营范围</div>
+              <div class="scope-content">{{ companyInfo.businessAnalysis.businessScope }}</div>
+            </div>
+          </el-card>
+        </el-tab-pane>
+
+        <el-tab-pane label="股权穿透" name="equity" v-if="companyInfo.equityChain">
+          <el-card class="info-card">
+            <template #header>
+              <div class="card-header">
+                <el-icon><Connection /></el-icon>
+                <span>股权穿透</span>
+              </div>
+            </template>
+            <div class="equity-chain">
+              <div
+                v-for="(node, idx) in companyInfo.equityChain"
+                :key="idx"
+                class="equity-node"
+                :class="{ 'is-target': node.isTarget }"
+              >
+                <div class="node-header">
+                  <span class="node-name">{{ node.name }}</span>
+                  <el-tag size="small" :type="node.isTarget ? 'primary' : 'info'">
+                    {{ node.isTarget ? '目标公司' : node.holdingRatio }}
+                  </el-tag>
+                </div>
+                <div class="node-meta" v-if="node.actualControl">
+                  实际控制人：{{ node.actualControl }}
+                </div>
+                <div v-if="idx < companyInfo.equityChain.length - 1" class="node-arrow">
+                  <el-icon><Bottom /></el-icon>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </el-tab-pane>
+
+        <el-tab-pane label="关联方" name="related" v-if="companyInfo.relatedCompanies?.length">
+          <el-card class="info-card">
+            <template #header>
+              <div class="card-header">
+                <el-icon><OfficeBuilding /></el-icon>
+                <span>关联方</span>
+              </div>
+            </template>
+            <div class="related-list">
+              <div
+                v-for="(rc, idx) in companyInfo.relatedCompanies"
+                :key="idx"
+                class="related-item"
+              >
+                <div class="related-icon">
+                  <el-icon><OfficeBuilding /></el-icon>
+                </div>
+                <div class="related-info">
+                  <div class="related-name">{{ rc.name }}</div>
+                  <div class="related-meta">
+                    <el-tag size="small" type="info">{{ rc.relation }}</el-tag>
+                    <span class="divider">|</span>
+                    <span>{{ rc.businessStatus }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </el-tab-pane>
       </el-tabs>
     </template>
 
@@ -272,7 +400,13 @@ import {
   User,
   UserFilled,
   Link,
-  Right
+  Right,
+  Top,
+  Bottom,
+  DataAnalysis,
+  Reading,
+  Collection,
+  Connection
 } from '@element-plus/icons-vue'
 import api from '../api'
 import EmptyState from '../components/EmptyState.vue'
@@ -366,6 +500,12 @@ const getRiskClass = (level) => {
 
 const getRiskItemClass = (level) => {
   return level === 'HIGH' ? 'risk-high' : level === 'MEDIUM' ? 'risk-medium' : 'risk-low'
+}
+
+const getTrendClass = (trend) => {
+  if (trend === '上升') return 'trend-up'
+  if (trend === '下降') return 'trend-down'
+  return 'trend-stable'
 }
 </script>
 
@@ -919,6 +1059,58 @@ const getRiskItemClass = (level) => {
     text-align: center;
     font-size: 12px;
     color: #9ca3af;
+  }
+
+  .analysis-item {
+    background: #f9fafb; border-radius: 12px; padding: 16px; text-align: center;
+    .analysis-label { font-size: 12px; color: #9ca3af; margin-bottom: 8px; }
+    .analysis-value { font-size: 20px; font-weight: 700; color: #1f2937; }
+    .analysis-trend {
+      font-size: 12px; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 4px;
+      &.trend-up { color: #10b981; }
+      &.trend-down { color: #ef4444; }
+      &.trend-stable { color: #9ca3af; }
+    }
+  }
+
+  .ip-item {
+    display: flex; align-items: center; gap: 8px; padding: 12px;
+    background: #f9fafb; border-radius: 10px; justify-content: center;
+    color: #6b7280; font-size: 14px;
+    .el-icon { color: #667eea; font-size: 18px; }
+  }
+
+  .business-scope {
+    margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 12px;
+    .scope-label { font-size: 13px; color: #9ca3af; margin-bottom: 8px; }
+    .scope-content { font-size: 14px; color: #4b5563; line-height: 1.8; }
+  }
+
+  .equity-chain {
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+    .equity-node {
+      background: #f9fafb; border-radius: 12px; padding: 16px 24px; min-width: 300px;
+      text-align: center; position: relative;
+      &.is-target { background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1)); border: 2px solid #667eea; }
+      .node-header { display: flex; align-items: center; justify-content: center; gap: 10px; }
+      .node-name { font-size: 16px; font-weight: 600; color: #1f2937; }
+      .node-meta { font-size: 13px; color: #6b7280; margin-top: 8px; }
+      .node-arrow { color: #667eea; margin-top: 8px; }
+    }
+  }
+
+  .related-list { display: flex; flex-direction: column; gap: 10px; }
+  .related-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 10px; background: #f9fafb;
+    .related-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      display: flex; align-items: center; justify-content: center; color: #fff;
+    }
+    .related-info { flex: 1; }
+    .related-name { font-size: 14px; color: #1f2937; font-weight: 500; }
+    .related-meta { font-size: 12px; color: #6b7280; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
   }
 }
 </style>

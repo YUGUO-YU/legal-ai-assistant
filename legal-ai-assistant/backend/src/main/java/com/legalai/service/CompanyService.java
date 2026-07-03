@@ -89,7 +89,108 @@ public class CompanyService {
         response.setRiskWarnings(warnings);
         response.setRiskLevel(calculateRiskLevel(warnings));
 
+        response.setEquityChain(buildMockEquityChain(companyName));
+        response.setRelatedCompanies(buildMockRelatedCompanies(companyName));
+        response.setBeneficialOwner(buildMockBeneficialOwner());
+        response.setBusinessAnalysis(buildMockBusinessAnalysis());
+        response.setSubscribed(false);
+
         return response;
+    }
+
+    private List<CompanyQueryResponse.EquityChain> buildMockEquityChain(String companyName) {
+        List<CompanyQueryResponse.EquityChain> chain = new ArrayList<>();
+
+        CompanyQueryResponse.EquityChain level1 = new CompanyQueryResponse.EquityChain();
+        level1.setLevel(1);
+        level1.setCompanyName(companyName);
+        level1.setRatio("100%");
+        level1.setAmount(1000.0);
+        level1.setType("本公司");
+
+        List<CompanyQueryResponse.EquityChain> level2Children = new ArrayList<>();
+
+        CompanyQueryResponse.EquityChain level2_1 = new CompanyQueryResponse.EquityChain();
+        level2_1.setLevel(2);
+        level2_1.setCompanyName("李四（模拟）");
+        level2_1.setRatio("50%");
+        level2_1.setAmount(500.0);
+        level2_1.setType("自然人股东");
+        level2Children.add(level2_1);
+
+        CompanyQueryResponse.EquityChain level2_2 = new CompanyQueryResponse.EquityChain();
+        level2_2.setLevel(2);
+        level2_2.setCompanyName("王五（模拟）");
+        level2_2.setRatio("30%");
+        level2_2.setAmount(300.0);
+        level2_2.setType("自然人股东");
+        level2Children.add(level2_2);
+
+        level1.setChildren(level2Children);
+        chain.add(level1);
+
+        return chain;
+    }
+
+    private List<CompanyQueryResponse.RelatedCompany> buildMockRelatedCompanies(String companyName) {
+        List<CompanyQueryResponse.RelatedCompany> related = new ArrayList<>();
+
+        CompanyQueryResponse.RelatedCompany parent = new CompanyQueryResponse.RelatedCompany();
+        parent.setName(companyName + "母公司（模拟）");
+        parent.setRelation("母公司");
+        parent.setUnifiedSocialCreditCode("91110000PARENT01");
+        parent.setBusinessStatus("存续");
+        parent.setLegalRepresentative("模拟-张三");
+        related.add(parent);
+
+        CompanyQueryResponse.RelatedCompany subsidiary = new CompanyQueryResponse.RelatedCompany();
+        subsidiary.setName(companyName + "子公司A（模拟）");
+        subsidiary.setRelation("子公司");
+        subsidiary.setUnifiedSocialCreditCode("91110000SUB01");
+        subsidiary.setBusinessStatus("存续");
+        subsidiary.setLegalRepresentative("模拟-李四");
+        related.add(subsidiary);
+
+        CompanyQueryResponse.RelatedCompany sibling = new CompanyQueryResponse.RelatedCompany();
+        sibling.setName(companyName + "兄弟公司（模拟）");
+        sibling.setRelation("同一母公司");
+        sibling.setUnifiedSocialCreditCode("91110000SIB01");
+        sibling.setBusinessStatus("存续");
+        sibling.setLegalRepresentative("模拟-王五");
+        related.add(sibling);
+
+        return related;
+    }
+
+    private CompanyQueryResponse.BeneficialOwner buildMockBeneficialOwner() {
+        CompanyQueryResponse.BeneficialOwner owner = new CompanyQueryResponse.BeneficialOwner();
+        owner.setName("李四（模拟）");
+        owner.setType("自然人");
+        owner.setActualRatio(50.0);
+        owner.setNationality("中国");
+        return owner;
+    }
+
+    private CompanyQueryResponse.BusinessAnalysis buildMockBusinessAnalysis() {
+        CompanyQueryResponse.BusinessAnalysis analysis = new CompanyQueryResponse.BusinessAnalysis();
+        analysis.setEmployeeCount(50);
+        analysis.setEmployeeTrend("上升");
+        analysis.setPaidInCapital(new BigDecimal("800"));
+        analysis.setIndustry("科技推广和应用服务业");
+        analysis.setIndustryAvgRatio("高于平均水平");
+        analysis.setPatentCount(5);
+        analysis.setTrademarkCount(8);
+        analysis.setCopyrightCount(3);
+        analysis.setBusinessScope("技术开发、技术咨询、技术转让、技术服务；软件开发；计算机系统服务等");
+        analysis.setMainBusiness("AI法律科技服务");
+
+        List<CompanyQueryResponse.YearData> yearlyData = new ArrayList<>();
+        yearlyData.add(new CompanyQueryResponse.YearData(2024, new BigDecimal("1000"), 50, "稳步增长"));
+        yearlyData.add(new CompanyQueryResponse.YearData(2023, new BigDecimal("800"), 35, "快速增长"));
+        yearlyData.add(new CompanyQueryResponse.YearData(2022, new BigDecimal("500"), 20, "初步发展"));
+        analysis.setYearlyData(yearlyData);
+
+        return analysis;
     }
 
     private CompanyQueryResponse realQueryCompany(CompanyQueryRequest request) {
@@ -219,6 +320,12 @@ public class CompanyService {
                 response.setRiskWarnings(new java.util.ArrayList<>());
                 response.setRiskLevel("NONE");
             }
+
+            response.setEquityChain(buildMockEquityChain(response.getCompanyName()));
+            response.setRelatedCompanies(buildMockRelatedCompanies(response.getCompanyName()));
+            response.setBeneficialOwner(buildMockBeneficialOwner());
+            response.setBusinessAnalysis(buildMockBusinessAnalysis());
+            response.setSubscribed(false);
 
             return response;
 

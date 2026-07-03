@@ -126,6 +126,138 @@
             </div>
             <empty-state v-else icon="User" title="暂无股东信息" />
           </el-card>
+
+          <el-card class="info-card" style="margin-top: 20px" v-if="company.beneficialOwner">
+            <template #header>
+              <div class="card-header">
+                <el-icon><UserFilled /></el-icon>
+                <span>实际控制人</span>
+              </div>
+            </template>
+            <div class="beneficial-owner">
+              <div class="owner-avatar">
+                <el-icon :size="32"><UserFilled /></el-icon>
+              </div>
+              <div class="owner-info">
+                <div class="owner-name">{{ company.beneficialOwner.name }}</div>
+                <div class="owner-meta">
+                  <el-tag size="small" type="info">{{ company.beneficialOwner.type }}</el-tag>
+                  <span class="divider">|</span>
+                  <span>国籍：{{ company.beneficialOwner.nationality }}</span>
+                </div>
+              </div>
+              <div class="owner-ratio">
+                <el-progress
+                  type="circle"
+                  :width="70"
+                  :stroke-width="6"
+                  :percentage="company.beneficialOwner.actualRatio || 0"
+                  color="#667eea"
+                >
+                  <template #default>
+                    <span class="ratio-text">{{ company.beneficialOwner.actualRatio }}%</span>
+                  </template>
+                </el-progress>
+                <span class="ratio-label">受益比例</span>
+              </div>
+            </div>
+          </el-card>
+
+          <el-card class="info-card" style="margin-top: 20px" v-if="company.relatedCompanies?.length">
+            <template #header>
+              <div class="card-header">
+                <el-icon><OfficeBuilding /></el-icon>
+                <span>关联方</span>
+              </div>
+            </template>
+            <div class="related-list">
+              <div
+                v-for="(rc, idx) in company.relatedCompanies"
+                :key="idx"
+                class="related-item"
+              >
+                <div class="related-icon">
+                  <el-icon><OfficeBuilding /></el-icon>
+                </div>
+                <div class="related-info">
+                  <div class="related-name">{{ rc.name }}</div>
+                  <div class="related-meta">
+                    <el-tag size="small" type="info">{{ rc.relation }}</el-tag>
+                    <span class="divider">|</span>
+                    <span>{{ rc.businessStatus }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <el-row :gutter="20" style="margin-top: 20px" v-if="company.businessAnalysis">
+        <el-col :span="24">
+          <el-card class="info-card">
+            <template #header>
+              <div class="card-header">
+                <el-icon><DataAnalysis /></el-icon>
+                <span>经营分析</span>
+              </div>
+            </template>
+            <el-row :gutter="20">
+              <el-col :span="6">
+                <div class="analysis-item">
+                  <div class="analysis-label">员工规模</div>
+                  <div class="analysis-value">{{ company.businessAnalysis.employeeCount || '-' }} 人</div>
+                  <div class="analysis-trend" :class="getTrendClass(company.businessAnalysis.employeeTrend)">
+                    <el-icon v-if="company.businessAnalysis.employeeTrend === '上升'"><Top /></el-icon>
+                    <el-icon v-else-if="company.businessAnalysis.employeeTrend === '下降'"><Bottom /></el-icon>
+                    {{ company.businessAnalysis.employeeTrend || '-' }}
+                  </div>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="analysis-item">
+                  <div class="analysis-label">实缴资本</div>
+                  <div class="analysis-value">{{ company.businessAnalysis.paidInCapital || '-' }} 万元</div>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="analysis-item">
+                  <div class="analysis-label">所属行业</div>
+                  <div class="analysis-value">{{ company.businessAnalysis.industry || '-' }}</div>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="analysis-item">
+                  <div class="analysis-label">行业水平</div>
+                  <div class="analysis-value">{{ company.businessAnalysis.industryAvgRatio || '-' }}</div>
+                </div>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20" style="margin-top: 20px">
+              <el-col :span="8">
+                <div class="ip-item">
+                  <el-icon><Document /></el-icon>
+                  <span>专利 {{ company.businessAnalysis.patentCount || 0 }}</span>
+                </div>
+              </el-col>
+              <el-col :span="8">
+                <div class="ip-item">
+                  <el-icon><Collection /></el-icon>
+                  <span>商标 {{ company.businessAnalysis.trademarkCount || 0 }}</span>
+                </div>
+              </el-col>
+              <el-col :span="8">
+                <div class="ip-item">
+                  <el-icon><Reading /></el-icon>
+                  <span>著作权 {{ company.businessAnalysis.copyrightCount || 0 }}</span>
+                </div>
+              </el-col>
+            </el-row>
+            <div class="business-scope" v-if="company.businessAnalysis.businessScope">
+              <div class="scope-label">经营范围</div>
+              <div class="scope-content">{{ company.businessAnalysis.businessScope }}</div>
+            </div>
+          </el-card>
         </el-col>
       </el-row>
     </div>
@@ -146,7 +278,12 @@ import {
   User,
   UserFilled,
   Right,
-  CircleCheck
+  CircleCheck,
+  Top,
+  Bottom,
+  DataAnalysis,
+  Reading,
+  Collection
 } from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
@@ -211,6 +348,12 @@ const getStatusType = (s) => {
 
 const getRiskType = (l) => ({ HIGH: 'danger', MEDIUM: 'warning', LOW: 'success' }[l] || 'info')
 const getRiskLabel = (l) => ({ HIGH: '高风险', MEDIUM: '中风险', LOW: '低风险' }[l] || '未知')
+
+const getTrendClass = (trend) => {
+  if (trend === '上升') return 'trend-up'
+  if (trend === '下降') return 'trend-down'
+  return 'trend-stable'
+}
 
 onMounted(loadDetail)
 </script>
@@ -290,7 +433,7 @@ onMounted(loadDetail)
     .risk-date { font-size: 12px; color: #9ca3af; }
   }
 
-  .shareholder-list { display: flex; flex-direction: column; gap: 8px; }
+    .shareholder-list { display: flex; flex-direction: column; gap: 8px; }
   .shareholder-row {
     display: flex; align-items: center; gap: 12px;
     padding: 12px 14px; border-radius: 10px; background: #f9fafb;
@@ -306,6 +449,64 @@ onMounted(loadDetail)
     .meta { font-size: 12px; color: #6b7280; margin-top: 2px; display: flex; gap: 6px; align-items: center; }
     .divider { color: #d1d5db; }
     .arrow { color: #9ca3af; }
+  }
+
+  .beneficial-owner {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px; background: linear-gradient(135deg, rgba(102,126,234,0.05), rgba(118,75,162,0.05));
+    border-radius: 12px;
+    .owner-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      display: flex; align-items: center; justify-content: center; color: #fff;
+    }
+    .owner-info { flex: 1; }
+    .owner-name { font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 6px; }
+    .owner-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6b7280; }
+    .owner-ratio {
+      display: flex; flex-direction: column; align-items: center;
+      .ratio-text { font-size: 18px; font-weight: 700; color: #667eea; }
+      .ratio-label { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+    }
+  }
+
+  .related-list { display: flex; flex-direction: column; gap: 10px; }
+  .related-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 10px; background: #f9fafb;
+    .related-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      display: flex; align-items: center; justify-content: center; color: #fff;
+    }
+    .related-info { flex: 1; }
+    .related-name { font-size: 14px; color: #1f2937; font-weight: 500; }
+    .related-meta { font-size: 12px; color: #6b7280; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+  }
+
+  .analysis-item {
+    background: #f9fafb; border-radius: 12px; padding: 16px; text-align: center;
+    .analysis-label { font-size: 12px; color: #9ca3af; margin-bottom: 8px; }
+    .analysis-value { font-size: 20px; font-weight: 700; color: #1f2937; }
+    .analysis-trend {
+      font-size: 12px; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 4px;
+      &.trend-up { color: #10b981; }
+      &.trend-down { color: #ef4444; }
+      &.trend-stable { color: #9ca3af; }
+    }
+  }
+
+  .ip-item {
+    display: flex; align-items: center; gap: 8px; padding: 12px;
+    background: #f9fafb; border-radius: 10px; justify-content: center;
+    color: #6b7280; font-size: 14px;
+    .el-icon { color: #667eea; font-size: 18px; }
+  }
+
+  .business-scope {
+    margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 12px;
+    .scope-label { font-size: 13px; color: #9ca3af; margin-bottom: 8px; }
+    .scope-content { font-size: 14px; color: #4b5563; line-height: 1.8; }
   }
 }
 </style>
