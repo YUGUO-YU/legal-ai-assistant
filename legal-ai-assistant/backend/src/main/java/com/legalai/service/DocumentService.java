@@ -198,6 +198,78 @@ public class DocumentService {
             Arrays.asList("《中华人民共和国民事诉讼法》第五十九条"),
             "common_power_of_attorney"
         ));
+
+        TEMPLATES.put("admin_petition", new DocumentTemplate(
+            "行政起诉状",
+            "行政诉讼",
+            true,
+            Arrays.asList("plaintiffName", "defendantName", "claimAmount", "facts"),
+            Arrays.asList("《中华人民共和国行政诉讼法》第四十五条"),
+            "admin_petition"
+        ));
+
+        TEMPLATES.put("admin_browser", new DocumentTemplate(
+            "行政复议申请书",
+            "行政诉讼",
+            true,
+            Arrays.asList("applicantName", "respondentName", "originalDecision", "复议请求"),
+            Arrays.asList("《中华人民共和国行政复议法》第十四条"),
+            "admin_browser"
+        ));
+
+        TEMPLATES.put("admin_defense", new DocumentTemplate(
+            "行政答辩状",
+            "行政诉讼",
+            false,
+            Arrays.asList("defendantName", "plaintiffName", "facts"),
+            Arrays.asList("《中华人民共和国行政诉讼法》第五十四条"),
+            "admin_defense"
+        ));
+
+        TEMPLATES.put("admin_performance", new DocumentTemplate(
+            "行政履职申请书",
+            "行政诉讼",
+            true,
+            Arrays.asList("applicantName", "respondentName", "dutyDescription", "requestContent"),
+            Arrays.asList("《中华人民共和国行政诉讼法》第三十八条"),
+            "admin_performance"
+        ));
+
+        TEMPLATES.put("criminal_petition", new DocumentTemplate(
+            "刑事自诉状",
+            "刑事诉讼",
+            true,
+            Arrays.asList("plaintiffName", "defendantName", "crimeFacts", "evidence"),
+            Arrays.asList("《中华人民共和国刑事诉讼法》第二百一十条"),
+            "criminal_petition"
+        ));
+
+        TEMPLATES.put("criminal_appeal", new DocumentTemplate(
+            "刑事上诉状",
+            "刑事诉讼",
+            false,
+            Arrays.asList("appellantName", "originalJudgment", "appealReasons"),
+            Arrays.asList("《中华人民共和国刑事诉讼法》第二百二十七条"),
+            "criminal_appeal"
+        ));
+
+        TEMPLATES.put("criminal_wound_appraisal", new DocumentTemplate(
+            "伤情鉴定申请书",
+            "刑事诉讼",
+            true,
+            Arrays.asList("applicantName", "defendantName", "incidentDescription", "injuryDescription"),
+            Arrays.asList("《中华人民共和国刑事诉讼法》第一百四十六条"),
+            "criminal_wound_appraisal"
+        ));
+
+        TEMPLATES.put("criminal_seizure", new DocumentTemplate(
+            "财产查封申请书",
+            "刑事诉讼",
+            true,
+            Arrays.asList("applicantName", "defendantName", "caseDescription", "seizureProperty"),
+            Arrays.asList("《中华人民共和国刑事诉讼法》第一百条"),
+            "criminal_seizure"
+        ));
     }
 
     @Autowired(required = false)
@@ -2139,6 +2211,14 @@ public class DocumentService {
             case "ip_software_license" -> sb.append(generateSoftwareLicense(request));
             case "ip_confidentiality" -> sb.append(generateIPConfidentiality(request));
             case "common_power_of_attorney" -> sb.append(generatePowerOfAttorney(request));
+            case "admin_petition" -> sb.append(generateAdminPetition(request));
+            case "admin_browser" -> sb.append(generateAdminBrowser(request));
+            case "admin_defense" -> sb.append(generateAdminDefense(request));
+            case "admin_performance" -> sb.append(generateAdminPerformance(request));
+            case "criminal_petition" -> sb.append(generateCriminalPetition(request));
+            case "criminal_appeal" -> sb.append(generateCriminalAppeal(request));
+            case "criminal_wound_appraisal" -> sb.append(generateCriminalWoundAppraisal(request));
+            case "criminal_seizure" -> sb.append(generateCriminalSeizure(request));
             default -> sb.append("通用法律文书\n\n文书内容...");
         }
 
@@ -2590,6 +2670,212 @@ public class DocumentService {
         sb.append("2. 诉讼时效：民事案件的诉讼时效为三年，请注意及时主张权利。\n");
         sb.append("3. 证据保全：建议保留好相关合同、付款凭证、往来函件等证据材料。\n");
         sb.append("4. 管辖法院：根据被告住所地或合同约定确定管辖法院。\n");
+
+        return sb.toString();
+    }
+
+    private String generateAdminPetition(DocumentDraftRequest request) {
+        DocumentDraftRequest.DocumentData data = request.getCaseData();
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
+
+        String plaintiffName = data != null && data.getPlaintiffName() != null ? data.getPlaintiffName() : "【请填写原告姓名】";
+        String defendantName = data != null && data.getDefendantName() != null ? data.getDefendantName() : "【请填写被告名称】";
+        String facts = data != null && data.getFacts() != null ? String.join("\n", data.getFacts()) : "【请填写案件事实】";
+        String courtName = data != null && data.getCourtName() != null ? data.getCourtName() : "【请填写管辖法院】";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("行政起诉状\n\n");
+        sb.append("原告：").append(plaintiffName).append("。\n\n");
+        sb.append("被告：").append(defendantName).append("。\n\n");
+        sb.append("诉讼请求：\n");
+        sb.append("1. 撤销被告作出的具体行政行为；\n");
+        sb.append("2. 判令被告重新作出具体行政行为；\n");
+        sb.append("3. 判令被告承担本案诉讼费用。\n\n");
+        sb.append("事实与理由：\n");
+        sb.append(facts).append("\n\n");
+        sb.append("此致\n");
+        sb.append(courtName).append("\n\n");
+        sb.append("具状人：").append(plaintiffName).append("\n");
+        sb.append(date);
+
+        return sb.toString();
+    }
+
+    private String generateAdminBrowser(DocumentDraftRequest request) {
+        DocumentDraftRequest.DocumentData data = request.getCaseData();
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
+
+        String applicantName = data != null && data.getPlaintiffName() != null ? data.getPlaintiffName() : "【请填写申请人姓名】";
+        String respondentName = data != null && data.getDefendantName() != null ? data.getDefendantName() : "【请填写被申请人名称】";
+        String originalDecision = data != null && data.getClaimDescription() != null ? data.getClaimDescription() : "【请填写原具体行政行为】";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("行政复议申请书\n\n");
+        sb.append("申请人：").append(applicantName).append("。\n\n");
+        sb.append("被申请人：").append(respondentName).append("。\n\n");
+        sb.append("行政复议请求：\n");
+        sb.append("1. 请求撤销被申请人作出的具体行政行为；\n");
+        sb.append("2. 请求责令被申请人重新作出具体行政行为。\n\n");
+        sb.append("事实与理由：\n");
+        sb.append("原具体行政行为：").append(originalDecision).append("\n\n");
+        sb.append("此致\n");
+        sb.append("【请填写复议机关名称】\n\n");
+        sb.append("申请人：").append(applicantName).append("\n");
+        sb.append(date);
+
+        return sb.toString();
+    }
+
+    private String generateAdminDefense(DocumentDraftRequest request) {
+        DocumentDraftRequest.DocumentData data = request.getCaseData();
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
+
+        String defendantName = data != null && data.getDefendantName() != null ? data.getDefendantName() : "【请填写被告名称】";
+        String plaintiffName = data != null && data.getPlaintiffName() != null ? data.getPlaintiffName() : "【请填写原告名称】";
+        String facts = data != null && data.getFacts() != null ? String.join("\n", data.getFacts()) : "【请填写答辩事实】";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("行政答辩状\n\n");
+        sb.append("答辩人（被告）：").append(defendantName).append("。\n\n");
+        sb.append("被答辩人（原告）：").append(plaintiffName).append("。\n\n");
+        sb.append("答辩意见：\n");
+        sb.append("一、答辩人对原告所述事实持有异议。\n");
+        sb.append("二、答辩人作出的具体行政行为符合法定程序。\n\n");
+        sb.append("此致\n");
+        sb.append("【请填写管辖法院】\n\n");
+        sb.append("答辩人：").append(defendantName).append("\n");
+        sb.append(date);
+
+        return sb.toString();
+    }
+
+    private String generateAdminPerformance(DocumentDraftRequest request) {
+        DocumentDraftRequest.DocumentData data = request.getCaseData();
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
+
+        String applicantName = data != null && data.getPlaintiffName() != null ? data.getPlaintiffName() : "【请填写申请人姓名】";
+        String respondentName = data != null && data.getDefendantName() != null ? data.getDefendantName() : "【请填写被申请人名称】";
+        String dutyDescription = data != null && data.getClaimDescription() != null ? data.getClaimDescription() : "【请填写职责描述】";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("行政履职申请书\n\n");
+        sb.append("申请人：").append(applicantName).append("。\n\n");
+        sb.append("被申请人：").append(respondentName).append("。\n\n");
+        sb.append("请求事项：\n");
+        sb.append("1. 请求被申请人对违反行政管理秩序的行为依法履行查处职责；\n");
+        sb.append("2. 请求将处理结果书面告知申请人。\n\n");
+        sb.append("事实与理由：\n");
+        sb.append("被申请人法定职责：").append(dutyDescription).append("\n\n");
+        sb.append("此致\n");
+        sb.append("【请填写具有管辖权的行政机关名称】\n\n");
+        sb.append("申请人：").append(applicantName).append("\n");
+        sb.append(date);
+
+        return sb.toString();
+    }
+
+    private String generateCriminalPetition(DocumentDraftRequest request) {
+        DocumentDraftRequest.DocumentData data = request.getCaseData();
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
+
+        String plaintiffName = data != null && data.getPlaintiffName() != null ? data.getPlaintiffName() : "【请填写自诉人姓名】";
+        String defendantName = data != null && data.getDefendantName() != null ? data.getDefendantName() : "【请填写被告人姓名】";
+        String crimeFacts = data != null && data.getFacts() != null ? String.join("\n", data.getFacts()) : "【请填写犯罪事实】";
+        String evidence = data != null && data.getClaimDescription() != null ? data.getClaimDescription() : "【请填写证据清单】";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("刑事自诉状\n\n");
+        sb.append("自诉人：").append(plaintiffName).append("。\n\n");
+        sb.append("被告人：").append(defendantName).append("。\n\n");
+        sb.append("诉讼请求：\n");
+        sb.append("1. 依法追究被告人的刑事责任；\n");
+        sb.append("2. 判令被告人赔偿自诉人经济损失。\n\n");
+        sb.append("犯罪事实与证据：\n");
+        sb.append(crimeFacts).append("\n\n");
+        sb.append("证据清单：\n");
+        sb.append(evidence).append("\n\n");
+        sb.append("此致\n");
+        sb.append("【请填写有管辖权的人民法院】\n\n");
+        sb.append("自诉人：").append(plaintiffName).append("\n");
+        sb.append(date);
+
+        return sb.toString();
+    }
+
+    private String generateCriminalAppeal(DocumentDraftRequest request) {
+        DocumentDraftRequest.DocumentData data = request.getCaseData();
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
+
+        String appellantName = data != null && data.getPlaintiffName() != null ? data.getPlaintiffName() : "【请填写上诉人姓名】";
+        String originalJudgment = data != null && data.getClaimDescription() != null ? data.getClaimDescription() : "【请填写原判决内容】";
+        String appealReasons = data != null && data.getFacts() != null ? String.join("\n", data.getFacts()) : "【请填写上诉理由】";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("刑事上诉状\n\n");
+        sb.append("上诉人：").append(appellantName).append("。\n\n");
+        sb.append("上诉人因").append(originalJudgment).append("一案，不服");
+        sb.append("【请填写原审法院名称及案号】，现提出上诉。\n\n");
+        sb.append("上诉请求：\n");
+        sb.append("1. 请求撤销原判决（裁定）；\n");
+        sb.append("2. 请求依法改判（发回重审）。\n\n");
+        sb.append("上诉理由：\n");
+        sb.append(appealReasons).append("\n\n");
+        sb.append("此致\n");
+        sb.append("【请填写上一级人民法院】\n\n");
+        sb.append("上诉人：").append(appellantName).append("\n");
+        sb.append(date);
+
+        return sb.toString();
+    }
+
+    private String generateCriminalWoundAppraisal(DocumentDraftRequest request) {
+        DocumentDraftRequest.DocumentData data = request.getCaseData();
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
+
+        String applicantName = data != null && data.getPlaintiffName() != null ? data.getPlaintiffName() : "【请填写申请人姓名】";
+        String defendantName = data != null && data.getDefendantName() != null ? data.getDefendantName() : "【请填写被申请人姓名】";
+        String incidentDescription = data != null && data.getFacts() != null ? String.join("\n", data.getFacts()) : "【请填写事件经过】";
+        String injuryDescription = data != null && data.getClaimDescription() != null ? data.getClaimDescription() : "【请填写伤情描述】";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("伤情鉴定申请书\n\n");
+        sb.append("申请人：").append(applicantName).append("。\n\n");
+        sb.append("被申请人：").append(defendantName).append("。\n\n");
+        sb.append("申请事项：\n");
+        sb.append("请求对申请人的伤情进行司法鉴定。\n\n");
+        sb.append("事实与伤情：\n");
+        sb.append("事件经过：").append(incidentDescription).append("\n\n");
+        sb.append("伤情描述：").append(injuryDescription).append("\n\n");
+        sb.append("此致\n");
+        sb.append("【请填写鉴定机构或公安机关名称】\n\n");
+        sb.append("申请人：").append(applicantName).append("\n");
+        sb.append(date);
+
+        return sb.toString();
+    }
+
+    private String generateCriminalSeizure(DocumentDraftRequest request) {
+        DocumentDraftRequest.DocumentData data = request.getCaseData();
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
+
+        String applicantName = data != null && data.getPlaintiffName() != null ? data.getPlaintiffName() : "【请填写申请人姓名】";
+        String defendantName = data != null && data.getDefendantName() != null ? data.getDefendantName() : "【请填写被告人姓名】";
+        String caseDescription = data != null && data.getFacts() != null ? String.join("\n", data.getFacts()) : "【请填写案件情况】";
+        String seizureProperty = data != null && data.getClaimDescription() != null ? data.getClaimDescription() : "【请填写查封财产】";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("财产查封申请书\n\n");
+        sb.append("申请人：").append(applicantName).append("。\n\n");
+        sb.append("被申请人：").append(defendantName).append("。\n\n");
+        sb.append("申请事项：\n");
+        sb.append("请求对被申请人的下列财产进行查封：\n");
+        sb.append(seizureProperty).append("\n\n");
+        sb.append("事实与理由：\n");
+        sb.append(caseDescription).append("\n\n");
+        sb.append("此致\n");
+        sb.append("【请填写有管辖权的人民法院或公安机关】\n\n");
+        sb.append("申请人：").append(applicantName).append("\n");
+        sb.append(date);
 
         return sb.toString();
     }

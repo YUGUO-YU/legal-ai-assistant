@@ -91,6 +91,42 @@
                 </div>
               </div>
             </el-tab-pane>
+            <el-tab-pane label="行政诉讼" name="行政诉讼">
+              <div class="template-grid">
+                <div
+                  v-for="tpl in filteredTemplatesByCategory('行政诉讼')"
+                  :key="tpl.templateCode"
+                  :class="['template-item', { active: selectedTemplate === tpl.templateCode }]"
+                  @click="selectTemplate(tpl)"
+                >
+                  <div class="template-icon">
+                    <el-icon><Coin /></el-icon>
+                  </div>
+                  <div class="template-info">
+                    <span class="template-name">{{ tpl.templateName }}</span>
+                    <el-tag v-if="tpl.popular" type="warning" size="small">常用</el-tag>
+                  </div>
+                </div>
+              </div>
+            </el-tab-pane>
+            <el-tab-pane label="刑事诉讼" name="刑事诉讼">
+              <div class="template-grid">
+                <div
+                  v-for="tpl in filteredTemplatesByCategory('刑事诉讼')"
+                  :key="tpl.templateCode"
+                  :class="['template-item', { active: selectedTemplate === tpl.templateCode }]"
+                  @click="selectTemplate(tpl)"
+                >
+                  <div class="template-icon">
+                    <el-icon><Warning /></el-icon>
+                  </div>
+                  <div class="template-info">
+                    <span class="template-name">{{ tpl.templateName }}</span>
+                    <el-tag v-if="tpl.popular" type="warning" size="small">常用</el-tag>
+                  </div>
+                </div>
+              </div>
+            </el-tab-pane>
           </el-tabs>
         </el-card>
       </el-col>
@@ -283,7 +319,9 @@ import {
   Download,
   Printer,
   Search,
-  DocumentCopy
+  DocumentCopy,
+  Coin,
+  Warning
 } from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
