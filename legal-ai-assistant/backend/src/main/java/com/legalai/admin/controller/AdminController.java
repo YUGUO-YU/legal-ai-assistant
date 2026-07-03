@@ -43,6 +43,37 @@ public class AdminController {
         return ApiResponse.success(adminDataService.stats());
     }
 
+    @GetMapping("/db/health")
+    public ApiResponse<Map<String, Object>> dbHealth() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            Long count = adminDataService.jdbc().queryForObject("SELECT 1", Long.class);
+            result.put("status", "ok");
+            result.put("connected", true);
+            result.put("message", "数据库连接正常");
+        } catch (Exception e) {
+            result.put("status", "error");
+            result.put("connected", false);
+            result.put("message", "数据库连接失败: " + e.getMessage());
+        }
+        return ApiResponse.success(result);
+    }
+
+    @GetMapping("/db/tables")
+    public ApiResponse<Map<String, Object>> dbTables() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            var rows = adminDataService.jdbc().queryForList("SHOW TABLES");
+            result.put("tables", rows);
+            result.put("count", rows.size());
+            result.put("status", "ok");
+        } catch (Exception e) {
+            result.put("status", "error");
+            result.put("error", e.getMessage());
+        }
+        return ApiResponse.success(result);
+    }
+
     @GetMapping("/{table}/list")
     public ApiResponse<Map<String, Object>> list(
             @PathVariable String table,

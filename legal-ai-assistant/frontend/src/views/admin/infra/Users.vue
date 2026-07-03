@@ -157,8 +157,17 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/infra/users', { params: { ...filter } })
+    if (res.data?.error) {
+      ElMessage.error('加载失败: ' + res.data.error)
+      if (res.data.errorType === 'table_not_found') {
+        ElMessage.warning('数据库未初始化，请联系管理员执行数据库初始化脚本')
+      }
+    }
     rows.value = res.data?.list || []
-  } catch (e) { rows.value = [] }
+  } catch (e) {
+    rows.value = []
+    ElMessage.error('加载失败，请检查数据库连接')
+  }
   finally { loading.value = false }
 }
 

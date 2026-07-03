@@ -136,11 +136,18 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/infra/frontend-users', { params: { page: currentPage.value, pageSize: pageSize.value, keyword: filter.keyword } })
+    if (res.data?.error) {
+      ElMessage.error('加载失败: ' + res.data.error)
+      if (res.data.errorType === 'table_not_found') {
+        ElMessage.warning('数据库未初始化，请联系管理员执行数据库初始化脚本')
+      }
+    }
     rows.value = res.data?.list || []
     total.value = res.data?.total || 0
   } catch (e) {
     rows.value = []
     total.value = 0
+    ElMessage.error('加载失败，请检查数据库连接')
   }
   finally { loading.value = false }
 }

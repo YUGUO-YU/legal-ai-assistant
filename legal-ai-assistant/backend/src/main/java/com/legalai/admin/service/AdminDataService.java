@@ -64,6 +64,21 @@ public class AdminDataService {
             }
 
             String safeTable = sanitize(table);
+
+            // Check if table exists first
+            try {
+                jdbc.queryForObject("SELECT COUNT(*) FROM " + safeTable + " WHERE 1=0", Integer.class);
+            } catch (Exception e) {
+                log.error("[Admin] 表不存在或无法访问 table={}: {}", table, e.getMessage());
+                result.put("total", 0);
+                result.put("page", page);
+                result.put("pageSize", pageSize);
+                result.put("list", java.util.Collections.emptyList());
+                result.put("error", "表不存在或数据库未初始化: " + table);
+                result.put("errorType", "table_not_found");
+                return result;
+            }
+
             Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM " + safeTable + where, Integer.class, args.toArray());
             int offset = Math.max(0, (page - 1) * pageSize);
 
@@ -85,6 +100,7 @@ public class AdminDataService {
             result.put("pageSize", pageSize);
             result.put("list", java.util.Collections.emptyList());
             result.put("error", e.getMessage());
+            result.put("errorType", "query_failed");
         }
         return result;
     }
