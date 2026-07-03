@@ -1,0 +1,153 @@
+/* frontend/src/assets/styles/animations.css */
+
+/* 淡入上移动画 */
+.fade-in-up {
+  animation: fadeInUp 0.36s ease-out both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 淡入动画 */
+.fade-in {
+  animation: fadeIn 0.3s ease both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 卡片悬停上浮 */
+.card-hover {
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* 按钮点击缩放反馈 */
+.btn-press {
+  transition: transform var(--transition-fast);
+}
+.btn-press:active {
+  transform: scale(0.96);
+}
+
+/* 交错入场动画 */
+.stagger-item {
+  animation: fadeInUp 0.36s ease-out both;
+}
+.stagger-item:nth-child(1) { animation-delay: 0.05s; }
+.stagger-item:nth-child(2) { animation-delay: 0.1s; }
+.stagger-item:nth-child(3) { animation-delay: 0.15s; }
+.stagger-item:nth-child(4) { animation-delay: 0.2s; }
+.stagger-item:nth-child(5) { animation-delay: 0.25s; }
+.stagger-item:nth-child(6) { animation-delay: 0.3s; }
+.stagger-item:nth-child(7) { animation-delay: 0.35s; }
+.stagger-item:nth-child(8) { animation-delay: 0.4s; }
+
+/* 搜索框焦点光晕 */
+.search-input-glow:focus-within {
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  border-color: var(--color-primary) !important;
+}
+
+/* 结果卡片悬停左边框 */
+.result-card-hover {
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  border-left: 3px solid transparent;
+}
+.result-card-hover:hover {
+  border-left-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 展开收起动画 */
+.result-expand-enter-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+.result-expand-leave-active {
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+.result-expand-enter-from,
+.result-expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+.result-expand-enter-to,
+.result-expand-leave-from {
+  opacity: 1;
+  max-height: 1000px;
+}
+
+/* 涟漪效果 */
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, var(--color-primary) 10%, transparent 10%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10);
+  opacity: 0;
+  transition: transform 0.5s, opacity 0.5s;
+}
+.ripple-effect:active::after {
+  transform: scale(0);
+  opacity: 0.3;
+  transition: 0s;
+}
+
+/* 虚线边框流动动画（用于拖拽上传区） */
+@keyframes dashFlow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+.dash-flow {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-border) 0,
+    var(--color-border) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  animation: dashFlow 0.8s linear infinite;
+}
+
+/* 骨架屏 shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 25%,
+    var(--color-border) 50%,
+    var(--color-bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
