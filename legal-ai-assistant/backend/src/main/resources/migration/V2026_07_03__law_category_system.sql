@@ -78,4 +78,24 @@ INSERT INTO law_category (category_type_id, parent_id, category_code, category_n
 (3, NULL, 'IND_003', '知识产权', '#45B7D1', 3, 1),
 (3, NULL, 'IND_004', '婚姻家庭', '#96CEB4', 4, 1),
 (3, NULL, 'IND_005', '刑事', '#DDA0DD', 5, 1),
-(3, NULL, 'IND_006', '民事', '#FFEAA7', 6, 1);
+(3, NULL, 'IND_006', '民事', '#FFEAA7', 6, 1),
+(3, NULL, 'IND_007', '合同法', '#98D8C8', 7, 1),
+(3, NULL, 'IND_008', '税法', '#F7DC6F', 8, 1),
+(3, NULL, 'IND_009', '金融法', '#BB8FCE', 9, 1),
+(3, NULL, 'IND_010', '房地产与建设工程', '#85C1E9', 10, 1),
+(3, NULL, 'IND_011', '海关与外贸', '#F0B27A', 11, 1),
+(3, NULL, 'IND_012', '环境保护', '#82E0AA', 12, 1),
+(3, NULL, 'IND_013', '交通安全', '#F1948A', 13, 1),
+(3, NULL, 'IND_014', '食品安全与药品', '#AED6F1', 14, 1),
+(3, NULL, 'IND_015', '医药卫生', '#D7BDE2', 15, 1),
+(3, NULL, 'IND_016', '教育文化', '#FDEBD0', 16, 1),
+(3, NULL, 'IND_017', '招投标与采购', '#D5DBDB', 17, 1),
+(3, NULL, 'IND_018', '外商投资与外资', '#A9CCE3', 18, 1),
+(3, NULL, 'IND_019', '网络安全与数据保护', '#A3E4D7', 19, 1),
+(3, NULL, 'IND_020', '行政法', '#FAD7A0', 20, 1);
+
+-- Custom categories (type_code = CUSTOM)
+INSERT INTO law_category (category_type_id, parent_id, category_code, category_name, color, sort_order, status) VALUES
+(4, NULL, 'CUSTOM_001', '常用收藏', '#FF6B6B', 1, 1),
+(4, NULL, 'CUSTOM_002', '待学习', '#4ECDC4', 2, 1),
+(4, NULL, 'CUSTOM_003', '工作参考', '#45B7D1', 3, 1);
