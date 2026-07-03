@@ -33,6 +33,8 @@ public class ExtractedInfo {
     private String legalRepresentative;
     private String position;
     private String residenceAddress;
+    private String birthDate;
+    private Integer age;
 
     public boolean isSuccess() {
         return success;
@@ -256,5 +258,21 @@ public class ExtractedInfo {
 
     public void setResidenceAddress(String residenceAddress) {
         this.residenceAddress = residenceAddress;
+    }
+
+    public String getBirthDate() {
+        return birthDate;
+    }
+
+    public void setBirthDate(String birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
     }
 }

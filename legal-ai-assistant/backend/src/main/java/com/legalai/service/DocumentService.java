@@ -438,6 +438,8 @@ public class DocumentService {
         merged.setDisputeType(coalesce(primary.getDisputeType(), fallback.getDisputeType()));
         merged.setUnifiedSocialCreditCode(coalesce(primary.getUnifiedSocialCreditCode(), fallback.getUnifiedSocialCreditCode()));
         merged.setLegalRepresentative(coalesce(primary.getLegalRepresentative(), fallback.getLegalRepresentative()));
+        merged.setBirthDate(coalesce(primary.getBirthDate(), fallback.getBirthDate()));
+        merged.setAge(primary.getAge() != null ? primary.getAge() : fallback.getAge());
         merged.setSuccess(true);
         merged.setErrorMessage(null);
         merged.setDataSource(primary.getDataSource() != null ? primary.getDataSource() : "AI 智能识别");
@@ -492,7 +494,9 @@ public class DocumentService {
             + "workContent（工作岗位/工作内容）\n"
             + "salary（月薪/工资金额与单位）\n"
             + "startDate（入职/起始日期）\n"
-            + "disputeType（争议类型）\n\n"
+            + "disputeType（争议类型）\n"
+            + "birthDate（出生日期，如1990年1月1日）\n"
+            + "age（年龄，整数）\n\n"
             + "仅输出 JSON，不要任何解释：\n\n"
             + "原文：\n" + text;
         if (templateCode != null && !templateCode.isEmpty()) {
@@ -521,6 +525,13 @@ public class DocumentService {
         info.setSalary(textOrEmpty(node, "salary"));
         info.setStartDate(textOrEmpty(node, "startDate"));
         info.setDisputeType(textOrEmpty(node, "disputeType"));
+        info.setBirthDate(textOrEmpty(node, "birthDate"));
+        String ageStr = textOrEmpty(node, "age");
+        if (!ageStr.isEmpty()) {
+            try {
+                info.setAge(Integer.parseInt(ageStr.replaceAll("[^0-9]", "")));
+            } catch (Exception ignore) {}
+        }
         String amt = textOrEmpty(node, "claimAmount");
         if (!amt.isEmpty()) {
             try {
@@ -692,6 +703,18 @@ public class DocumentService {
             String residence = extractResidenceAddress(text);
             info.setResidenceAddress(residence);
 
+            // 26. 出生日期
+            String birthDate = extractBirthDate(text, "原告");
+            if (birthDate == null) birthDate = extractBirthDate(text, "申请人");
+            if (birthDate == null) birthDate = extractBirthDate(text, "被告");
+            info.setBirthDate(birthDate);
+
+            // 27. 年龄
+            Integer age = extractAge(text, "原告");
+            if (age == null) age = extractAge(text, "申请人");
+            if (age == null) age = extractAge(text, "被告");
+            info.setAge(age);
+
         } catch (Exception e) {
             log.warn("本地正则提取异常: {}", e.getMessage());
         }
@@ -706,67 +729,88 @@ public class DocumentService {
         if (idx < 0) return null;
 
         int start = idx + keyword.length();
-        int end = Math.min(start + 200, text.length());
+        int end = Math.min(start + 300, text.length());
         String segment = text.substring(start, end);
 
         segment = segment.replaceAll("^[：:,，\\s为叫字]+", "");
 
         String cleanedSegment = segment;
 
-        // 移除"统一社会信用代码"及其后面的内容
-        cleanedSegment = cleanedSegment.replaceAll("统一社会信用代码[^\n，,，、；;]{0,50}", "");
-        // 移除住所、地址
-        cleanedSegment = cleanedSegment.replaceAll("[住所]宅?[：:]\s*[^\n，,]{5,100}", "");
-        cleanedSegment = cleanedSegment.replaceAll("地址[^\n，,]{5,100}", "");
-        // 移除身份证号
-        cleanedSegment = cleanedSegment.replaceAll("身份证[号]?[^\n，,]{10,30}", "");
-        // 移除出生日期
-        cleanedSegment = cleanedSegment.replaceAll("出生[日期][^\n，,]{5,20}", "");
+        // 预处理：移除各类干扰内容
+        cleanedSegment = cleanedSegment.replaceAll("(?i)统一社会信用代码[^\\n，,]{0,50}", "");
+        cleanedSegment = cleanedSegment.replaceAll("(?i)住所[：:]\\s*[^\\n，,]{5,150}", "");
+        cleanedSegment = cleanedSegment.replaceAll("(?i)地址[^\\n，,]{5,150}", "");
+        cleanedSegment = cleanedSegment.replaceAll("(?i)身份证[号]?[^\\n，,]{10,30}", "");
+        cleanedSegment = cleanedSegment.replaceAll("(?i)出生[日期][^\\n，,]{5,20}", "");
+        cleanedSegment = cleanedSegment.replaceAll("(?i)电话[^\\n]{5,20}", "");
+        cleanedSegment = cleanedSegment.replaceAll("(?i)邮编[^\\n]{5,10}", "");
+        cleanedSegment = cleanedSegment.replaceAll("(?i)性别[男女人妖]", "");
+        cleanedSegment = cleanedSegment.replaceAll("(?i)民族[\\u4e00-\\u9fa5]{2,6}", "");
+        cleanedSegment = cleanedSegment.replaceAll("(?i)法定代表人[^\\n，,]{2,20}", "");
 
-        // 先取第一行（到换行或特定分隔符）
+        // 取第一行
         int lineEnd = cleanedSegment.indexOf('\n');
-        if (lineEnd > 0) {
+        if (lineEnd > 0 && lineEnd < 200) {
             cleanedSegment = cleanedSegment.substring(0, lineEnd);
         }
+        // 取第一句（分号）
         int semicolonEnd = cleanedSegment.indexOf('；');
-        if (semicolonEnd > 2) {
+        if (semicolonEnd > 2 && semicolonEnd < 100) {
             cleanedSegment = cleanedSegment.substring(0, semicolonEnd);
         }
+        // 取第一段（逗号，但不要太短）
         int commaEnd = cleanedSegment.indexOf('，');
-        if (commaEnd > 50) {
+        if (commaEnd > 10 && commaEnd < 120) {
             cleanedSegment = cleanedSegment.substring(0, commaEnd);
+        }
+        // 取顿号分隔的第一人称（多人时只取第一个）
+        int pauseEnd = cleanedSegment.indexOf('、');
+        if (pauseEnd > 2 && pauseEnd < 100) {
+            cleanedSegment = cleanedSegment.substring(0, pauseEnd);
         }
 
         cleanedSegment = cleanedSegment.trim();
 
-        // 匹配自然人姓名：2-4个汉字（排除"公司""法院"等词）
+        // 1. 匹配自然人姓名：2-4个汉字
         Pattern p = Pattern.compile("^[\\u4e00-\\u9fa5]{2,4}(?:[·•][\\u4e00-\\u9fa5]{2,4})?");
         Matcher m = p.matcher(cleanedSegment);
         if (m.find()) {
             String name = m.group().trim();
-            name = name.replaceAll("(男|女|族)$", "").trim();
+            // 去掉常见后缀
+            name = name.replaceAll("(男|女|族|有限责任公司)?$", "").trim();
+            // 排除机构词
             if (name.length() >= 2 && !isInstitutionalWord(name)) {
                 return name;
             }
         }
 
-        // 匹配法定代表人：法定代表人：XXX
-        p = Pattern.compile("^[\\u4e00-\\u9fa5]{2,6}");
+        // 2. 匹配公司名：XX有限公司 / XX公司 / XX集团
+        p = Pattern.compile("^[\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{2,35}(?:有限公司|公司|集团|企业|合作社|协会|中心|学校|医院|银行|酒店|宾馆|商场|工厂|作坊)");
         m = p.matcher(cleanedSegment);
         if (m.find()) {
             String name = m.group().trim();
-            if (name.length() >= 2 && !isInstitutionalWord(name)) {
-                return name;
-            }
-        }
-
-        // 匹配公司名：XX有限公司 / XX公司 / XX集团
-        p = Pattern.compile("^[\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{2,30}(?:有限公司|公司|集团|企业|合作社|协会|中心|学校|医院|银行|酒店|商场)");
-        m = p.matcher(cleanedSegment);
-        if (m.find()) {
-            String name = m.group().trim();
-            name = name.replaceAll("(住所|地址|注册地|统一社会信用代码)[^\n]*", "").trim();
+            name = name.replaceAll("(住所|地址|注册地|统一社会信用代码)[^\\n，,，、；;]*", "").trim();
             if (name.length() >= 4) return name;
+        }
+
+        // 3. 匹配"XX（性别/民族/职务）"格式的自然人
+        p = Pattern.compile("^[\\u4e00-\\u9fa5]{2,5}(?=[（\\(][^）\\)]*$)");
+        m = p.matcher(cleanedSegment);
+        if (m.find()) {
+            String name = m.group().trim();
+            if (name.length() >= 2 && !isInstitutionalWord(name)) {
+                return name;
+            }
+        }
+
+        // 4. 匹配法定代表人：先找标注再提取姓名
+        p = Pattern.compile("(?:法定代表人|法人代表|负责人|经营者)[：:\\s]*([\\u4e00-\\u9fa5]{2,6})");
+        m = p.matcher(segment);
+        if (m.find()) {
+            String name = m.group(1).trim();
+            if (name.length() >= 2 && !isInstitutionalWord(name)) {
+                return name;
+            }
         }
 
         return null;
@@ -787,63 +831,116 @@ public class DocumentService {
         if (idx < 0) return null;
 
         int start = idx + keyword.length();
-        int end = Math.min(start + 300, text.length());
+        int end = Math.min(start + 500, text.length());
         String segment = text.substring(start, end);
 
         segment = segment.replaceAll("^[：:,，\\s为住]+", "");
 
-        // 移除统一社会信用代码
-        segment = segment.replaceAll("统一社会信用代码[^\n]{10,30}", "");
-        // 移除身份证号
-        segment = segment.replaceAll("身份证[号]?[^\n]{10,30}", "");
-        // 移除法定代表人
-        segment = segment.replaceAll("法定代表人[^\n]{2,20}", "");
-        // 移除电话
-        segment = segment.replaceAll("电话[^\n]{5,20}", "");
+        // 移除各类干扰内容
+        segment = segment.replaceAll("(?i)统一社会信用代码[^\\n]{10,30}", "");
+        segment = segment.replaceAll("(?i)身份证[号]?[^\\n]{10,30}", "");
+        segment = segment.replaceAll("(?i)法定代表人[^\\n]{2,20}", "");
+        segment = segment.replaceAll("(?i)电话[^\\n]{5,20}", "");
+        segment = segment.replaceAll("(?i)邮编[^\\n]{5,10}", "");
+        segment = segment.replaceAll("(?i)联系人[^\\n]{2,20}", "");
+        segment = segment.replaceAll("(?i)电子邮箱[^\\n]{5,30}", "");
 
-        // 找到第一个换行，截取第一行
-        int lineEnd = segment.indexOf('\n');
-        if (lineEnd > 0 && lineEnd < 200) {
-            segment = segment.substring(0, lineEnd);
-        }
+        // OCR纠错：处理常见字符混淆
+        segment = fixOcrChars(segment);
 
-        // 截取到顿号、逗号、分号（取第一段）
-        int pauseEnd = segment.indexOf('、');
-        if (pauseEnd > 5 && pauseEnd < 150) {
-            segment = segment.substring(0, pauseEnd);
-        }
-        int commaEnd = segment.indexOf('，');
-        if (commaEnd > 5 && commaEnd < 150) {
-            segment = segment.substring(0, commaEnd);
-        }
-        int semicolonEnd = segment.indexOf('；');
-        if (semicolonEnd > 5 && semicolonEnd < 150) {
-            segment = segment.substring(0, semicolonEnd);
-        }
-        int periodEnd = segment.indexOf('。');
-        if (periodEnd > 5 && periodEnd < 150) {
-            segment = segment.substring(0, periodEnd);
-        }
+        // 策略1：合并连续的多行地址（跨行地址）
+        String merged = mergeMultiLineAddress(segment);
+        if (merged != null) return merged;
 
-        segment = segment.trim();
+        // 策略2：截取第一行/第一段
+        String firstLine = getFirstLine(segment);
+        if (isValidAddress(firstLine)) return firstLine;
 
-        // 验证是否是有效地址（包含省/市/区/县/路/街/道/镇/乡/号等）
-        if (segment.length() >= 6 && (
-            segment.contains("省") || segment.contains("市") || segment.contains("区") ||
-            segment.contains("县") || segment.contains("路") || segment.contains("街") ||
-            segment.contains("道") || segment.contains("镇") || segment.contains("乡") ||
-            segment.contains("号") || segment.contains("栋") || segment.contains("楼") ||
-            segment.contains("室") || segment.contains("弄")
-        )) {
-            return segment;
-        }
-
-        // 如果地址关键词不包含但长度在合理范围也返回
-        if (segment.length() >= 8 && segment.length() <= 120 && !segment.matches(".*[0-9A-Z]{15,}.*")) {
-            return segment;
-        }
+        // 策略3：尝试整段
+        if (isValidAddress(segment.trim())) return segment.trim();
 
         return null;
+    }
+
+    private String fixOcrChars(String text) {
+        if (text == null) return null;
+        // 全角数字转半角（地址中常见全角数字）
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c >= '０' && c <= '９') {
+                sb.append((char)(c - '０' + '0'));
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    private String mergeMultiLineAddress(String segment) {
+        if (segment == null || segment.length() < 10) return null;
+
+        StringBuilder sb = new StringBuilder();
+        String[] lines = segment.split("\\n");
+        int validLines = 0;
+
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+            // 如果这行包含地址关键词或者是前几行的延续，合并
+            if (validLines == 0 || containsAddressKeyword(line) || line.matches("[\\u4e00-\\u9fa5]+[路街巷道号栋楼室弄]")) {
+                if (sb.length() > 0 && validLines > 0) sb.append(" ");
+                sb.append(line);
+                validLines++;
+                if (validLines >= 3) break; // 最多合并3行
+            }
+        }
+
+        String merged = sb.toString().trim();
+        if (merged.length() >= 8 && containsAddressKeyword(merged)) {
+            // 截取到第一个分句标记
+            int periodIdx = merged.indexOf('。');
+            if (periodIdx > 5) merged = merged.substring(0, periodIdx);
+            return merged;
+        }
+        return null;
+    }
+
+    private boolean containsAddressKeyword(String text) {
+        if (text == null) return false;
+        String[] keywords = {"省", "市", "区", "县", "镇", "乡", "村", "路", "街", "巷", "道", "号", "栋", "楼", "室", "弄", "幢", "单元", "层"};
+        for (String kw : keywords) {
+            if (text.contains(kw)) return true;
+        }
+        return false;
+    }
+
+    private String getFirstLine(String segment) {
+        // 优先取第一个换行之前的
+        int lineEnd = segment.indexOf('\n');
+        if (lineEnd > 3 && lineEnd < 200) {
+            return segment.substring(0, lineEnd).trim();
+        }
+        // 否则取到第一个分隔符
+        int commaEnd = segment.indexOf('，');
+        int semicolonEnd = segment.indexOf('；');
+        int periodEnd = segment.indexOf('。');
+        int end = segment.length();
+        if (commaEnd > 3 && commaEnd < end) end = commaEnd;
+        if (semicolonEnd > 3 && semicolonEnd < end) end = semicolonEnd;
+        if (periodEnd > 3 && periodEnd < end) end = periodEnd;
+        return segment.substring(0, end).trim();
+    }
+
+    private boolean isValidAddress(String text) {
+        if (text == null || text.length() < 6 || text.length() > 200) return false;
+        // 必须包含地址关键词
+        if (!containsAddressKeyword(text)) return false;
+        // 排除明显不是地址的内容（过多数字/字母）
+        if (text.replaceAll("[\\u4e00-\\u9fa5]", "").length() > text.length() * 0.4) return false;
+        // 排除包含"公司""法院"等机构词
+        if (text.matches(".*[公司法院检察院公安局].*")) return false;
+        return true;
     }
 
     private String extractCourtName(String text) {
@@ -982,14 +1079,14 @@ public class DocumentService {
 
     private String extractDate(String text) {
         if (text == null) return null;
-        
-        // 多种日期格式
+
         String[] datePatterns = {
             "(\\d{4}年\\d{1,2}月\\d{1,2}日?)",
             "(\\d{4}[年\\-/.]\\d{1,2}[月\\-/.]\\d{1,2}[日]?)",
-            "(\\d{8})"
+            "(\\d{8})",
+            "(\\d{4})\\s*年\\s*(\\d{1,2})\\s*月",
         };
-        
+
         for (String p : datePatterns) {
             Pattern pattern = Pattern.compile(p);
             Matcher m = pattern.matcher(text);
@@ -999,7 +1096,60 @@ public class DocumentService {
                 return date;
             }
         }
-        
+
+        return null;
+    }
+
+    private String extractBirthDate(String text, String keyword) {
+        if (text == null) return null;
+
+        int idx = text.indexOf(keyword);
+        if (idx < 0) return null;
+
+        int start = idx;
+        int segEnd = Math.min(idx + 300, text.length());
+        String segment = text.substring(start, segEnd);
+
+        // 出生日期：YYYY年MM月DD日 / YYYY-MM-DD / YYYYMMDD
+        Pattern p = Pattern.compile("(?:出生(?:日期|地)?)[：:\\s]*(?:19|20)(\\d{2}[年\\-/.]\\d{1,2}[月\\-/.]\\d{1,2}[日]?)");
+        Matcher m = p.matcher(segment);
+        if (m.find()) return m.group(1).replaceAll("\\s", "");
+
+        p = Pattern.compile("(?:19|20)\\d{2}(?:年\\d{1,2}月\\d{1,2}日?|\\d{2}[\\-/.]\\d{1,2}[\\-/.]\\d{1,2})");
+        m = p.matcher(segment);
+        if (m.find()) return m.group().replaceAll("\\s", "");
+
+        return null;
+    }
+
+    private Integer extractAge(String text, String keyword) {
+        if (text == null) return null;
+
+        int idx = text.indexOf(keyword);
+        if (idx < 0) return null;
+
+        int segEnd = Math.min(idx + 200, text.length());
+        String segment = text.substring(idx, segEnd);
+
+        // 年龄：XX岁 / XX周岁 / 年龄XX
+        Pattern p = Pattern.compile("(?:年龄|岁数)[：:\\s]*(\\d{1,3})(?:岁|周岁)");
+        Matcher m = p.matcher(segment);
+        if (m.find()) {
+            try {
+                int age = Integer.parseInt(m.group(1));
+                if (age > 0 && age < 120) return age;
+            } catch (Exception ignore) {}
+        }
+
+        // 从身份证号反推出生年份
+        p = Pattern.compile("\\b\\d{6}(19|20)(\\d{2})\\d{8}[\\dXx]\\b");
+        m = p.matcher(segment);
+        if (m.find()) {
+            int birthYear = Integer.parseInt(m.group(1) + m.group(2));
+            int age = java.time.Year.now().getValue() - birthYear;
+            if (age > 0 && age < 120) return age;
+        }
+
         return null;
     }
 
@@ -1156,30 +1306,98 @@ public class DocumentService {
     private String extractUnifiedSocialCreditCode(String text) {
         if (text == null) return null;
 
-        // 1. 带标注的格式：统一社会信用代码：91110000XXXXXXXX
-        Pattern p = Pattern.compile("(?:统一社会信用代码)[：:\\s]*([1-9A-HJ-NPQRTUWXY]{2}\\d{6}[1-9A-HJ-NPQRTUWXY]{9}[0-9A-Z])");
+        // 统一社会信用代码正则：第一位非0，第二位只能是特定字母，后面14位数字，最后一位是校验位（数字或X）
+        String CODE_PATTERN = "(1[1-5]|2[12]|3[1-3]|4[1-6]|5[12]|6[1-4]|7[1-4]|8[1-3]|9[1])[1-9A-HJ-NPQRTUWXY]\\d{6}[1-9A-HJ-NPQRTUWXY][0-9A-Z]";
+
+        // 1. 带标注的格式
+        Pattern p = Pattern.compile("(?:统一社会信用代码)[：:\\s]*(" + CODE_PATTERN + ")", Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(text);
         if (m.find()) {
-            String code = m.group(1).trim();
-            if (code.length() == 18) return code;
+            String code = m.group(1).trim().toUpperCase();
+            String validated = validateAndFixCreditCode(code);
+            if (validated != null) return validated;
         }
 
-        // 2. 直接全文扫描18位统一社会信用代码（字母范围严格）
-        p = Pattern.compile("\\b([1-9A-HJ-NPQRTUWXY][1-9A-HJ-NPQRTUWXY]\\d{6}[1-9A-HJ-NPQRTUWXY]{9}[0-9A-Z])\\b");
-        m = p.matcher(text);
-        if (m.find()) {
-            return m.group(1).trim();
+        // 2. OCR容错扫描：允许O代替0、I代替1等
+        String ocrFixed = fixOcrCreditCode(text);
+        if (!ocrFixed.equals(text)) {
+            p = Pattern.compile("\\b(" + CODE_PATTERN + ")\\b", Pattern.CASE_INSENSITIVE);
+            m = p.matcher(ocrFixed);
+            while (m.find()) {
+                String code = m.group(1).trim().toUpperCase();
+                String validated = validateAndFixCreditCode(code);
+                if (validated != null) return validated;
+            }
         }
 
-        // 3. 宽松匹配：冒号或空格后的18位
-        p = Pattern.compile("[：:\\s]([1-9A-HJ-NPQRTUWXY]{2}\\d{6}[1-9A-HJ-NPQRTUWXY]{9}[0-9A-Z])\\b");
+        // 3. 直接全文扫描18位严格格式
+        p = Pattern.compile("\\b(" + CODE_PATTERN + ")\\b", Pattern.CASE_INSENSITIVE);
         m = p.matcher(text);
         if (m.find()) {
-            String code = m.group(1).trim();
-            if (code.length() == 18) return code;
+            String code = m.group(1).trim().toUpperCase();
+            String validated = validateAndFixCreditCode(code);
+            if (validated != null) return validated;
+        }
+
+        // 4. 宽松匹配：冒号或空格后的18位
+        p = Pattern.compile("[：:\\s](" + CODE_PATTERN + ")", Pattern.CASE_INSENSITIVE);
+        m = p.matcher(text);
+        if (m.find()) {
+            String code = m.group(1).trim().toUpperCase();
+            String validated = validateAndFixCreditCode(code);
+            if (validated != null) return validated;
         }
 
         return null;
+    }
+
+    private String fixOcrCreditCode(String text) {
+        if (text == null) return null;
+        // 常见OCR错误：O->0, I->1, l->1, S->5, Z->2, Q->0
+        StringBuilder sb = new StringBuilder();
+        for (char c : text.toCharArray()) {
+            if (c == 'O' || c == 'o') sb.append('0');
+            else if (c == 'I' || c == 'l') sb.append('1');
+            else if (c == 'S' || c == 's') sb.append('5');
+            else if (c == 'Z' || c == 'z') sb.append('2');
+            else sb.append(c);
+        }
+        return sb.toString();
+    }
+
+    private String validateAndFixCreditCode(String code) {
+        if (code == null || code.length() != 18) return null;
+        code = code.toUpperCase();
+
+        // 检查字符集是否在允许范围内
+        String allowed = "0123456789ABCDEFGHJKLMNPQRTUWXY";
+        for (char c : code.toCharArray()) {
+            if (allowed.indexOf(c) < 0) return null;
+        }
+
+        // 校验位验证
+        int[] wi = {1, 3, 9, 27, 19, 26, 16, 17, 20, 29, 25, 13, 8, 24, 10, 30, 28};
+        String baseCode = "0123456789ABCDEFGHJKLMNPQRTUWXY";
+        int sum = 0;
+        for (int i = 0; i < 17; i++) {
+            int idx = baseCode.indexOf(code.charAt(i));
+            if (idx < 0) return null;
+            sum += idx * wi[i];
+        }
+        int mod = sum % 31;
+        char expected = baseCode.charAt((31 - mod) % 31);
+        char actual = code.charAt(17);
+
+        // 校验位不严格匹配时，若OCR可能出错则尝试修复
+        if (expected != actual) {
+            // 如果实际是X而期望不是，或实际是0而期望不是，可能OCR问题，尝试接受
+            if ((actual == 'X' && expected != 'X') || actual == '0') {
+                // 校验位可能有问题，但不拒绝，接受原值
+            } else {
+                return null; // 校验失败
+            }
+        }
+        return code;
     }
 
     private String extractLegalRepresentative(String text) {
@@ -1253,28 +1471,144 @@ public class DocumentService {
 
     private BigDecimal parseAmount(String text) {
         if (text == null || text.isEmpty()) return null;
+
+        // 预处理：OCR纠错，把全角数字转半角
+        text = text.replaceAll("[０-９]", d -> String.valueOf((char)(d.group().charAt(0) - '０' + '0')));
+
+        // 预处理：统一分隔符
+        text = text.replaceAll("[，,]", ".");
+
+        // 策略1：处理金额区间 10万-20万 / 10-20万元，取第一个数
+        Pattern rangeP = Pattern.compile("[万一亿]+(?:[\\d][\u4e00-\u9fa5]*-)?[\\d]+[\u4e00-\u9fa5]*");
+        Matcher rangeM = rangeP.matcher(text);
+        if (rangeM.find()) {
+            String range = rangeM.group();
+            int dashIdx = range.indexOf('-');
+            if (dashIdx > 0) {
+                String first = range.substring(0, dashIdx);
+                BigDecimal bd = parseChineseNumber(first);
+                if (bd != null && bd.signum() > 0) return bd;
+            }
+        }
+
+        // 策略2：处理金额范围 "10万元至20万元" 格式
+        Pattern range2P = Pattern.compile("([\\d.]+)(?:万元|万|元)(?:至|-)([\\d.]+)(?:万元|万|元)");
+        Matcher range2M = range2P.matcher(text);
+        if (range2M.find()) {
+            try {
+                String first = range2M.group(1).replaceAll("[^\\d.]", "");
+                if (!first.isEmpty()) {
+                    BigDecimal bd = new BigDecimal(first);
+                    if (text.contains("万元") || text.contains("万")) bd = bd.multiply(new BigDecimal("10000"));
+                    if (bd.signum() > 0) return bd;
+                }
+            } catch (Exception ignore) {}
+        }
+
+        // 策略3：处理中文大写数字（拾、贰、叁等）
+        BigDecimal chineseResult = parseChineseNumber(text);
+        if (chineseResult != null && chineseResult.signum() > 0) {
+            return chineseResult;
+        }
+
+        // 策略4：标准数字模式
         String[] patterns = new String[] {
-            "(?:金额|诉请金额|诉讼请求金额|标的额|欠款|借款|本金|货款|赔偿金额)[为于约]?\\s*[人民币]?\\s*([\\d,，\\.]{1,15})(?:\\s*元)?",
-            "([\\d,，\\.]{1,15})\\s*万元",
-            "([\\d,，\\.]{1,15})\\s*元"
+            // 金额标注 + 数字 + 元
+            "(?:金额|诉请金额|诉讼请求金额|标的额|欠款|借款|本金|货款|赔偿金额|索赔)[为于约是]?\\s*[人民币]?\\s*([\\d.]{1,20})(?:\\s*元)?",
+            // 数字 + 万元/万
+            "([\\d.]{1,15})\\s*(?:万元|万)",
+            // 数字 + 亿元/亿
+            "([\\d.]{1,15})\\s*(?:亿元|亿)",
+            // 数字 + 元
+            "([\\d.]{1,15})\\s*元",
+            // "约"或"约计" + 数字
+            "(?:约|约计|大约)[\\s:：]*([\\d.]{1,15})",
+            // "余元"格式：3万余元（取3万）
+            "([\\d.]+)(?:余)万元",
+            // 仅数字（作为兜底）
+            "\\b([\\d.]{1,15})\\b"
         };
+
         for (String p : patterns) {
             try {
                 java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(p);
                 java.util.regex.Matcher m = pattern.matcher(text);
                 if (m.find()) {
-                    String num = m.group(1);
-                    if (num == null) continue;
-                    num = num.replaceAll("[,，\\s]", "");
-                    if (num.isEmpty()) continue;
+                    String num = m.group(1).trim();
+                    num = num.replaceAll("[^\\d.]", "");
+                    if (num.isEmpty() || num.equals(".")) continue;
                     BigDecimal bd = new BigDecimal(num);
-                    if (p.contains("万元")) {
+                    if (bd == null || bd.signum() <= 0) continue;
+                    if (p.contains("万元") || (m.group().contains("万") && !m.group().contains("亿元"))) {
                         bd = bd.multiply(new BigDecimal("10000"));
+                    } else if (p.contains("亿元") || m.group().contains("亿元") || m.group().contains("亿")) {
+                        bd = bd.multiply(new BigDecimal("100000000"));
                     }
-                    if (bd.signum() > 0) return bd;
+                    if (bd.signum() > 0 && bd.compareTo(new BigDecimal("100000000000")) <= 0) {
+                        return bd;
+                    }
                 }
-            } catch (Exception ignore) {
+            } catch (Exception ignore) {}
+        }
+        return null;
+    }
+
+    private BigDecimal parseChineseNumber(String text) {
+        if (text == null || text.isEmpty()) return null;
+        // 中文数字映射
+        String[] chineseDigits = {"零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "百", "千", "万", "亿"};
+        int[] values = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000, 10000, 100000000};
+
+        String numText = text.trim();
+        // 提取数字部分
+        Pattern p = Pattern.compile("[一二三四五六七八九十百千万亿零〇0-9]{2,15}[个章节]?(?:元|万元|万|亿元|亿)?");
+        Matcher m = p.matcher(numText);
+        if (!m.find()) return null;
+
+        String chineseNum = m.group();
+        chineseNum = chineseNum.replaceAll("[个章节]", "");
+
+        long result = 0;
+        long temp = 0;
+        long unit = 1;
+        boolean hasUnit = false;
+
+        for (int i = chineseNum.length() - 1; i >= 0; i--) {
+            char c = chineseNum.charAt(i);
+            int idx = -1;
+            for (int j = 0; j < chineseDigits.length; j++) {
+                if (String.valueOf(c).equals(chineseDigits[j])) {
+                    idx = j;
+                    break;
+                }
             }
+            if (idx >= 10) { // 是单位（十百千万亿）
+                unit = values[idx];
+                hasUnit = true;
+                if (idx == 10) unit = 10;
+                else if (idx == 11) unit = 100;
+                else if (idx == 12) unit = 1000;
+                else if (idx == 13) unit = 10000;
+                else if (idx == 14) unit = 100000000;
+                result += (temp == 0 ? 1 : temp) * unit;
+                temp = 0;
+                hasUnit = false;
+            } else if (idx >= 0 && idx <= 9) {
+                if (unit == 1 && !hasUnit) {
+                    temp = temp * 10 + values[idx];
+                } else {
+                    result += values[idx] * unit;
+                    unit = 1;
+                }
+            }
+        }
+        result += temp * unit;
+
+        if (result > 0) {
+            // 检查是否有万元/亿元后缀
+            if (text.contains("亿元")) result *= 100000000;
+            else if (text.contains("万")) result *= 10000;
+            return new BigDecimal(result);
         }
         return null;
     }
