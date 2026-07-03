@@ -1,10 +1,21 @@
 import { ref, computed } from 'vue'
+import api from '@/api'
 
 const STORAGE_KEY = 'usage_memory'
 const EXPIRE_MS = 24 * 60 * 60 * 1000
+const USER_ID_KEY = 'usage_user_id'
 
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 7)
+}
+
+function getUserId() {
+  let userId = localStorage.getItem(USER_ID_KEY)
+  if (!userId) {
+    userId = 'user_' + Math.random().toString(36).substring(2, 10)
+    localStorage.setItem(USER_ID_KEY, userId)
+  }
+  return userId
 }
 
 function loadRecords() {
@@ -28,11 +39,66 @@ function cleanExpired(records) {
   return records.filter(r => now - r.timestamp < EXPIRE_MS)
 }
 
-export function useUsageMemory() {
-  const records = ref(loadRecords())
-  const justCleared = ref(false)
+async function syncFromBackend(userId) {
+  try {
+    const res = await api.usage.getRecords(userId, 200)
+    if (res.data && Array.isArray(res.data)) {
+      return res.data.map(r => ({
+        id: r.id,
+        type: r.type,
+        title: r.title,
+        desc: r.desc,
+        timestamp: r.timestamp
+      }))
+    }
+  } catch (e) {
+    console.warn('Failed to sync from backend:', e)
+  }
+  return null
+}
 
+async function addRecordToBackend(record, userId) {
+  try {
+    await api.usage.addRecord({
+      userId,
+      type: record.type,
+      title: record.title,
+      desc: record.desc
+    })
+    return true
+  } catch (e) {
+    console.warn('Failed to add record to backend:', e)
+    return false
+  }
+}
+
+export function useUsageMemory() {
+  const records = ref([])
+  const justCleared = ref(false)
+  const isLoading = ref(false)
   const cleanedCount = ref(0)
+  let userId = getUserId()
+
+  async function loadRecordsAsync() {
+    isLoading.value = true
+    try {
+      const backendRecords = await syncFromBackend(userId)
+      if (backendRecords && backendRecords.length > 0) {
+        records.value = backendRecords
+        saveRecords(backendRecords)
+      } else {
+        const localRecords = loadRecords()
+        records.value = cleanExpired(localRecords)
+      }
+    } catch (e) {
+      const localRecords = loadRecords()
+      records.value = cleanExpired(localRecords)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  loadRecordsAsync()
 
   const expiredRecords = computed(() => {
     const now = Date.now()
@@ -40,8 +106,7 @@ export function useUsageMemory() {
   })
 
   const validRecords = computed(() => {
-    const now = Date.now()
-    return records.value.filter(r => now - r.timestamp < EXPIRE_MS)
+    return records.value
   })
 
   const groupByDate = computed(() => {
@@ -69,8 +134,8 @@ export function useUsageMemory() {
     return false
   }
 
-  function addRecord(type, title, desc, extra = {}) {
-    const wasExpired = checkAndClean()
+  async function addRecord(type, title, desc, extra = {}) {
+    checkAndClean()
 
     const record = {
       id: genId(),
@@ -83,19 +148,32 @@ export function useUsageMemory() {
 
     records.value = [record, ...records.value].slice(0, 200)
     saveRecords(records.value)
-    return wasExpired
+
+    await addRecordToBackend(record, userId)
+
+    return false
   }
 
-  function clearAll() {
+  async function clearAll() {
     records.value = []
     justCleared.value = true
-    saveRecords(records.value)
+    saveRecords([])
+    try {
+      await api.usage.clearAll(userId)
+    } catch (e) {
+      console.warn('Failed to clear records from backend:', e)
+    }
     setTimeout(() => { justCleared.value = false }, 3000)
   }
 
-  function removeRecord(id) {
+  async function removeRecord(id) {
     records.value = records.value.filter(r => r.id !== id)
     saveRecords(records.value)
+    try {
+      await api.usage.deleteRecord(id, userId)
+    } catch (e) {
+      console.warn('Failed to delete record from backend:', e)
+    }
   }
 
   function getRecordCount() {
@@ -165,6 +243,7 @@ export function useUsageMemory() {
     getTypeLabel,
     getTypeColor,
     formatAge,
-    formatDate
+    formatDate,
+    loadRecords: loadRecordsAsync
   }
 }

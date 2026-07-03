@@ -216,6 +216,12 @@ export default {
     changePassword: (data) => withRetry(() => api.put('/auth/password', data)),
     updateProfile: (data) => withRetry(() => api.put('/auth/profile', data))
   },
+  usage: {
+    addRecord: (data) => api.post('/usage/records', data),
+    getRecords: (userId, limit = 50) => api.get('/usage/records', { params: { userId, limit } }),
+    deleteRecord: (recordId, userId) => api.delete('/usage/records/' + recordId, { params: { userId } }),
+    clearAll: (userId) => api.delete('/usage/records', { params: { userId } })
+  },
   health: () => api.get('/health'),
   dataImport: {
     importCivilLaw: (data) => withRetry(() => api.post('/admin/data/import-civil-law', data)),
