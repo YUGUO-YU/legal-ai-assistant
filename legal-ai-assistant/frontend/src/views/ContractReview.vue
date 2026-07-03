@@ -114,7 +114,7 @@
             <p>正在分析合同风险...</p>
           </div>
 
-          <div v-else-if="reviewResult" class="review-result">
+          <div v-else-if="reviewResult" class="review-result fade-in-up">
             <div class="score-panel">
               <div class="score-circle" :class="getRiskClass(reviewResult.riskLevel)">
                 <el-progress
@@ -155,7 +155,7 @@
                   </div>
                   <el-progress
                     :percentage="dim.score"
-                    :color="getScoreColor(dim.score)"
+                    :color="getScoreGradient(dim.score)"
                     :show-text="false"
                     :stroke-width="6"
                   />
@@ -406,6 +406,12 @@ const getScoreColor = (score) => {
   if (score >= 80) return '#10b981'
   if (score >= 60) return '#f59e0b'
   return '#ef4444'
+}
+
+const getScoreGradient = (score) => {
+  if (score >= 80) return [{ color: '#10b981', percentage: 0 }, { color: '#34d399', percentage: 100 }]
+  if (score >= 60) return [{ color: '#f59e0b', percentage: 0 }, { color: '#fbbf24', percentage: 100 }]
+  return [{ color: '#ef4444', percentage: 0 }, { color: '#f87171', percentage: 100 }]
 }
 
 const exportReport = () => {
@@ -692,10 +698,21 @@ const saveDraft = () => {
       border: 2px dashed #e5e7eb;
       background: #f9fafb;
       transition: all 0.3s;
+      position: relative;
 
       &:hover {
         border-color: #667eea;
         background: rgba(102, 126, 234, 0.05);
+
+        &::after {
+          content: '';
+          position: absolute;
+          inset: -2px;
+          border-radius: 16px;
+          border: 2px dashed #667eea;
+          animation: dashFlow 0.8s linear infinite;
+          pointer-events: none;
+        }
       }
     }
   }
@@ -822,6 +839,18 @@ const saveDraft = () => {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes dashFlow {
+  0% {
+    border-color: #667eea;
+  }
+  50% {
+    border-color: rgba(102, 126, 234, 0.3);
+  }
+  100% {
+    border-color: #667eea;
   }
 }
 
