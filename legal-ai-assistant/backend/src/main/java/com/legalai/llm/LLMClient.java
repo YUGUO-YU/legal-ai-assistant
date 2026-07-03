@@ -211,8 +211,9 @@ public class LLMClient {
         List<Map<String, Object>> tools = List.of(Map.of(
             "type", "web_search",
             "web_search", Map.of(
-                "search_mode", "outline",
-                "enable_brief_search_result", false
+                "search_query", prompt != null ? prompt : "",
+                "search_mode", "highlight",
+                "enable_brief_search_result", true
             )
         ));
 
