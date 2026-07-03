@@ -31,12 +31,11 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
 
 ## 条目
 
-[自动上传到 GitHub]
-- Date: 2026-06-18
-- Context: 用户要求"每次开发完自动上传到 github"
+[每次开发完成自动上传到 GitHub]
+- Date: 2026-07-03
+- Context: 用户要求"每次开发完成自动上传github"
 - Instructions:
-  - 每次工具调用后，若工作树有变更，自动 stage、生成 conventional commit 信息、push 到 origin/main
-  - 提交信息由 AI 根据 git diff 内容总结生成
-  - 推送失败（冲突/网络/认证）立即停下来报告，不重试
+  - 每次开发任务完成后（有新的 commit），立即自动执行 `git add -A && git commit && git push origin main`
+  - 提交信息使用 conventional commit 格式（feat/fix/docs/chore 等）
+  - 推送失败（冲突/网络/认证）立即报告用户，不重试
   - 远程仓库: https://github.com/YUGUO-YU/legal-ai-assistant (branch: main)
-  - 助手脚本: scripts/auto-commit-push.sh
