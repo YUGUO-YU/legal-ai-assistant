@@ -1,7 +1,9 @@
 package com.legalai.admin.controller;
 
 import com.legalai.admin.service.AdminDataService;
+import com.legalai.admin.service.LawCategoryService;
 import com.legalai.dto.ApiResponse;
+import com.legalai.model.LawCategory;
 import com.legalai.service.CacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +25,9 @@ public class AdminController {
 
     @Autowired
     private AdminDataService adminDataService;
+
+    @Autowired
+    private LawCategoryService lawCategoryService;
 
     @Autowired(required = false)
     private CacheService cacheService;
@@ -388,20 +393,20 @@ public class AdminController {
         if (ok) {
             return ApiResponse.success(Map.of("ok", true, "message", "已将当前模型切换到 id=" + id));
         }
-        return ApiResponse.error("设置失败");
+        return ApiResponse.error(500, "设置失败");
     }
 
     @PostMapping("/ai/llm-models/{id}/update-key")
     public ApiResponse<Map<String, Object>> updateModelApiKey(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String apiKey = body.get("apiKey");
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            return ApiResponse.error("API密钥不能为空");
+            return ApiResponse.error(400, "API密钥不能为空");
         }
         boolean ok = adminDataService.updateModelApiKey(id, apiKey);
         if (ok) {
             return ApiResponse.success(Map.of("ok", true, "message", "API密钥已更新"));
         }
-        return ApiResponse.error("更新失败");
+        return ApiResponse.error(500, "更新失败");
     }
 
     @GetMapping("/ai/token-usage")
@@ -543,6 +548,54 @@ public class AdminController {
             result.put("db_error", e.getMessage());
         }
         return ApiResponse.success(result);
+    }
+
+    // ============================================================
+    // 分类管理：类型 / 类别 / 文档分类关联
+    // ============================================================
+
+    @GetMapping("/law/category-types")
+    public ApiResponse<List<Map<String, Object>>> listCategoryTypes() {
+        return ApiResponse.success(lawCategoryService.listTypes());
+    }
+
+    @GetMapping("/law/categories")
+    public ApiResponse<List<Map<String, Object>>> listCategories(@RequestParam(required = false) Long typeId) {
+        return ApiResponse.success(lawCategoryService.listCategories(typeId));
+    }
+
+    @GetMapping("/law/categories/{id}")
+    public ApiResponse<Map<String, Object>> getCategory(@PathVariable Long id) {
+        return ApiResponse.success(lawCategoryService.getCategory(id));
+    }
+
+    @PostMapping("/law/categories")
+    public ApiResponse<Void> createCategory(@RequestBody LawCategory category) {
+        lawCategoryService.createCategory(category);
+        return ApiResponse.success(null);
+    }
+
+    @PutMapping("/law/categories/{id}")
+    public ApiResponse<Void> updateCategory(@PathVariable Long id, @RequestBody LawCategory category) {
+        lawCategoryService.updateCategory(id, category);
+        return ApiResponse.success(null);
+    }
+
+    @DeleteMapping("/law/categories/{id}")
+    public ApiResponse<Void> deleteCategory(@PathVariable Long id) {
+        lawCategoryService.deleteCategory(id);
+        return ApiResponse.success(null);
+    }
+
+    @GetMapping("/law/document-categories/{lawId}")
+    public ApiResponse<List<Map<String, Object>>> getDocumentCategories(@PathVariable Long lawId) {
+        return ApiResponse.success(lawCategoryService.getDocumentCategories(lawId));
+    }
+
+    @PostMapping("/law/document-categories/{lawId}")
+    public ApiResponse<Void> setDocumentCategories(@PathVariable Long lawId, @RequestBody Map<String, List<Long>> body) {
+        lawCategoryService.setDocumentCategories(lawId, body.get("categoryIds"));
+        return ApiResponse.success(null);
     }
 
     // ============================================================
