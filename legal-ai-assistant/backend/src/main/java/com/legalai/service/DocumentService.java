@@ -412,8 +412,8 @@ public class DocumentService {
     private boolean hasCoreFields(ExtractedInfo info) {
         if (info == null) return false;
         int core = 0;
-        if (notEmpty(info.getPlaintiffName())) core++;
-        if (notEmpty(info.getDefendantName())) core++;
+        if (notEmpty(info.getPlaintiffName()) || (info.getPlaintiffNames() != null && !info.getPlaintiffNames().isEmpty())) core++;
+        if (notEmpty(info.getDefendantName()) || (info.getDefendantNames() != null && !info.getDefendantNames().isEmpty())) core++;
         if (info.getClaimAmount() != null && info.getClaimAmount().signum() > 0) core++;
         if (notEmpty(info.getFacts())) core++;
         if (notEmpty(info.getClaimDescription())) core++;
@@ -440,10 +440,20 @@ public class DocumentService {
         merged.setLegalRepresentative(coalesce(primary.getLegalRepresentative(), fallback.getLegalRepresentative()));
         merged.setBirthDate(coalesce(primary.getBirthDate(), fallback.getBirthDate()));
         merged.setAge(primary.getAge() != null ? primary.getAge() : fallback.getAge());
+        merged.setPlaintiffNames(mergePartyLists(primary.getPlaintiffNames(), fallback.getPlaintiffNames()));
+        merged.setDefendantNames(mergePartyLists(primary.getDefendantNames(), fallback.getDefendantNames()));
         merged.setSuccess(true);
         merged.setErrorMessage(null);
         merged.setDataSource(primary.getDataSource() != null ? primary.getDataSource() : "AI 智能识别");
         return merged;
+    }
+
+    private <T> List<T> mergePartyLists(List<T> a, List<T> b) {
+        if (a == null || a.isEmpty()) return b;
+        if (b == null || b.isEmpty()) return a;
+        Set<T> merged = new LinkedHashSet<>(a);
+        merged.addAll(b);
+        return new ArrayList<>(merged);
     }
 
     private String coalesce(String a, String b) {
@@ -465,6 +475,8 @@ public class DocumentService {
         if (notEmpty(info.getEmployerName())) c++;
         if (notEmpty(info.getEmployeeName())) c++;
         if (notEmpty(info.getWorkContent())) c++;
+        if (info.getPlaintiffNames() != null && !info.getPlaintiffNames().isEmpty()) c += info.getPlaintiffNames().size() - 1;
+        if (info.getDefendantNames() != null && !info.getDefendantNames().isEmpty()) c += info.getDefendantNames().size() - 1;
         if (notEmpty(info.getSalary())) c++;
         if (notEmpty(info.getStartDate())) c++;
         if (notEmpty(info.getDisputeType())) c++;
@@ -496,7 +508,9 @@ public class DocumentService {
             + "startDate（入职/起始日期）\n"
             + "disputeType（争议类型）\n"
             + "birthDate（出生日期，如1990年1月1日）\n"
-            + "age（年龄，整数）\n\n"
+            + "age（年龄，整数）\n"
+            + "plaintiffNames（多个原告姓名，JSON数组格式，如[\"张三\",\"李四\"]）\n"
+            + "defendantNames（多个被告姓名，JSON数组格式，如[\"王五\",\"赵六\"]）\n\n"
             + "仅输出 JSON，不要任何解释：\n\n"
             + "原文：\n" + text;
         if (templateCode != null && !templateCode.isEmpty()) {
@@ -531,6 +545,25 @@ public class DocumentService {
             try {
                 info.setAge(Integer.parseInt(ageStr.replaceAll("[^0-9]", "")));
             } catch (Exception ignore) {}
+        }
+        // 解析多当事人
+        JsonNode pNamesNode = node.get("plaintiffNames");
+        if (pNamesNode != null && pNamesNode.isArray()) {
+            List<String> pNames = new ArrayList<>();
+            for (JsonNode n : pNamesNode) {
+                String name = n.asText("").trim();
+                if (!name.isEmpty()) pNames.add(name);
+            }
+            if (!pNames.isEmpty()) info.setPlaintiffNames(pNames);
+        }
+        JsonNode dNamesNode = node.get("defendantNames");
+        if (dNamesNode != null && dNamesNode.isArray()) {
+            List<String> dNames = new ArrayList<>();
+            for (JsonNode n : dNamesNode) {
+                String name = n.asText("").trim();
+                if (!name.isEmpty()) dNames.add(name);
+            }
+            if (!dNames.isEmpty()) info.setDefendantNames(dNames);
         }
         String amt = textOrEmpty(node, "claimAmount");
         if (!amt.isEmpty()) {
@@ -580,7 +613,9 @@ public class DocumentService {
             || notEmpty(info.getSalary())
             || notEmpty(info.getStartDate())
             || notEmpty(info.getDisputeType())
-            || (info.getClaimAmount() != null && info.getClaimAmount().signum() > 0);
+            || (info.getClaimAmount() != null && info.getClaimAmount().signum() > 0)
+            || (info.getPlaintiffNames() != null && !info.getPlaintiffNames().isEmpty())
+            || (info.getDefendantNames() != null && !info.getDefendantNames().isEmpty());
     }
 
     private ExtractedInfo extractByRegex(String text, String templateCode) {
@@ -594,122 +629,132 @@ public class DocumentService {
             if (plaintiff == null) plaintiff = extractPartyName(text, "委托代理人");
             info.setPlaintiffName(plaintiff);
 
-            // 2. 被告姓名 - 多种格式支持
+            // 2. 多当事人提取
+            List<String> allPlaintiffs = extractAllParties(text, "原告");
+            if (!allPlaintiffs.isEmpty()) info.setPlaintiffNames(allPlaintiffs);
+
+            // 3. 被告姓名 - 多种格式支持
             String defendant = extractPartyName(text, "被告");
             if (defendant == null) defendant = extractPartyName(text, "被申请人");
             if (defendant == null) defendant = extractPartyName(text, "被执行人");
             if (defendant == null) defendant = extractPartyName(text, "被诉人");
+            // 上诉案件
+            if (defendant == null) defendant = extractPartyName(text, "上诉人");
             info.setDefendantName(defendant);
 
-            // 3. 原告地址
+            // 4. 多被告提取
+            List<String> allDefendants = extractAllParties(text, "被告");
+            if (!allDefendants.isEmpty()) info.setDefendantNames(allDefendants);
+
+            // 5. 原告地址
             String plaintiffAddr = extractAddress(text, "原告");
             if (plaintiffAddr == null) plaintiffAddr = extractAddress(text, "申请人");
             info.setPlaintiffAddress(plaintiffAddr);
 
-            // 4. 被告地址
+            // 6. 被告地址
             String defendantAddr = extractAddress(text, "被告");
             if (defendantAddr == null) defendantAddr = extractAddress(text, "被申请人");
             info.setDefendantAddress(defendantAddr);
 
-            // 5. 法院名称
+            // 7. 法院名称
             String court = extractCourtName(text);
             info.setCourtName(court);
 
-            // 6. 诉讼金额
+            // 8. 诉讼金额
             BigDecimal amount = parseAmount(text);
             if (amount != null) {
                 info.setClaimAmount(amount);
             }
 
-            // 7. 诉讼请求
+            // 10. 诉讼请求
             String claimDesc = extractClaimDescription(text);
             info.setClaimDescription(claimDesc);
 
-            // 8. 事实与理由
+            // 11. 事实与理由
             String facts = extractFacts(text);
             info.setFacts(facts);
 
-            // 9. 用人单位（劳动纠纷）
+            // 12. 用人单位（劳动纠纷）
             String employer = extractPartyName(text, "用人单位");
             if (employer != null) {
                 employer = employer.replaceAll("(住所|地址|统一社会信用代码).*$", "").trim();
             }
             info.setEmployerName(employer);
 
-            // 10. 劳动者
+            // 13. 劳动者
             String employee = extractPartyName(text, "劳动者");
             info.setEmployeeName(employee);
 
-            // 11. 工作岗位
+            // 14. 工作岗位
             String workContent = extractField(text, "工作岗位", 40);
             if (workContent == null) workContent = extractField(text, "从事", 40);
             info.setWorkContent(workContent);
 
-            // 12. 工资
+            // 15. 工资
             String salary = extractField(text, "工资", 20);
             if (salary == null) salary = extractField(text, "月薪", 20);
             if (salary == null) salary = extractField(text, "月工资", 20);
             info.setSalary(salary);
 
-            // 13. 入职日期
+            // 16. 入职日期
             String startDate = extractDate(text);
             info.setStartDate(startDate);
 
-            // 14. 争议类型
+            // 17. 争议类型
             String dispute = extractDisputeType(text);
             info.setDisputeType(dispute);
 
-            // 15. 案件类型
+            // 18. 案件类型
             String caseType = extractCaseType(text);
             info.setCaseType(caseType);
 
-            // 16. 原告电话
+            // 19. 原告电话
             String plaintiffPhone = extractPhone(text, "原告");
             info.setPlaintiffPhone(plaintiffPhone);
 
-            // 17. 被告电话
+            // 20. 被告电话
             String defendantPhone = extractPhone(text, "被告");
             info.setDefendantPhone(defendantPhone);
 
-            // 18. 原告身份证号
+            // 21. 原告身份证号
             String plaintiffIdCard = extractIdCard(text, "原告");
             info.setPlaintiffIdCard(plaintiffIdCard);
 
-            // 19. 被告身份证号
+            // 22. 被告身份证号
             String defendantIdCard = extractIdCard(text, "被告");
             info.setDefendantIdCard(defendantIdCard);
 
-            // 20. 诉讼依据
+            // 23. 诉讼依据
             String claimBasis = extractClaimBasis(text);
             info.setClaimBasis(claimBasis);
 
-            // 21. 证据
+            // 24. 证据
             String evidence = extractEvidence(text);
             info.setEvidence(evidence);
 
-            // 22. 统一社会信用代码
+            // 25. 统一社会信用代码
             String creditCode = extractUnifiedSocialCreditCode(text);
             info.setUnifiedSocialCreditCode(creditCode);
 
-            // 23. 法定代表人
+            // 26. 法定代表人
             String legalRep = extractLegalRepresentative(text);
             info.setLegalRepresentative(legalRep);
 
-            // 24. 职务
+            // 27. 职务
             String position = extractPosition(text);
             info.setPosition(position);
 
-            // 25. 住所地
+            // 28. 住所地
             String residence = extractResidenceAddress(text);
             info.setResidenceAddress(residence);
 
-            // 26. 出生日期
+            // 29. 出生日期
             String birthDate = extractBirthDate(text, "原告");
             if (birthDate == null) birthDate = extractBirthDate(text, "申请人");
             if (birthDate == null) birthDate = extractBirthDate(text, "被告");
             info.setBirthDate(birthDate);
 
-            // 27. 年龄
+            // 30. 年龄
             Integer age = extractAge(text, "原告");
             if (age == null) age = extractAge(text, "申请人");
             if (age == null) age = extractAge(text, "被告");
@@ -729,7 +774,7 @@ public class DocumentService {
         if (idx < 0) return null;
 
         int start = idx + keyword.length();
-        int end = Math.min(start + 300, text.length());
+        int end = Math.min(start + 400, text.length());
         String segment = text.substring(start, end);
 
         segment = segment.replaceAll("^[：:,，\\s为叫字]+", "");
@@ -750,22 +795,22 @@ public class DocumentService {
 
         // 取第一行
         int lineEnd = cleanedSegment.indexOf('\n');
-        if (lineEnd > 0 && lineEnd < 200) {
+        if (lineEnd > 0 && lineEnd < 250) {
             cleanedSegment = cleanedSegment.substring(0, lineEnd);
         }
         // 取第一句（分号）
         int semicolonEnd = cleanedSegment.indexOf('；');
-        if (semicolonEnd > 2 && semicolonEnd < 100) {
+        if (semicolonEnd > 2 && semicolonEnd < 120) {
             cleanedSegment = cleanedSegment.substring(0, semicolonEnd);
         }
         // 取第一段（逗号，但不要太短）
         int commaEnd = cleanedSegment.indexOf('，');
-        if (commaEnd > 10 && commaEnd < 120) {
+        if (commaEnd > 10 && commaEnd < 150) {
             cleanedSegment = cleanedSegment.substring(0, commaEnd);
         }
         // 取顿号分隔的第一人称（多人时只取第一个）
         int pauseEnd = cleanedSegment.indexOf('、');
-        if (pauseEnd > 2 && pauseEnd < 100) {
+        if (pauseEnd > 2 && pauseEnd < 120) {
             cleanedSegment = cleanedSegment.substring(0, pauseEnd);
         }
 
@@ -776,9 +821,7 @@ public class DocumentService {
         Matcher m = p.matcher(cleanedSegment);
         if (m.find()) {
             String name = m.group().trim();
-            // 去掉常见后缀
             name = name.replaceAll("(男|女|族|有限责任公司)?$", "").trim();
-            // 排除机构词
             if (name.length() >= 2 && !isInstitutionalWord(name)) {
                 return name;
             }
@@ -811,6 +854,119 @@ public class DocumentService {
             if (name.length() >= 2 && !isInstitutionalWord(name)) {
                 return name;
             }
+        }
+
+        return null;
+    }
+
+    private List<String> extractAllParties(String text, String roleLabel) {
+        if (text == null || roleLabel == null) return Collections.emptyList();
+
+        List<String> parties = new ArrayList<>();
+        String[] roleVariants = {
+            roleLabel,
+            roleLabel + "一",
+            roleLabel + "二",
+            roleLabel + "三",
+            roleLabel + "四",
+            roleLabel + "：",
+            roleLabel + ":",
+            roleLabel + "人"
+        };
+
+        for (String variant : roleVariants) {
+            int idx = text.indexOf(variant);
+            if (idx >= 0) {
+                int start = idx + variant.length();
+                int segEnd = Math.min(start + 600, text.length());
+                String segment = text.substring(start, segEnd);
+
+                // 预处理
+                segment = segment.replaceAll("^[：:,，\\s]+", "");
+
+                // 分段处理：换行、分号、顿号
+                String[] parts = segment.split("[\n；;]");
+                for (String part : parts) {
+                    part = part.trim();
+                    if (part.isEmpty()) continue;
+
+                    // 取顿号分隔的每一项
+                    String[] multiParts = part.split("、");
+                    for (String mp : multiParts) {
+                        mp = mp.trim();
+                        if (mp.isEmpty()) continue;
+
+                        // 预处理：移除干扰内容
+                        mp = mp.replaceAll("(?i)统一社会信用代码[^\\n，,]{0,50}", "");
+                        mp = mp.replaceAll("(?i)住所[：:]\\s*[^\\n，,]{5,150}", "");
+                        mp = mp.replaceAll("(?i)地址[^\\n，,]{5,150}", "");
+                        mp = mp.replaceAll("(?i)身份证[号]?[^\\n，,]{10,30}", "");
+                        mp = mp.replaceAll("(?i)出生[日期][^\\n，,]{5,20}", "");
+                        mp = mp.replaceAll("(?i)电话[^\\n]{5,20}", "");
+                        mp = mp.replaceAll("(?i)邮编[^\\n]{5,10}", "");
+                        mp = mp.replaceAll("(?i)民族[\\u4e00-\\u9fa5]{2,6}", "");
+                        mp = mp.replaceAll("(?i)法定代表人[^\\n，,]{2,20}", "");
+
+                        // 去掉常见后缀和标注
+                        mp = mp.replaceAll("^[：:,，\\s为叫字]+", "");
+
+                        // 截取到下一个角色标签之前
+                        for (String rv : roleVariants) {
+                            int rvIdx = mp.indexOf(rv);
+                            if (rvIdx > 2) {
+                                mp = mp.substring(0, rvIdx).trim();
+                            }
+                        }
+
+                        String name = extractSingleName(mp);
+                        if (name != null && !name.isEmpty() && !parties.contains(name)) {
+                            parties.add(name);
+                        }
+                    }
+                }
+                break; // 找到第一个变体就停止
+            }
+        }
+        return parties;
+    }
+
+    private String extractSingleName(String text) {
+        if (text == null || text.trim().isEmpty()) return null;
+
+        String cleaned = text.trim();
+
+        // 截取到第一个非名称字符
+        int commaIdx = cleaned.indexOf('，');
+        int semicolonIdx = cleaned.indexOf('；');
+        int newlineIdx = cleaned.indexOf('\n');
+        int bracketIdx = cleaned.indexOf('（');
+
+        int cutIdx = cleaned.length();
+        if (bracketIdx > 0 && bracketIdx < cutIdx) cutIdx = bracketIdx;
+        if (commaIdx > 0 && commaIdx < cutIdx) cutIdx = commaIdx;
+        if (semicolonIdx > 0 && semicolonIdx < cutIdx) cutIdx = semicolonIdx;
+        if (newlineIdx > 0 && newlineIdx < cutIdx) cutIdx = newlineIdx;
+
+        cleaned = cleaned.substring(0, cutIdx).trim();
+
+        // 匹配自然人姓名
+        Pattern p = Pattern.compile("^[\\u4e00-\\u9fa5]{2,4}(?:[·•][\\u4e00-\\u9fa5]{2,4})?");
+        Matcher m = p.matcher(cleaned);
+        if (m.find()) {
+            String name = m.group().trim();
+            name = name.replaceAll("(男|女|族|有限责任公司)$", "").trim();
+            if (name.length() >= 2 && !isInstitutionalWord(name)) {
+                return name;
+            }
+        }
+
+        // 匹配公司名
+        p = Pattern.compile("^[\\u4e00-\\u9fa5A-Za-z0-9（）()\\-·]{2,35}(?:有限公司|公司|集团|企业|合作社|协会|中心|学校|医院|银行|酒店|宾馆|商场|工厂|作坊)");
+        m = p.matcher(cleaned);
+        if (m.find()) {
+            String name = m.group().trim();
+            name = name.replaceAll("(住所|地址|注册地|统一社会信用代码)[^\\n，,，、；;]*", "").trim();
+            if (name.length() >= 4) return name;
         }
 
         return null;
@@ -859,6 +1015,72 @@ public class DocumentService {
         // 策略3：尝试整段
         if (isValidAddress(segment.trim())) return segment.trim();
 
+        return null;
+    }
+
+    private Map<String, String> parseStructuredAddress(String address) {
+        Map<String, String> result = new LinkedHashMap<>();
+        if (address == null || address.isEmpty()) return result;
+
+        String addr = address.trim();
+
+        // 省/自治区/直辖市
+        String province = extractByRegex(addr, "(?:([^省\s]+省)|([^省\s]+自治区)|(北京市)|(天津市)|(上海市)|(重庆市)|(香港)|(澳门))");
+        if (province != null) {
+            result.put("province", province);
+            addr = addr.substring(addr.indexOf(province) + province.length());
+        }
+
+        // 市/地区/自治州
+        String city = extractByRegex(addr, "([^省\s]{2,10}?(?:市|地区|自治州|盟|特别行政区))");
+        if (city != null) {
+            result.put("city", city);
+            int cityIdx = addr.indexOf(city);
+            if (cityIdx >= 0) addr = addr.substring(cityIdx + city.length());
+        }
+
+        // 区/县/县级市
+        String district = extractByRegex(addr, "([^市\s]{2,10}?(?:区|县|市|旗|林|特区))");
+        if (district != null) {
+            result.put("district", district);
+            int distIdx = addr.indexOf(district);
+            if (distIdx >= 0) addr = addr.substring(distIdx + district.length());
+        }
+
+        // 街道/路/巷/道
+        String street = extractByRegex(addr, "([\\u4e00-\\u9fa5]+(?:街道|路|巷|道|街|镇|乡))");
+        if (street != null) {
+            result.put("street", street);
+            int streetIdx = addr.indexOf(street);
+            if (streetIdx >= 0) addr = addr.substring(streetIdx + street.length());
+        }
+
+        // 门牌号/栋/单元/室
+        String number = extractByRegex(addr, "([\\d零一二三四五六七八九十百]+(?:号|栋|幢|单元|层|室|弄))");
+        if (number != null) {
+            result.put("number", number);
+        }
+
+        // 剩余未解析的部分
+        String remaining = addr.trim();
+        if (!remaining.isEmpty() && result.isEmpty()) {
+            result.put("raw", address);
+        } else if (!remaining.isEmpty()) {
+            result.put("detail", remaining);
+        }
+
+        return result;
+    }
+
+    private String extractByRegex(String text, String regex) {
+        if (text == null || regex == null) return null;
+        try {
+            Pattern p = Pattern.compile(regex);
+            Matcher m = p.matcher(text);
+            if (m.find()) {
+                return m.group(1) != null ? m.group(1) : m.group();
+            }
+        } catch (Exception ignore) {}
         return null;
     }
 
@@ -949,17 +1171,23 @@ public class DocumentService {
         // 按优先级从高到低匹配各种法院格式
         String[] patterns = {
             // 1. 带"管辖""受案""起诉至""向""移送"语义的标注行
-            "(?:管辖法院|受案法院|起诉至|诉至|向法院|移送至|立案法院)[：:\\s]*([\\u4e00-\\u9fa5]{2,10}(?:人民法院|中级法院|高级法院|专门法院|铁路法院|军事法院|法院))",
-            // 2. 此致后面的法院（最常见）
-            "此致\\s*([\\u4e00-\\u9fa5]{2,10}(?:人民法院|中级法院|高级法院|专门法院|铁路法院|军事法院))",
-            // 3. XX省XX市人民法院
-            "([\\u4e00-\\u9fa5]{2,6}人民法院)",
-            // 4. XX市XX人民法院
+            "(?:管辖法院|受案法院|起诉至|诉至|向法院|移送至|立案法院|管辖)[：:\\s]*([\\u4e00-\\u9fa5]{2,10}(?:人民法院|中级法院|高级法院|专门法院|铁路法院|军事法院|法院))",
+            // 2. 此致后面的法院（最常见）- 精确匹配
+            "此致\\s*([\\u4e00-\\u9fa5]{2,12}(?:人民法院|中级法院|高级法院|专门法院|铁路法院|军事法院|法院))",
+            // 3. 具状人/落款后面的法院
+            "(?:具状人|起诉人|上诉人)[\\s\\S]{0,50}此致\\s*([\\u4e00-\\u9fa5]{2,12}(?:人民法院|中级法院|高级法院|专门法院|铁路法院|军事法院|法院))",
+            // 4. XX高级人民法院
+            "([\\u4e00-\\u9fa5]{2,8}高级人民法院)",
+            // 5. XX省XX市人民法院
+            "([\\u4e00-\\u9fa5]{2,10}人民法院)",
+            // 6. XX市XX人民法院
             "([\\u4e00-\\u9fa5]{2,8}人民法院)",
-            // 5. XX市XX法院
-            "([\\u4e00-\\u9fa5]{2,10}法院)",
-            // 6. 专门的法院名称
-            "(?:互联网法院|金融法院|知识产权法院|破产法院|铁路法院|军事法院|海事法院|森林法院|铁路运输法院)"
+            // 7. XX市XX中级人民法院
+            "([\\u4e00-\\u9fa5]{2,6}中级人民法院)",
+            // 8. XX市XX法院
+            "([\\u4e00-\\u9fa5]{2,12}法院)",
+            // 9. 专门的法院名称
+            "(?:北京互联网法院|上海金融法院|北京知识产权法院|广州知识产权法院|深圳破产法院|成都铁路法院|军事法院|海事法院|森林法院)"
         };
 
         for (String pStr : patterns) {
@@ -969,7 +1197,7 @@ public class DocumentService {
                 if (m.find()) {
                     String court = m.group(m.groupCount()).trim();
                     // 过滤掉明显不是法院名的词
-                    if (court.length() >= 4 && !court.matches(".*[区县市省路街巷]$")) {
+                    if (court.length() >= 4 && !court.matches(".*[区县市省路街巷]$") && !court.matches(".*[屯村乡]$")) {
                         return court;
                     }
                 }
@@ -977,7 +1205,25 @@ public class DocumentService {
             }
         }
 
+        // 从文书末尾提取（此致到文件结尾的区域）
+        String endSection = extractEndSection(text);
+        if (endSection != null) {
+            Pattern p = Pattern.compile("([\\u4e00-\\u9fa5]{2,10}(?:人民法院|中级法院|高级法院|专门法院|铁路法院|法院))");
+            Matcher m = p.matcher(endSection);
+            if (m.find()) {
+                String court = m.group(1).trim();
+                if (court.length() >= 4) return court;
+            }
+        }
+
         return null;
+    }
+
+    private String extractEndSection(String text) {
+        if (text == null || text.length() < 100) return null;
+        // 提取最后500个字符
+        int start = Math.max(0, text.length() - 500);
+        return text.substring(start);
     }
 
     private String extractClaimDescription(String text) {
@@ -1035,19 +1281,173 @@ public class DocumentService {
         return null;
     }
 
+    private List<Map<String, String>> extractClaimItems(String text) {
+        if (text == null) return Collections.emptyList();
+
+        List<Map<String, String>> items = new ArrayList<>();
+        String claimText = extractClaimDescription(text);
+        if (claimText == null || claimText.isEmpty()) return items;
+
+        // 分割每一项诉讼请求
+        String[] lines = claimText.split("\n");
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+
+            // 去掉编号
+            String content = line.replaceAll("^[1１零一二三四五六七八九十百千万0-9[（(][0-9）)\\]]+[、.．:：\\s]+", "").trim();
+            if (content.length() < 3) continue;
+
+            Map<String, String> item = new LinkedHashMap<>();
+            item.put("description", content);
+
+            // 分类：金钱/行为/解除/其他
+            String category = categorizeClaim(content);
+            item.put("category", category);
+
+            // 提取金额（如果有）
+            String amountStr = extractAmountFromClaim(content);
+            if (amountStr != null) {
+                item.put("amount", amountStr);
+            }
+
+            items.add(item);
+        }
+
+        return items;
+    }
+
+    private String categorizeClaim(String claim) {
+        if (claim == null) return "其他";
+        String lower = claim.toLowerCase();
+        if (lower.contains("归还") || lower.contains("返还") || lower.contains("支付") || lower.contains("赔偿") || lower.contains("货款") || lower.contains("欠款") || lower.contains("借款") || lower.contains("本金") || lower.contains("利息")) {
+            return "金钱";
+        }
+        if (lower.contains("解除") || lower.contains("撤销") || lower.contains("确认") || lower.contains("无效")) {
+            return "行为";
+        }
+        if (lower.contains("腾退") || lower.contains("交还") || lower.contains("搬迁") || lower.contains("迁出") || lower.contains("搬离")) {
+            return "腾退";
+        }
+        if (lower.contains("过户") || lower.contains("登记") || lower.contains("办理") || lower.contains("变更")) {
+            return "登记";
+        }
+        return "其他";
+    }
+
+    private String extractAmountFromClaim(String claim) {
+        if (claim == null) return null;
+        Pattern p = Pattern.compile("([\\d,.，]+)\\s*(?:元|万元|亿|人民币|美元|港币)");
+        Matcher m = p.matcher(claim);
+        if (m.find()) {
+            return m.group().trim();
+        }
+        // 单独的数字+元格式
+        p = Pattern.compile("([\\d,.，]+)\\s*元");
+        m = p.matcher(claim);
+        if (m.find()) {
+            return m.group().trim();
+        }
+        return null;
+    }
+
     private String extractFacts(String text) {
         if (text == null) return null;
-        
+
         // 匹配"事实与理由："或"事实："后的内容
         Pattern p = Pattern.compile("(?:事实(?:与理由)?|理由|案情|案件事实)[：:][\\s\\S]{10,5000}(?=(?:此致|具状|落款|申请人|$))");
         Matcher m = p.matcher(text);
         if (m.find()) {
             String result = m.group();
             result = result.replaceAll("^(?:事实(?:与理由)?|理由|案情|案件事实)[：:]", "").trim();
+            // 清理证据部分（证据跟在事实后面）
+            result = cleanEvidenceSection(result);
             if (result.length() > 0) return result;
         }
-        
+
         return null;
+    }
+
+    private String cleanEvidenceSection(String facts) {
+        if (facts == null) return null;
+        // 如果事实中包含"证据"关键词，截取之前的内容
+        int evidenceIdx = facts.indexOf("证据");
+        if (evidenceIdx > 10) {
+            // 检查是否是独立的证据章节（通常在事实之后）
+            String beforeEvidence = facts.substring(0, evidenceIdx);
+            // 如果证据前面是句号或换行，说明是事实描述的结束
+            if (evidenceIdx > 0 && (beforeEvidence.endsWith("。") || beforeEvidence.endsWith("\n"))) {
+                return beforeEvidence.trim();
+            }
+        }
+        // 移除证据编号列表（如"1."、"2."开头的证据描述）
+        String cleaned = facts.replaceAll("(?m)^[1１][、.．]\\s*证据[^\\n]{0,50}\\n?", "");
+        cleaned = cleaned.replaceAll("(?m)^[一二三四五六七八九十]+[、.．]\\s*证据[^\\n]{0,50}\\n?", "");
+        return cleaned.trim();
+    }
+
+    private List<Map<String, String>> extractFactsWithSegments(String text) {
+        if (text == null) return Collections.emptyList();
+        List<Map<String, String>> segments = new ArrayList<>();
+
+        String facts = extractFacts(text);
+        if (facts == null || facts.isEmpty()) return segments;
+
+        // 按时间/行为分段
+        String[] lines = facts.split("\n");
+        StringBuilder currentSegment = new StringBuilder();
+        String currentType = "general";
+
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+
+            String segmentType = detectFactSegmentType(line);
+            if (!segmentType.equals(currentType) && currentSegment.length() > 0) {
+                Map<String, String> seg = new LinkedHashMap<>();
+                seg.put("type", currentType);
+                seg.put("content", currentSegment.toString().trim());
+                segments.add(seg);
+                currentSegment = new StringBuilder();
+            }
+            currentType = segmentType;
+            if (currentSegment.length() > 0) currentSegment.append("\n");
+            currentSegment.append(line);
+        }
+
+        if (currentSegment.length() > 0) {
+            Map<String, String> seg = new LinkedHashMap<>();
+            seg.put("type", currentType);
+            seg.put("content", currentSegment.toString().trim());
+            segments.add(seg);
+        }
+
+        return segments;
+    }
+
+    private String detectFactSegmentType(String line) {
+        if (line == null) return "general";
+        // 时间标记
+        if (line.matches(".*(?:19|20)\\d{2}年\\d{1,2}月.*") || line.matches(".*\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}.*")) {
+            return "time";
+        }
+        // 合同关系
+        if (line.contains("签订") || line.contains("合同") || line.contains("协议")) {
+            return "contract";
+        }
+        // 违约行为
+        if (line.contains("违约") || line.contains("违反") || line.contains("未按") || line.contains("逾期")) {
+            return "breach";
+        }
+        // 损失
+        if (line.contains("损失") || line.contains("造成") || line.contains("致使") || line.contains("导致")) {
+            return "damage";
+        }
+        // 协商
+        if (line.contains("协商") || line.contains("调解") || line.contains("催告") || line.contains("通知")) {
+            return "negotiation";
+        }
+        return "general";
     }
 
     private String extractField(String text, String keyword, int maxLen) {
@@ -1080,24 +1480,73 @@ public class DocumentService {
     private String extractDate(String text) {
         if (text == null) return null;
 
+        // 按优先级匹配各种日期格式
         String[] datePatterns = {
+            // 1. YYYY年MM月DD日（中文标准格式）
             "(\\d{4}年\\d{1,2}月\\d{1,2}日?)",
+            // 2. YYYY年MM月
+            "(\\d{4}年\\d{1,2}月)",
+            // 3. YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD（标准数字格式）
             "(\\d{4}[年\\-/.]\\d{1,2}[月\\-/.]\\d{1,2}[日]?)",
+            // 4. YYYYMMDD（8位数字格式）
             "(\\d{8})",
-            "(\\d{4})\\s*年\\s*(\\d{1,2})\\s*月",
+            // 5. 中文日期：二零二三年一月一日
+            "([零一二三四五六七八九]{4}年[零一二三四五六七八九十]{1,2}月[零一二三四五六七八九十]{1,3}日?)",
+            // 6. 相对日期：近日/上月/去年等（返回相对描述）
+            "([近当往]日?[几上下半\\w]+)",
+            // 7. 日期范围：2023年1月至2023年12月
+            "(\\d{4}年\\d{1,2}月至\\d{4}年\\d{1,2}月)"
         };
 
         for (String p : datePatterns) {
-            Pattern pattern = Pattern.compile(p);
-            Matcher m = pattern.matcher(text);
-            if (m.find()) {
-                String date = m.group(1);
-                date = date.replaceAll("\\s+", "");
-                return date;
-            }
+            try {
+                Pattern pattern = Pattern.compile(p);
+                Matcher m = pattern.matcher(text);
+                if (m.find()) {
+                    String date = m.group(1);
+                    date = date.replaceAll("\\s+", "");
+                    // 标准化中文数字日期
+                    date = normalizeChineseDate(date);
+                    if (isValidDate(date)) {
+                        return date;
+                    }
+                }
+            } catch (Exception ignore) {}
         }
 
         return null;
+    }
+
+    private String normalizeChineseDate(String date) {
+        if (date == null) return null;
+        // 转换中文数字到阿拉伯数字
+        String[][] chineseDigits = {
+            {"零", "0"}, {"一", "1"}, {"二", "2"}, {"三", "3"}, {"四", "4"},
+            {"五", "5"}, {"六", "6"}, {"七", "7"}, {"八", "8"}, {"九", "9"}
+        };
+        for (String[] pair : chineseDigits) {
+            date = date.replace(pair[0], pair[1]);
+        }
+        // 处理十的特殊情况
+        date = date.replaceAll("(?<=(\\d))十(?=\\d)", "1");
+        date = date.replaceAll("(?<=(\\d))十$", "10");
+        date = date.replaceAll("^十(?=\\d)", "1");
+        return date;
+    }
+
+    private boolean isValidDate(String date) {
+        if (date == null || date.isEmpty()) return false;
+        // 移除年月日等字符，只保留数字
+        String digits = date.replaceAll("[^0-9]", "");
+        if (digits.length() < 4) return false;
+        // 基本范围检查：年应该在1900-2100之间
+        try {
+            int year = Integer.parseInt(digits.substring(0, 4));
+            if (year < 1900 || year > 2100) return false;
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
     }
 
     private String extractBirthDate(String text, String keyword) {

@@ -35,6 +35,8 @@ public class ExtractedInfo {
     private String residenceAddress;
     private String birthDate;
     private Integer age;
+    private List<String> plaintiffNames;
+    private List<String> defendantNames;
 
     public boolean isSuccess() {
         return success;
@@ -274,5 +276,21 @@ public class ExtractedInfo {
 
     public void setAge(Integer age) {
         this.age = age;
+    }
+
+    public List<String> getPlaintiffNames() {
+        return plaintiffNames;
+    }
+
+    public void setPlaintiffNames(List<String> plaintiffNames) {
+        this.plaintiffNames = plaintiffNames;
+    }
+
+    public List<String> getDefendantNames() {
+        return defendantNames;
+    }
+
+    public void setDefendantNames(List<String> defendantNames) {
+        this.defendantNames = defendantNames;
     }
 }
