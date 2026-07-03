@@ -760,31 +760,42 @@ public class AdminDataService {
     // PROMPT_TEMPLATE CRUD
     // ============================================================
 
-    public Long createPromptTemplate(Map<String, Object> data) {
+    public Map<String, Object> createPromptTemplate(Map<String, Object> data) {
+        Map<String, Object> result = new LinkedHashMap<>();
         String sql = """
             INSERT INTO prompt_template (prompt_code, module, scene, version, content, variables, is_active, is_gray, gray_ratio, adopt_rate, feedback_score, biz_module)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
-        jdbc.update(sql,
-            data.get("prompt_code"),
-            data.get("module"),
-            data.get("scene"),
-            data.get("version"),
-            data.get("content"),
-            data.get("variables"),
-            0,
-            0,
-            0,
-            data.get("adopt_rate") != null ? data.get("adopt_rate") : 0.0,
-            data.get("feedback_score") != null ? data.get("feedback_score") : 0.0,
-            data.get("module") != null ? data.get("module") : "MOD-01"
-        );
-        log.info("创建 Prompt 模板: {}", data.get("prompt_code"));
-        List<Map<String, Object>> rows = jdbc.queryForList("SELECT LAST_INSERT_ID() as id");
-        return rows.isEmpty() ? null : (Long) rows.get(0).get("id");
+        try {
+            jdbc.update(sql,
+                data.get("prompt_code"),
+                data.get("module"),
+                data.get("scene"),
+                data.get("version"),
+                data.get("content"),
+                data.get("variables"),
+                0,
+                0,
+                0,
+                data.get("adopt_rate") != null ? data.get("adopt_rate") : 0.0,
+                data.get("feedback_score") != null ? data.get("feedback_score") : 0.0,
+                data.get("module") != null ? data.get("module") : "MOD-01"
+            );
+            log.info("创建 Prompt 模板: {}", data.get("prompt_code"));
+            List<Map<String, Object>> rows = jdbc.queryForList("SELECT LAST_INSERT_ID() as id");
+            Long id = rows.isEmpty() ? null : (Long) rows.get(0).get("id");
+            result.put("ok", true);
+            result.put("id", id);
+        } catch (Exception e) {
+            log.error("创建 Prompt 模板失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
     }
 
-    public void updatePromptTemplate(Long id, Map<String, Object> data) {
+    public Map<String, Object> updatePromptTemplate(Long id, Map<String, Object> data) {
+        Map<String, Object> result = new LinkedHashMap<>();
         StringBuilder sql = new StringBuilder("UPDATE prompt_template SET ");
         java.util.List<Object> args = new java.util.ArrayList<>();
         if (data.get("prompt_code") != null) { sql.append("prompt_code = ?, "); args.add(data.get("prompt_code")); }
@@ -795,16 +806,37 @@ public class AdminDataService {
         if (data.get("variables") != null) { sql.append("variables = ?, "); args.add(data.get("variables")); }
         if (data.get("adopt_rate") != null) { sql.append("adopt_rate = ?, "); args.add(data.get("adopt_rate")); }
         if (data.get("feedback_score") != null) { sql.append("feedback_score = ?, "); args.add(data.get("feedback_score")); }
-        if (args.isEmpty()) return;
+        if (args.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "无可更新字段");
+            return result;
+        }
         sql.setLength(sql.length() - 2);
         sql.append(" WHERE id = ?");
         args.add(id);
-        jdbc.update(sql.toString(), args.toArray());
-        log.info("更新 Prompt 模板 id={}", id);
+        try {
+            jdbc.update(sql.toString(), args.toArray());
+            log.info("更新 Prompt 模板 id={}", id);
+            result.put("ok", true);
+        } catch (Exception e) {
+            log.error("更新 Prompt 模板失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
     }
 
-    public void deletePromptTemplate(Long id) {
-        jdbc.update("DELETE FROM prompt_template WHERE id = ?", id);
-        log.info("删除 Prompt 模板 id={}", id);
+    public Map<String, Object> deletePromptTemplate(Long id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            jdbc.update("DELETE FROM prompt_template WHERE id = ?", id);
+            log.info("删除 Prompt 模板 id={}", id);
+            result.put("ok", true);
+        } catch (Exception e) {
+            log.error("删除 Prompt 模板失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
     }
 }
