@@ -304,7 +304,8 @@ public class CaseService {
         long winCount = items.stream()
             .filter(item -> item.getJudgmentResult() != null && item.getJudgmentResult() <= 2)
             .count();
-        stats.setWinRate((double) winCount / items.size());
+        double winRate = (double) winCount / items.size();
+        stats.setWinRate(winRate);
 
         BigDecimal totalAmount = items.stream()
             .filter(item -> item.getLitigationAmount() != null)
@@ -312,7 +313,219 @@ public class CaseService {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         stats.setAvgCompensation(totalAmount.divide(BigDecimal.valueOf(items.size()), 2, BigDecimal.ROUND_HALF_UP));
 
+        stats.setWinRatePrediction(calculateWinRatePrediction(items, winRate));
+        stats.setJudgmentDistribution(calculateJudgmentDistribution(items));
+        stats.setCompensationDistribution(calculateCompensationDistribution(items));
+        stats.setTimelineAnalysis(calculateTimelineAnalysis(items));
+        stats.setStrategyRecommendations(generateStrategyRecommendations(items));
+
         return stats;
+    }
+
+    private CaseSimilarSearchResponse.WinRatePrediction calculateWinRatePrediction(
+            List<CaseSimilarSearchResponse.SimilarCaseItem> items, double baseWinRate) {
+        CaseSimilarSearchResponse.WinRatePrediction prediction = new CaseSimilarSearchResponse.WinRatePrediction();
+
+        double confidence = Math.min(0.95, 0.6 + (items.size() * 0.02));
+        prediction.setConfidence(confidence);
+
+        double predictedWinRate = baseWinRate * (0.9 + confidence * 0.1);
+        predictedWinRate = Math.max(0.0, Math.min(1.0, predictedWinRate));
+        prediction.setPredictedWinRate(predictedWinRate);
+
+        CaseSimilarSearchResponse.FactorAnalysis factorAnalysis = new CaseSimilarSearchResponse.FactorAnalysis();
+        List<String> favorable = new ArrayList<>();
+        List<String> unfavorable = new ArrayList<>();
+        List<String> neutral = new ArrayList<>();
+
+        long fullSupport = items.stream().filter(i -> i.getJudgmentResult() != null && i.getJudgmentResult() == 1).count();
+        if (fullSupport > items.size() / 3) {
+            favorable.add("类似案件全部支持率较高");
+        }
+
+        long partialSupport = items.stream().filter(i -> i.getJudgmentResult() != null && i.getJudgmentResult() == 2).count();
+        if (partialSupport > items.size() / 2) {
+            favorable.add("部分支持类案件占比高，有争取空间");
+        }
+
+        long rejected = items.stream().filter(i -> i.getJudgmentResult() != null && i.getJudgmentResult() == 3).count();
+        if (rejected > items.size() / 2) {
+            unfavorable.add("类似案件驳回率较高，需充分准备");
+        }
+
+        double avgSimilarity = items.stream()
+            .filter(i -> i.getSimilarityScore() != null)
+            .mapToDouble(CaseSimilarSearchResponse.SimilarCaseItem::getSimilarityScore)
+            .average().orElse(0.5);
+        if (avgSimilarity >= 0.8) {
+            favorable.add("案件相似度高，参考价值大");
+        } else if (avgSimilarity < 0.6) {
+            unfavorable.add("案件相似度有限，需结合其他证据");
+        } else {
+            neutral.add("案件相似度中等，需综合分析");
+        }
+
+        if (items.stream().anyMatch(i -> i.getKeyFacts() != null && i.getKeyFacts().length() > 100)) {
+            favorable.add("类案事实描述详细，便于对比");
+        }
+
+        neutral.add("审理法院级别影响判决尺度");
+        neutral.add("具体诉讼请求设计影响最终结果");
+
+        factorAnalysis.setFavorableFactors(favorable);
+        factorAnalysis.setUnfavorableFactors(unfavorable);
+        factorAnalysis.setNeutralFactors(neutral);
+        prediction.setFactorAnalysis(factorAnalysis);
+
+        Map<String, Double> resultProbs = new LinkedHashMap<>();
+        resultProbs.put("全部支持", fullSupport * 1.0 / items.size());
+        resultProbs.put("部分支持", partialSupport * 1.0 / items.size());
+        resultProbs.put("驳回", rejected * 1.0 / items.size());
+        prediction.setResultProbabilities(resultProbs);
+
+        return prediction;
+    }
+
+    private Map<String, Integer> calculateJudgmentDistribution(List<CaseSimilarSearchResponse.SimilarCaseItem> items) {
+        Map<String, Integer> distribution = new LinkedHashMap<>();
+        distribution.put("全部支持", 0);
+        distribution.put("部分支持", 0);
+        distribution.put("驳回", 0);
+
+        for (CaseSimilarSearchResponse.SimilarCaseItem item : items) {
+            if (item.getJudgmentResult() != null) {
+                switch (item.getJudgmentResult()) {
+                    case 1: distribution.put("全部支持", distribution.get("全部支持") + 1); break;
+                    case 2: distribution.put("部分支持", distribution.get("部分支持") + 1); break;
+                    case 3: distribution.put("驳回", distribution.get("驳回") + 1); break;
+                }
+            }
+        }
+        return distribution;
+    }
+
+    private CaseSimilarSearchResponse.CompensationDistribution calculateCompensationDistribution(
+            List<CaseSimilarSearchResponse.SimilarCaseItem> items) {
+        CaseSimilarSearchResponse.CompensationDistribution dist = new CaseSimilarSearchResponse.CompensationDistribution();
+        dist.setRange0to5w(0);
+        dist.setRange5to20w(0);
+        dist.setRange20to50w(0);
+        dist.setRangeAbove50w(0);
+
+        for (CaseSimilarSearchResponse.SimilarCaseItem item : items) {
+            if (item.getLitigationAmount() != null) {
+                double amount = item.getLitigationAmount().doubleValue();
+                if (amount < 50000) {
+                    dist.setRange0to5w(dist.getRange0to5w() + 1);
+                } else if (amount < 200000) {
+                    dist.setRange5to20w(dist.getRange5to20w() + 1);
+                } else if (amount < 500000) {
+                    dist.setRange20to50w(dist.getRange20to50w() + 1);
+                } else {
+                    dist.setRangeAbove50w(dist.getRangeAbove50w() + 1);
+                }
+            }
+        }
+        return dist;
+    }
+
+    private CaseSimilarSearchResponse.TimelineAnalysis calculateTimelineAnalysis(
+            List<CaseSimilarSearchResponse.SimilarCaseItem> items) {
+        CaseSimilarSearchResponse.TimelineAnalysis analysis = new CaseSimilarSearchResponse.TimelineAnalysis();
+
+        Map<Integer, Integer> yearCount = new TreeMap<>();
+        for (CaseSimilarSearchResponse.SimilarCaseItem item : items) {
+            if (item.getJudgeDate() != null && item.getJudgeDate().length() >= 4) {
+                try {
+                    int year = Integer.parseInt(item.getJudgeDate().substring(0, 4));
+                    yearCount.merge(year, 1, Integer::sum);
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        List<CaseSimilarSearchResponse.YearDistribution> caseDist = new ArrayList<>();
+        for (Map.Entry<Integer, Integer> entry : yearCount.entrySet()) {
+            caseDist.add(new CaseSimilarSearchResponse.YearDistribution(entry.getKey(), entry.getValue()));
+        }
+        analysis.setCaseDistribution(caseDist);
+
+        int avgDuration = 90;
+        analysis.setAvgDuration(avgDuration);
+
+        if (caseDist.size() >= 2) {
+            int recent = caseDist.get(caseDist.size() - 1).getCount();
+            int previous = caseDist.get(caseDist.size() - 2).getCount();
+            if (recent > previous * 1.2) {
+                analysis.setTrendDirection("increasing");
+            } else if (recent < previous * 0.8) {
+                analysis.setTrendDirection("decreasing");
+            } else {
+                analysis.setTrendDirection("stable");
+            }
+        } else {
+            analysis.setTrendDirection("stable");
+        }
+
+        Map<String, Integer> courtLevelDist = new LinkedHashMap<>();
+        courtLevelDist.put("基层法院", 0);
+        courtLevelDist.put("中级人民法院", 0);
+        courtLevelDist.put("高级人民法院", 0);
+        courtLevelDist.put("最高人民法院", 0);
+
+        for (CaseSimilarSearchResponse.SimilarCaseItem item : items) {
+            if (item.getCourtLevel() != null) {
+                switch (item.getCourtLevel()) {
+                    case 1: courtLevelDist.put("最高人民法院", courtLevelDist.get("最高人民法院") + 1); break;
+                    case 2: courtLevelDist.put("高级人民法院", courtLevelDist.get("高级人民法院") + 1); break;
+                    case 3: courtLevelDist.put("中级人民法院", courtLevelDist.get("中级人民法院") + 1); break;
+                    case 4: courtLevelDist.put("基层法院", courtLevelDist.get("基层法院") + 1); break;
+                }
+            }
+        }
+        analysis.setCourtLevelDistribution(courtLevelDist);
+
+        return analysis;
+    }
+
+    private List<String> generateStrategyRecommendations(List<CaseSimilarSearchResponse.SimilarCaseItem> items) {
+        List<String> recommendations = new ArrayList<>();
+
+        long fullSupport = items.stream().filter(i -> i.getJudgmentResult() != null && i.getJudgmentResult() == 1).count();
+        long partialSupport = items.stream().filter(i -> i.getJudgmentResult() != null && i.getJudgmentResult() == 2).count();
+
+        if (fullSupport > items.size() / 2) {
+            recommendations.add("类似案件全部支持率较高，建议明确诉讼请求，争取全额支持");
+        } else if (partialSupport > items.size() / 2) {
+            recommendations.add("类似案件多获部分支持，建议合理评估诉求金额，设置弹性区间");
+        }
+
+        Set<String> commonLegalBasis = new LinkedHashSet<>();
+        for (CaseSimilarSearchResponse.SimilarCaseItem item : items) {
+            if (item.getLegalBasis() != null) {
+                for (String basis : item.getLegalBasis()) {
+                    if (basis.contains("《民法典》") || basis.contains("司法解释")) {
+                        commonLegalBasis.add(basis);
+                    }
+                }
+            }
+        }
+        if (!commonLegalBasis.isEmpty()) {
+            recommendations.add("高频法律依据：" + String.join("、", commonLegalBasis.stream().limit(3).toArray(String[]::new)));
+        }
+
+        recommendations.add("建议准备充分的合同履行证据，包括书面协议、付款记录、沟通函件等");
+        recommendations.add("诉讼请求设计应考虑实际损失和可得利益，合理确定金额");
+        recommendations.add("注意举证责任的转移问题，及时申请法院调查取证");
+
+        double avgAmount = items.stream()
+            .filter(i -> i.getLitigationAmount() != null)
+            .mapToDouble(i -> i.getLitigationAmount().doubleValue())
+            .average().orElse(0);
+        if (avgAmount > 0) {
+            recommendations.add("类案平均诉讼金额约" + String.format("%.1f", avgAmount / 10000) + "万元，可作为参考");
+        }
+
+        return recommendations;
     }
 
     private CaseSimilarSearchResponse mockSearch(CaseSimilarSearchRequest request) {
@@ -342,10 +555,8 @@ public class CaseService {
             items.add(item);
         }
 
-        CaseSimilarSearchResponse.CaseStatistics statistics = new CaseSimilarSearchResponse.CaseStatistics();
+        CaseSimilarSearchResponse.CaseStatistics statistics = calculateStatistics(items);
         statistics.setTotalCount(156);
-        statistics.setWinRate(0.73);
-        statistics.setAvgCompensation(new BigDecimal("156000"));
 
         CaseSimilarSearchResponse response = new CaseSimilarSearchResponse();
         response.setSourceCaseHash(String.valueOf(request.getCaseDescription().hashCode()));

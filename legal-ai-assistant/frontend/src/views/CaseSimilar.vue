@@ -152,6 +152,20 @@
           </div>
         </el-card>
       </div>
+
+      <div v-if="results.length > 0 && statistics.winRatePrediction" class="analysis-section">
+        <el-card class="analysis-card">
+          <template #header>
+            <div class="analysis-header">
+              <div class="analysis-title">
+                <el-icon><DataAnalysis /></el-icon>
+                <span>类案分析报告</span>
+              </div>
+            </div>
+          </template>
+          <AnalysisReport :statistics="statistics" />
+        </el-card>
+      </div>
     </div>
 
     <empty-state
@@ -177,11 +191,13 @@ import {
   CircleCheck,
   Coin,
   Collection,
-  View
+  View,
+  DataAnalysis
 } from '@element-plus/icons-vue'
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
+import AnalysisReport from '../components/AnalysisReport.vue'
 
 const router = useRouter()
 const caseDescription = ref('')
@@ -190,7 +206,7 @@ const caseCause = ref('')
 const loading = ref(false)
 const results = ref([])
 const hasSearched = ref(false)
-const statistics = ref({ totalCount: 0, winRate: 0, avgCompensation: 0 })
+const statistics = ref({})
 
 const handleSearch = async () => {
   if (!caseDescription.value.trim()) {
@@ -562,6 +578,36 @@ const viewDetail = (item) => {
       display: inline-flex;
       align-items: center;
       gap: 6px;
+    }
+  }
+}
+
+.analysis-section {
+  margin-top: 24px;
+
+  .analysis-card {
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+    :deep(.el-card__header) {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      border: none;
+      padding: 16px 20px;
+    }
+
+    .analysis-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .analysis-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        font-weight: 600;
+      }
     }
   }
 }
