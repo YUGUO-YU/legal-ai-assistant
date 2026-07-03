@@ -9,7 +9,7 @@
 
     <div class="search-container">
       <div class="search-box">
-        <div class="search-input-wrapper">
+        <div class="search-input-wrapper search-input-glow">
           <el-icon class="search-icon"><Search /></el-icon>
           <el-input
             v-model="query"
@@ -60,13 +60,14 @@
       </div>
 
       <div class="result-list">
-        <el-card
-          v-for="(item, index) in results"
-          :key="item.articleId"
-          class="result-item"
-          :class="{ expanded: expanded[index] }"
-          @click="toggleExpand(index)"
-        >
+          <transition-group name="result-expand">
+            <el-card
+              v-for="(item, index) in results"
+              :key="item.articleId"
+              class="result-item result-card-hover"
+              :class="{ expanded: expanded[index] }"
+              @click="toggleExpand(index)"
+            >
           <div class="result-main">
             <div class="result-meta">
               <div class="tag-group">
@@ -80,9 +81,9 @@
               </div>
               <div class="result-actions">
                 <el-rate v-model="item.rating" :max="3" size="small" @click.stop />
-                <el-button type="primary" link size="small" @click.stop="copyContent(item)">
-                  <el-icon><CopyDocument /></el-icon>
-                  复制
+                <el-button type="primary" link size="small" class="btn-press" @click.stop="copyContent(item, index)">
+                  <el-icon><CopyDocument v-if="!copiedStates[index]" /><Check v-else /></el-icon>
+                  {{ copiedStates[index] ? '已复制' : '复制' }}
         </el-button>
         <PptProgressDialog ref="pptProgressRef" v-model="showPptProgress" />
               </div>
@@ -117,7 +118,8 @@
             </div>
           </div>
         </el-card>
-      </div>
+          </transition-group>
+        </div>
 
       <div v-if="suggestedQueries.length > 0" class="suggested-section">
         <div class="suggested-header">
@@ -215,6 +217,7 @@ const searchLogId = ref(null)
 const generatingPpt = ref(false)
 const showPptProgress = ref(false)
 const pptProgressRef = ref(null)
+const copiedStates = reactive({})
 
 const suggestions = [
   '合同欺诈如何认定？',
@@ -268,10 +271,14 @@ const toggleExpand = (index) => {
   expanded[index] = !expanded[index]
 }
 
-const copyContent = (item) => {
+const copyContent = async (item, index) => {
   const text = `${item.lawTitle} ${item.articleNo} ${item.title}\n${item.content}`
-  navigator.clipboard.writeText(text)
+  await navigator.clipboard.writeText(text)
   ElMessage.success('已复制到剪贴板')
+  copiedStates[index] = true
+  setTimeout(() => {
+    copiedStates[index] = false
+  }, 1500)
 }
 
 const generatePpt = async () => {
