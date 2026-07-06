@@ -212,9 +212,9 @@ async function handleSave() {
   try {
     let res
     if (form.id) {
-      res = await api.post(`/admin/{table}/${form.id}/update`.replace('{table}', 'alert_rule'), payload)
+      res = await api.post(`/admin/alert_rule/${form.id}/update`, payload)
     } else {
-      res = await api.post('/admin/{table}/create'.replace('{table}', 'alert_rule'), payload)
+      res = await api.post('/admin/alert_rule/create', payload)
     }
     if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
     else ElMessage.error(res.data?.error || '保存失败')
@@ -224,7 +224,7 @@ async function handleSave() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除规则「${row.rule_name}」？`, '确认', { type: 'warning' })
-    await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}', 'alert_rule'))
+    await api.post(`/admin/alert_rule/${row.id}/delete`)
     ElMessage.success('已删除')
     load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
@@ -232,7 +232,7 @@ async function handleDelete(row) {
 
 async function toggleRule(row) {
   try {
-    await api.post(`/admin/{table}/${row.id}/toggle`.replace('{table}', 'alert_rule'), { status: row.status === 1 ? 0 : 1 })
+    await api.post(`/admin/alert_rule/${row.id}/toggle`, { status: row.status === 1 ? 0 : 1 })
     row.status = row.status === 1 ? 0 : 1
   } catch (e) { ElMessage.error('切换失败') }
 }

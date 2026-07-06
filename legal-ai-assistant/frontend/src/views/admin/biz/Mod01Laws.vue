@@ -131,7 +131,7 @@ function reset() { filter.keyword = ''; statusFilter.value = 'all'; filter.page 
 
 async function openDetail(row) {
   try {
-    const res = await api.get(`/admin/{table}/${row.id}`.replace('{table}', 'law_document'))
+    const res = await api.get(`/admin/law_document/${row.id}`)
     detail.value = res.data?.data || row
     showDetail.value = true
   } catch (e) {

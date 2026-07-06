@@ -59,8 +59,8 @@ const treeRows=computed(()=>{
 async function load(){loading.value=true;try{const res=await api.get('/admin/infra/menus');rows.value=res.data?.list||[]}catch(e){rows.value=[]}finally{loading.value=false}}
 function openCreate(){Object.assign(form,{id:null,parent_id:0,menu_name:'',menu_type:2,path:'',component:'',permission:'',icon:'',sort_order:0,biz_module:'',status:1});showDialog.value=true}
 function openEdit(row){Object.assign(form,{...row});showDialog.value=true}
-async function handleSave(){if(!form.menu_name){ElMessage.warning('菜单名称必填');return}const p={...form};delete p.id;try{const res=form.id?await api.post(`/admin/{table}/${form.id}/update`.replace('{table}','admin_menu'),p):await api.post('/admin/{table}/create'.replace('{table}','admin_menu'),p);if(res.data?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else ElMessage.error(res.data?.error||'保存失败')}catch(e){ElMessage.error('保存失败')}}
-async function handleDelete(row){try{await ElMessageBox.confirm(`删除菜单「${row.menu_name}」？`,'确认',{type:'warning'});await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}','admin_menu'));ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
+async function handleSave(){if(!form.menu_name){ElMessage.warning('菜单名称必填');return}const p={...form};delete p.id;try{const res=form.id?await api.post(`/admin/admin_menu/${form.id}/update`,p):await api.post('/admin/admin_menu/create',p);if(res.data?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else ElMessage.error(res.data?.error||'保存失败')}catch(e){ElMessage.error('保存失败')}}
+async function handleDelete(row){try{await ElMessageBox.confirm(`删除菜单「${row.menu_name}」？`,'确认',{type:'warning'});await api.post(`/admin/admin_menu/${row.id}/delete`);ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
 onMounted(load)
 </script>
 <style lang="scss" scoped>

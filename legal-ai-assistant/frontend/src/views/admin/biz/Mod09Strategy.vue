@@ -39,8 +39,8 @@ const form=reactive({id:null,kb_id:1,chunk_size:512,chunk_overlap:64,splitter:'r
 async function load(){loading.value=true;try{const res=await api.get('/admin/biz/mod09/kb-strategies');rows.value=res.data?.list||[]}catch(e){rows.value=[]}finally{loading.value=false}}
 function openCreate(){Object.assign(form,{id:null,kb_id:1,chunk_size:512,chunk_overlap:64,splitter:'recursive',status:1});showDialog.value=true}
 function openEdit(row){Object.assign(form,{...row});showDialog.value=true}
-async function handleSave(){const p={...form};delete p.id;try{const res=form.id?await api.post(`/admin/{table}/${form.id}/update`.replace('{table}','kb_chunk_strategy'),p):await api.post('/admin/{table}/create'.replace('{table}','kb_chunk_strategy'),p);if(res.data?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else ElMessage.error(res.data?.error||'保存失败')}catch(e){ElMessage.error('保存失败')}}
-async function handleDelete(row){try{await ElMessageBox.confirm(`删除策略？`,'确认',{type:'warning'});await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}','kb_chunk_strategy'));ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
+async function handleSave(){const p={...form};delete p.id;try{const res=form.id?await api.post(`/admin/kb_chunk_strategy/${form.id}/update`,p):await api.post('/admin/kb_chunk_strategy/create',p);if(res.data?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else ElMessage.error(res.data?.error||'保存失败')}catch(e){ElMessage.error('保存失败')}}
+async function handleDelete(row){try{await ElMessageBox.confirm(`删除策略？`,'确认',{type:'warning'});await api.post(`/admin/kb_chunk_strategy/${row.id}/delete`);ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
 onMounted(load)
 </script>
 <style lang="scss" scoped>

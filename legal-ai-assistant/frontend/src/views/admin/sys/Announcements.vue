@@ -66,7 +66,7 @@
     </el-card>
 
     <el-dialog v-model="showDialog" :title="form.id ? '编辑公告' : '新建公告'" width="680px">
-      <el-form :model="form" label-width="100px">
+      <el-form :model="form" :rules="rules" label-width="100px">
         <el-form-item label="标题" required>
           <el-input v-model="form.title" placeholder="公告标题" maxlength="256" show-word-limit />
         </el-form-item>
@@ -135,6 +135,19 @@ const pageSize = ref(20)
 const filter = reactive({ keyword: '' })
 const showDialog = ref(false)
 const form = reactive({ id: null, title: '', content: '', type: 1, priority: 0, status: 1, published_at: '', expired_at: '', created_by: 'admin' })
+
+const rules = reactive({
+  title: [
+    { required: true, message: '请输入标题', trigger: 'blur' },
+    { max: 200, message: '标题不能超过200字符', trigger: 'blur' }
+  ],
+  content: [
+    { required: true, message: '请输入内容', trigger: 'blur' }
+  ],
+  priority: [
+    { required: true, message: '请选择优先级', trigger: 'change' }
+  ]
+})
 
 function typeLabel(type) { return ['', '系统公告', '功能更新', '维护通知', '安全警告'][type] || '系统公告' }
 function typeTag(type) { return ['', '', 'success', 'warning', 'danger'][type] || '' }

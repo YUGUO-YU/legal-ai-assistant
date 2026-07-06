@@ -43,7 +43,7 @@
     </el-card>
 
     <el-dialog v-model="showDialog" :title="form.id ? '编辑知识库' : '新建知识库'" width="560px">
-      <el-form :model="form" label-width="100px">
+      <el-form :model="form" :rules="rules" label-width="100px">
         <el-form-item label="名称" required>
           <el-input v-model="form.name" placeholder="例：民事判例库" />
         </el-form-item>
@@ -83,6 +83,17 @@ const showDialog = ref(false)
 const isPublic = ref(false)
 const form = reactive({ id: null, kb_uuid: '', name: '', description: '', owner_id: '', is_public: 0, doc_count: 0 })
 
+const rules = reactive({
+  name: [
+    { required: true, message: '请输入知识库名称', trigger: 'blur' },
+    { max: 100, message: '名称不能超过100字符', trigger: 'blur' }
+  ],
+  owner_id: [
+    { required: true, message: '请输入Owner ID', trigger: 'blur' },
+    { type: 'number', message: 'Owner ID必须为数字', trigger: 'blur' }
+  ]
+})
+
 async function load() {
   loading.value = true
   try {
@@ -108,8 +119,8 @@ async function handleSave() {
   const payload = { ...form }; delete payload.id; delete payload.kb_uuid; delete payload.doc_count
   try {
     const res = form.id
-      ? await api.post(`/admin/{table}/${form.id}/update`.replace('{table}', 'kb_knowledge_base'), payload)
-      : await api.post('/admin/{table}/create'.replace('{table}', 'kb_knowledge_base'), payload)
+      ? await api.post(`/admin/kb_knowledge_base/${form.id}/update`, payload)
+      : await api.post('/admin/kb_knowledge_base/create', payload)
     if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
     else ElMessage.error(res.data?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
@@ -118,7 +129,7 @@ async function handleSave() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除知识库「${row.name}」？`, '确认', { type: 'warning' })
-    await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}', 'kb_knowledge_base'))
+    await api.post(`/admin/kb_knowledge_base/${row.id}/delete`)
     ElMessage.success('已删除'); load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
 }

@@ -175,8 +175,8 @@ async function handleSave() {
   const payload = { ...form }; delete payload.id
   try {
     const res = form.id
-      ? await api.post(`/admin/{table}/${form.id}/update`.replace('{table}', 'admin_role'), payload)
-      : await api.post('/admin/{table}/create'.replace('{table}', 'admin_role'), payload)
+      ? await api.post(`/admin/admin_role/${form.id}/update`, payload)
+      : await api.post('/admin/admin_role/create', payload)
     if (res.data?.ok) {
       if (menuTreeRef.value) {
         const checkedKeys = menuTreeRef.value.getCheckedKeys()
@@ -192,7 +192,7 @@ async function handleSave() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除角色「${row.role_name}」？`, '确认', { type: 'warning' })
-    await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}', 'admin_role'))
+    await api.post(`/admin/admin_role/${row.id}/delete`)
     ElMessage.success('已删除'); load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
 }

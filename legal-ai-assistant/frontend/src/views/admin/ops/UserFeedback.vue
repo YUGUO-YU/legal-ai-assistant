@@ -157,7 +157,7 @@ async function load() {
 
 async function handleStatus(row, newStatus) {
   try {
-    const res = await api.post(`/admin/{table}/${row.id}/update`.replace('{table}', 'user_feedback'), { status: newStatus })
+    const res = await api.post(`/admin/user_feedback/${row.id}/update`, { status: newStatus })
     if (res.data?.ok || !res.data?.error) {
       row.status = newStatus
       ElMessage.success(`反馈 ${row.id} → ${statusLabel(newStatus)}`)

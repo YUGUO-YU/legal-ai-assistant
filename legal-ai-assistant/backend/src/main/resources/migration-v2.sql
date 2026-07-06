@@ -98,6 +98,13 @@ CREATE TABLE IF NOT EXISTS contract_review (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '合同审查记录';
 
 -- --------------------------------------------------
+-- 8. 审计日志表添加复合索引
+-- --------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_audit_user_module ON admin_audit_log(user_id, biz_module);
+CREATE INDEX IF NOT EXISTS idx_audit_operation ON admin_audit_log(operation);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON admin_audit_log(created_at);
+
+-- --------------------------------------------------
 -- 完成提示
 -- --------------------------------------------------
 SELECT 'Migration v2 completed successfully' AS status;

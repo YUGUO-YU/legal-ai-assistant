@@ -120,7 +120,7 @@ const groupedStats = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const res = await api.get('/admin/{table}/list'.replace('{table}', 'case_element_dict'))
+    const res = await api.get('/admin/case_element_dict/list')
     rows.value = res.data?.list || []
   } catch (e) { rows.value = [] }
   finally { loading.value = false }
@@ -142,8 +142,8 @@ async function handleSave() {
   const payload = { ...form }; delete payload.id
   try {
     const res = form.id
-      ? await api.post(`/admin/{table}/${form.id}/update`.replace('{table}', 'case_element_dict'), payload)
-      : await api.post('/admin/{table}/create'.replace('{table}', 'case_element_dict'), payload)
+      ? await api.post(`/admin/case_element_dict/${form.id}/update`, payload)
+      : await api.post('/admin/case_element_dict/create', payload)
     if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
     else ElMessage.error(res.data?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
@@ -152,7 +152,7 @@ async function handleSave() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除要素「${row.element_name}」？`, '确认', { type: 'warning' })
-    await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}', 'case_element_dict'))
+    await api.post(`/admin/case_element_dict/${row.id}/delete`)
     ElMessage.success('已删除'); load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
 }

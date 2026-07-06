@@ -101,7 +101,7 @@ const form = reactive({ id: null, config_key: '', config_value: '', config_group
 async function load() {
   loading.value = true
   try {
-    const res = await api.get('/admin/{table}/list'.replace('{table}', 'sys_config'), {
+    const res = await api.get('/admin/sys_config/list', {
       params: { page: 1, pageSize: 100, module: filter.group || undefined }
     })
     rows.value = res.data?.list || []
@@ -130,9 +130,9 @@ async function handleSave() {
   try {
     let res
     if (form.id) {
-      res = await api.post(`/admin/{table}/${form.id}/update`.replace('{table}', 'sys_config'), form)
+      res = await api.post(`/admin/sys_config/${form.id}/update`, form)
     } else {
-      res = await api.post('/admin/{table}/create'.replace('{table}', 'sys_config'), form)
+      res = await api.post('/admin/sys_config/create', form)
     }
     if (res.data?.ok) {
       ElMessage.success('保存成功')
@@ -149,7 +149,7 @@ async function handleSave() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除配置 ${row.config_key}？`, '确认', { type: 'warning' })
-    const res = await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}', 'sys_config'))
+    const res = await api.post(`/admin/sys_config/${row.id}/delete`)
     if (res.data?.ok) {
       ElMessage.success('已删除')
       load()

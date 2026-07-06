@@ -201,9 +201,9 @@ async function handleSave() {
   try {
     let res
     if (form.id) {
-      res = await api.post(`/admin/{table}/${form.id}/update`.replace('{table}', 'admin_user'), payload)
+      res = await api.post(`/admin/admin_user/${form.id}/update`, payload)
     } else {
-      res = await api.post('/admin/{table}/create'.replace('{table}', 'admin_user'), payload)
+      res = await api.post('/admin/admin_user/create', payload)
     }
     if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
     else ElMessage.error(res.data?.error || '保存失败')
@@ -213,7 +213,7 @@ async function handleSave() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除用户「${row.real_name}」？`, '确认', { type: 'warning' })
-    await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}', 'admin_user'))
+    await api.post(`/admin/admin_user/${row.id}/delete`)
     ElMessage.success('已删除')
     load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
@@ -224,7 +224,7 @@ async function toggleUser(row) {
   try {
     await ElMessageBox.confirm(`确定要${action}用户「${row.username}（${row.real_name}）」？${action === '停用' ? '停用后该用户将无法登录。' : '启用后该用户将恢复登录权限。'}`, `确认${action}`, { type: 'warning' })
     const newStatus = row.status === 1 ? 0 : 1
-    await api.post(`/admin/{table}/${row.id}/toggle`.replace('{table}', 'admin_user'), { status: newStatus })
+    await api.post(`/admin/admin_user/${row.id}/toggle`, { status: newStatus })
     row.status = newStatus
     ElMessage.success(statusLabel(newStatus))
   } catch (e) { if (e !== 'cancel') ElMessage.error('操作失败') }

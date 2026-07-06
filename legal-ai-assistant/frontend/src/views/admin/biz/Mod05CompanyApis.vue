@@ -17,7 +17,7 @@
       </el-table>
     </el-card>
     <el-dialog v-model="showDialog" :title="form.id?'编辑配置':'新增配置'" width="560px">
-      <el-form :model="form" label-width="100px">
+      <el-form :model="form" :rules="rules" label-width="100px">
         <el-form-item label="API名称" required><el-input v-model="form.api_name" /></el-form-item>
         <el-form-item label="供应商"><el-select v-model="form.provider" style="width:100%" filterable allow-create><el-option v-for="p in providers" :key="p" :label="p" :value="p"/></el-select></el-form-item>
         <el-form-item label="端点URL"><el-input v-model="form.endpoint" /></el-form-item>
@@ -36,12 +36,21 @@ import api from '../../../api'
 const rows=ref([]);const loading=ref(false);const showDialog=ref(false)
 const form=reactive({id:null,api_name:'',provider:'企查查',endpoint:'',api_key_enc:'',monthly_quota:10000,used_count:0,status:1})
 const providers=['企查查','天眼查','启信宝','国家企业信用信息公示系统','爱企查']
+const rules=reactive({
+  api_name:[
+    {required:true,message:'请输入API名称',trigger:'blur'},
+    {max:100,message:'API名称不能超过100字符',trigger:'blur'}
+  ],
+  api_key_enc:[
+    {required:true,message:'请输入API Key',trigger:'blur'}
+  ]
+})
 function quotaPct(r){return r.monthly_quota?Math.round((r.used_count||0)/r.monthly_quota*100):0}
 async function load(){loading.value=true;try{const res=await api.get('/admin/biz/mod05/company-apis');rows.value=res.data?.list||[]}catch(e){rows.value=[]}finally{loading.value=false}}
 function openCreate(){Object.assign(form,{id:null,api_name:'',provider:'企查查',endpoint:'',api_key_enc:'',monthly_quota:10000,used_count:0,status:1});showDialog.value=true}
 function openEdit(row){Object.assign(form,{...row});showDialog.value=true}
-async function handleSave(){if(!form.api_name){ElMessage.warning('API名称必填');return}const p={...form};if(!p.api_key_enc)delete p.api_key_enc;delete p.id;delete p.used_count;try{const res=form.id?await api.post(`/admin/{table}/${form.id}/update`.replace('{table}','company_api_config'),p):await api.post('/admin/{table}/create'.replace('{table}','company_api_config'),p);if(res.data?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else ElMessage.error(res.data?.error||'保存失败')}catch(e){ElMessage.error('保存失败')}}
-async function handleDelete(row){try{await ElMessageBox.confirm(`删除「${row.api_name}」？`,'确认',{type:'warning'});await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}','company_api_config'));ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
+async function handleSave(){if(!form.api_name){ElMessage.warning('API名称必填');return}const p={...form};if(!p.api_key_enc)delete p.api_key_enc;delete p.id;delete p.used_count;try{const res=form.id?await api.post(`/admin/company_api_config/${form.id}/update`,p):await api.post('/admin/company_api_config/create',p);if(res.data?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else ElMessage.error(res.data?.error||'保存失败')}catch(e){ElMessage.error('保存失败')}}
+async function handleDelete(row){try{await ElMessageBox.confirm(`删除「${row.api_name}」？`,'确认',{type:'warning'});await api.post(`/admin/company_api_config/${row.id}/delete`);ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
 onMounted(load)
 </script>
 <style lang="scss" scoped>

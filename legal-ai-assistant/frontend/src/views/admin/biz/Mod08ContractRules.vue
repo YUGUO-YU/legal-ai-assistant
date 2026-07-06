@@ -141,8 +141,8 @@ async function handleSave() {
   const payload = { ...form }; delete payload.id
   try {
     const res = form.id
-      ? await api.post(`/admin/{table}/${form.id}/update`.replace('{table}', 'contract_review_rule'), payload)
-      : await api.post('/admin/{table}/create'.replace('{table}', 'contract_review_rule'), payload)
+      ? await api.post(`/admin/contract_review_rule/${form.id}/update`, payload)
+      : await api.post('/admin/contract_review_rule/create', payload)
     if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
     else ElMessage.error(res.data?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
@@ -151,7 +151,7 @@ async function handleSave() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除规则「${row.dimension}」？`, '确认', { type: 'warning' })
-    await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}', 'contract_review_rule'))
+    await api.post(`/admin/contract_review_rule/${row.id}/delete`)
     ElMessage.success('已删除'); load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
 }

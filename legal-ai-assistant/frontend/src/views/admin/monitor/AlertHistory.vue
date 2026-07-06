@@ -109,7 +109,7 @@ async function load() {
     const params = { page: filter.page, pageSize: filter.pageSize }
     if (filter.notify != null) params.notify_status = filter.notify
     if (filter.level != null) params.level = filter.level
-    const res = await api.get('/admin/{table}/list'.replace('{table}', 'alert_history'), { params })
+    const res = await api.get('/admin/alert_history/list', { params })
     rows.value = res.data?.list || []
     total.value = res.data?.total || 0
   } catch (e) {

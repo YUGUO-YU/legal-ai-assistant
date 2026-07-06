@@ -141,7 +141,10 @@ CREATE TABLE IF NOT EXISTS admin_audit_log (
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_user (user_id),
     INDEX idx_module_biz (biz_module, biz_type),
-    INDEX idx_created (created_at)
+    INDEX idx_created (created_at),
+    INDEX idx_audit_user_module (user_id, biz_module),
+    INDEX idx_audit_operation (operation),
+    INDEX idx_audit_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '审计日志';
 
 CREATE TABLE IF NOT EXISTS sys_announcement (
