@@ -43,6 +43,13 @@
           />
         </el-form-item>
 
+        <div class="password-strength" v-if="form.password">
+          <div class="strength-bar">
+            <div :style="{ width: (passwordStrength.level / 4 * 100) + '%', background: passwordStrength.color }"></div>
+          </div>
+          <span :style="{ color: passwordStrength.color }">{{ passwordStrength.label }}</span>
+        </div>
+
         <el-form-item prop="confirmPassword">
           <el-input
             v-model="form.confirmPassword"
@@ -94,15 +101,33 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Lock, Postcard, Message, Avatar } from '@element-plus/icons-vue'
 import api from '../api'
 
 const router = useRouter()
 const formRef = ref(null)
 const loading = ref(false)
+
+const passwordStrength = computed(() => {
+  const p = form.password
+  if (!p) return { level: 0, label: '', color: '' }
+  let score = 0
+  if (p.length >= 8) score++
+  if (/[a-z]/.test(p) && /[A-Z]/.test(p)) score++
+  if (/\d/.test(p)) score++
+  if (/[^a-zA-Z0-9]/.test(p)) score++
+  const levels = [
+    { level: 0, label: '', color: '' },
+    { level: 1, label: '弱', color: '#F56C6C' },
+    { level: 2, label: '中', color: '#E6A23C' },
+    { level: 3, label: '强', color: '#67C23A' },
+    { level: 4, label: '非常强', color: '#409EFF' },
+  ]
+  return levels[score]
+})
 
 onMounted(() => {
   if (localStorage.getItem('darkMode') === 'true') {
@@ -150,6 +175,22 @@ const handleRegister = async () => {
   await formRef.value.validate(async (valid) => {
     if (!valid) return
 
+    if (!form.realName || !form.email) {
+      try {
+        await ElMessageBox.confirm(
+          '您还未填写真实姓名和邮箱，补充这些信息可以提升账号安全性。是否现在补充？',
+          '提示',
+          {
+            confirmButtonText: '现在补充',
+            cancelButtonText: '稍后补充',
+            type: 'info'
+          }
+        )
+        return
+      } catch {
+      }
+    }
+
     loading.value = true
     try {
       await api.auth.register({
@@ -158,7 +199,7 @@ const handleRegister = async () => {
         realName: form.realName,
         email: form.email || null
       })
-      ElMessage.success('注册成功，请登录')
+      ElMessage.success('注册成功！您的账号正在等待管理员审核，审核通过后可登录')
       router.push('/')
     } catch (e) {
       console.error('注册失败:', e)
@@ -285,6 +326,35 @@ const handleRegister = async () => {
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
     }
+  }
+}
+
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -12px;
+  margin-bottom: 16px;
+  padding: 0 2px;
+
+  .strength-bar {
+    flex: 1;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+
+    div {
+      height: 100%;
+      transition: all 0.3s;
+      border-radius: 2px;
+    }
+  }
+
+  span {
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 40px;
   }
 }
 

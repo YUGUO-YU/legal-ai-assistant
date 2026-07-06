@@ -326,6 +326,7 @@ function openGray(row) {
 
 async function handleGraySubmit() {
   try {
+    await ElMessageBox.confirm(`确定要对「${grayForm.code} ${grayForm.version}」进行灰度发布？灰度比例：${grayForm.ratio}%。${grayForm.teams ? '（指定团队：' + grayForm.teams + '）' : ''}`, '确认灰度发布', { type: 'warning' })
     const res = await api.post(`/admin/ai/prompts/${grayForm.id}/gray`, null, { params: { ratio: grayForm.ratio, teams: grayForm.teams || '' } })
     if (res.data?.ok) {
       ElMessage.success(`已发布 ${grayForm.ratio}% 灰度`)
@@ -334,9 +335,7 @@ async function handleGraySubmit() {
     } else {
       ElMessage.error(res.data?.error || '灰度失败')
     }
-  } catch (e) {
-    ElMessage.error('灰度失败：' + (e.message || ''))
-  }
+  } catch (e) { if (e !== 'cancel') ElMessage.error('灰度失败：' + (e.message || '')) }
 }
 
 async function handleRollback(row) {

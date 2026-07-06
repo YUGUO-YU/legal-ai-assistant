@@ -43,7 +43,7 @@
           />
           <div class="code-hint">
             <el-icon><InfoFilled /></el-icon>
-            <span>验证码同时输出在后台日志中</span>
+            <span>验证码 10 分钟内有效</span>
           </div>
 
           <el-form-item prop="code">
@@ -85,10 +85,11 @@
             type="primary"
             size="large"
             class="login-btn"
+            :disabled="countdown > 0"
             :loading="loading"
             @click="handleGetCode"
           >
-            获取验证码
+            {{ countdown > 0 ? `${countdown}秒后重新获取` : '获取验证码' }}
           </el-button>
           <el-button
             v-else
@@ -134,6 +135,8 @@ const formRef = ref(null)
 const loading = ref(false)
 const codeSent = ref(false)
 const serverCode = ref('')
+const countdown = ref(0)
+let countdownTimer = null
 
 onMounted(() => {
   if (localStorage.getItem('darkMode') === 'true') {
@@ -178,6 +181,7 @@ const rules = {
 
 const handleGetCode = async () => {
   if (!formRef.value) return
+  if (countdown.value > 0) return
   await formRef.value.validateField('username', async (errorMsg) => {
     if (errorMsg) return
     loading.value = true
@@ -185,6 +189,14 @@ const handleGetCode = async () => {
       const res = await api.auth.sendVerifyCode(form.username)
       serverCode.value = res.data.code
       codeSent.value = true
+      countdown.value = 60
+      countdownTimer = setInterval(() => {
+        countdown.value--
+        if (countdown.value <= 0) {
+          clearInterval(countdownTimer)
+          countdownTimer = null
+        }
+      }, 1000)
       ElMessage.success('验证码已生成，请查收')
     } catch (e) {
       console.error('获取验证码失败:', e)
@@ -222,6 +234,11 @@ const handleBack = () => {
   form.code = ''
   form.newPassword = ''
   form.confirmPassword = ''
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
+  countdown.value = 0
 }
 </script>
 

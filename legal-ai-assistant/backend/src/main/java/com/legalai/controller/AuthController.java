@@ -91,8 +91,12 @@ public class AuthController {
 
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@RequestBody LoginRequest request) {
-        LoginResponse response = authService.login(request);
-        return ApiResponse.success(response);
+        try {
+            LoginResponse response = authService.login(request);
+            return ApiResponse.success(response);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(401, e.getMessage());
+        }
     }
 
     @PostMapping("/refresh")

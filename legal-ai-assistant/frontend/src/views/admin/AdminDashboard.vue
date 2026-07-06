@@ -26,7 +26,7 @@
     </el-alert>
 
     <el-row :gutter="14" class="kpi-row">
-      <el-col :xs="12" :sm="8" :md="6" :lg="4" v-for="m in kpis" :key="m.label">
+      <el-col :xs="12" :sm="6" :md="4" :lg="3" v-for="m in kpis" :key="m.label">
         <el-card class="kpi-card" :body-style="{ padding: '14px' }" :class="m.tone">
           <div class="kpi-label">{{ m.label }}</div>
           <div class="kpi-value">{{ m.value }}</div>
@@ -184,8 +184,13 @@ const kpis = computed(() => [
   { label: '待审法规', value: overview.value.pendingLaws ?? '-', foot: 'MOD-01', tone: 'warning' },
   { label: '待复核草稿', value: overview.value.pendingDrafts ?? '-', foot: 'MOD-03', tone: 'warning' },
   { label: '待处理反馈', value: overview.value.pendingFeedback ?? '-', foot: '运营域', tone: 'info' },
+  { label: '前端用户', value: overview.value.totalFrontendUsers ?? '-', foot: '总注册量', tone: 'primary' },
+  { label: '待审核', value: overview.value.pendingApprovals ?? '-', foot: '新注册', tone: overview.value.pendingApprovals > 0 ? 'warning' : 'primary' },
+  { label: '今日登录', value: overview.value.todayLogins ?? '-', foot: '活跃用户', tone: 'success' },
+  { label: '今日注册', value: overview.value.todayRegs ?? '-', foot: '新用户', tone: 'info' },
   { label: '7日 Token', value: formatNum(overview.value.weeklyTokens), foot: '全部模块', tone: 'primary' },
-  { label: '7日成本', value: '¥' + (overview.value.weeklyCost ?? 0), foot: 'LLM 用量', tone: 'primary' }
+  { label: '7日成本', value: '¥' + (overview.value.weeklyCost ?? 0), foot: 'LLM 用量', tone: 'primary' },
+  { label: '活跃公告', value: overview.value.activeAnnouncements ?? '-', foot: '在有效期', tone: 'info' }
 ])
 
 const moduleBars = computed(() => {

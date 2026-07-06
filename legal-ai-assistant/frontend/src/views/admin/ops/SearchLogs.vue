@@ -7,6 +7,7 @@
       </div>
       <div class="header-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
+        <el-button type="success" @click="handleExport" :loading="exporting">导出</el-button>
       </div>
     </div>
 
@@ -96,10 +97,12 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import api from '../../../api'
 
 const rows = ref([])
 const loading = ref(false)
+const exporting = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
@@ -155,6 +158,28 @@ async function load() {
 }
 
 watch([page, pageSize], load)
+
+async function handleExport() {
+  exporting.value = true
+  try {
+    const res = await fetch('/api/admin/ops/search-logs/export', {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    })
+    const text = await res.text()
+    const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'search-logs-' + new Date().toISOString().slice(0, 10) + '.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
+
 onMounted(load)
 </script>
 

@@ -34,7 +34,6 @@ public class AuthService {
     private static final String DELETE_EXPIRED_TOKENS_SQL = "DELETE FROM auth_tokens WHERE expire_at < NOW()";
 
     private final Map<String, TokenInfo> tokenStore = new ConcurrentHashMap<>();
-    private final Map<String, ResetCodeInfo> resetCodeStore = new ConcurrentHashMap<>();
     private final Map<String, LoginFailureInfo> loginFailures = new ConcurrentHashMap<>();
     private final JdbcTemplate jdbc;
     private final Random random = new Random();
@@ -103,7 +102,7 @@ public class AuthService {
         log.info("用户登录请求: username={}", request.getUsername());
 
         var rows = jdbc.queryForList(
-            "SELECT id, username, password, real_name, email, status FROM frontend_user WHERE username = ?",
+            "SELECT id, username, password, real_name, email, status, approved FROM frontend_user WHERE username = ?",
             request.getUsername());
 
         if (rows.isEmpty()) {
@@ -116,6 +115,12 @@ public class AuthService {
         if (status == null || status != 1) {
             log.warn("用户已停用: {}", request.getUsername());
             throw new RuntimeException("账号已被停用");
+        }
+
+        Integer approved = (Integer) user.get("approved");
+        if (approved == null || approved != 1) {
+            log.warn("用户未审核: {}", request.getUsername());
+            throw new RuntimeException("账号待审核，请等待管理员批准");
         }
 
         String dbPassword = (String) user.get("password");
@@ -158,6 +163,15 @@ public class AuthService {
         response.setUserInfo(userInfo);
 
         log.info("用户登录成功: username={}, userId={}", request.getUsername(), userId);
+        try {
+            jdbc.update("UPDATE frontend_user SET last_login_at = NOW(), last_login_ip = ? WHERE id = ?",
+                request.getIp() != null ? request.getIp() : "unknown", userId);
+            jdbc.update("INSERT INTO user_login_history (user_id, username, ip, login_type) VALUES (?, ?, ?, 'frontend')",
+                userId, request.getUsername(), request.getIp() != null ? request.getIp() : "unknown");
+        } catch (Exception e) {
+            log.warn("记录登录历史失败: {}", e.getMessage());
+        }
+        try { String loginParams = "{\"username\":\"" + request.getUsername() + "\",\"password\":\"****\"}"; recordAudit(0L, request.getUsername(), "LOGIN", "AUTH", "frontend_user", userId, "/api/v1/auth/login", "POST", loginParams, "ok", null, 0, true, null); } catch (Exception ignored) {}
         return response;
     }
 
@@ -372,10 +386,11 @@ public class AuthService {
         String hashedPassword = DigestUtils.sha256Hex(password.getBytes(StandardCharsets.UTF_8));
 
         jdbc.update(
-            "INSERT INTO frontend_user (id, username, password, real_name, email, status) VALUES (?, ?, ?, ?, ?, 1)",
+            "INSERT INTO frontend_user (id, username, password, real_name, email, status, approved) VALUES (?, ?, ?, ?, ?, 1, 0)",
             userId, username, hashedPassword, realName, email);
 
-        log.info("新用户注册成功: username={}, userId={}", username, userId);
+        log.info("新用户注册成功: username={}, userId={}, 待审核", username, userId);
+        try { String regParams = "{\"username\":\"" + username + "\",\"password\":\"****\",\"email\":\"" + (email != null ? email : "") + "\"}"; recordAudit(0L, username, "REGISTER", "AUTH", "frontend_user", userId, "/api/v1/auth/register", "POST", regParams, "ok", null, 0, true, null); } catch (Exception ignored) {}
     }
 
     public ForgotPasswordResponse sendResetCode(String username) {
@@ -386,10 +401,13 @@ public class AuthService {
         }
 
         String code = String.format("%06d", random.nextInt(1000000));
-        resetCodeStore.put(username, new ResetCodeInfo(code, System.currentTimeMillis() + RESET_CODE_EXPIRE_MS));
+        java.sql.Timestamp expireAt = new java.sql.Timestamp(System.currentTimeMillis() + RESET_CODE_EXPIRE_MS);
+
+        jdbc.update("DELETE FROM password_reset_code WHERE username = ? AND used = 0", username);
+        jdbc.update("INSERT INTO password_reset_code (username, code, expire_at) VALUES (?, ?, ?)", username, code, expireAt);
 
         log.info("密码重置码已生成: username={}, code={}", username, code);
-        return new ForgotPasswordResponse(code, "验证码已生成，请查看后端日志");
+        return new ForgotPasswordResponse(code, "验证码发送成功，10分钟内有效");
     }
 
     public void resetPassword(ResetPasswordRequest request) {
@@ -401,29 +419,38 @@ public class AuthService {
             throw new RuntimeException("密码长度需在6-32个字符之间");
         }
 
-        ResetCodeInfo info = resetCodeStore.get(username);
-        if (info == null || !info.code.equals(code)) {
-            throw new RuntimeException("验证码错误");
+        var codeRows = jdbc.queryForList(
+            "SELECT id, expire_at FROM password_reset_code WHERE username = ? AND code = ? AND used = 0 ORDER BY id DESC LIMIT 1",
+            username, code);
+        if (codeRows.isEmpty()) {
+            throw new RuntimeException("验证码错误或已过期");
         }
-        if (System.currentTimeMillis() > info.expireTime) {
-            resetCodeStore.remove(username);
+        long expireTime = ((java.sql.Timestamp) codeRows.get(0).get("expire_at")).getTime();
+        if (System.currentTimeMillis() > expireTime) {
+            jdbc.update("DELETE FROM password_reset_code WHERE username = ? AND code = ?", username, code);
             throw new RuntimeException("验证码已过期，请重新获取");
         }
 
         String hashedPassword = DigestUtils.sha256Hex(newPassword.getBytes(StandardCharsets.UTF_8));
         jdbc.update("UPDATE frontend_user SET password = ? WHERE username = ?", hashedPassword, username);
-        resetCodeStore.remove(username);
+        jdbc.update("DELETE FROM password_reset_code WHERE username = ? AND code = ?", username, code);
 
         log.info("密码重置成功: username={}", username);
+        try { String resetParams = "{\"username\":\"" + username + "\",\"code\":\"****\",\"newPassword\":\"****\"}"; recordAudit(0L, username, "PASSWORD_RESET", "AUTH", "frontend_user", null, "/api/v1/auth/reset-password", "POST", resetParams, "ok", null, 0, true, null); } catch (Exception ignored) {}
     }
 
-    private static class ResetCodeInfo {
-        String code;
-        long expireTime;
-        ResetCodeInfo(String code, long expireTime) {
-            this.code = code;
-            this.expireTime = expireTime;
+    private void recordAudit(Long userId, String username, String operation, String bizModule, String bizType, String bizId, String url, String method, String params, String result, String ip, int duration, boolean ok, String error) {
+        try {
+            jdbc.update("INSERT INTO admin_audit_log(user_id, username, operation, biz_module, biz_type, biz_id, request_url, request_method, request_params, response_result, ip, duration_ms, status, error_msg, trace_id, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())",
+                userId, username, operation, bizModule, bizType, bizId, url, method, truncate(params, 4000), truncate(result, 4000), ip, duration, ok ? 1 : 0, error, java.util.UUID.randomUUID().toString());
+        } catch (Exception e) {
+            log.warn("审计日志记录失败: {}", e.getMessage());
         }
+    }
+
+    private String truncate(String s, int max) {
+        if (s == null) return null;
+        return s.length() > max ? s.substring(0, max) : s;
     }
 
     private static class LoginFailureInfo {

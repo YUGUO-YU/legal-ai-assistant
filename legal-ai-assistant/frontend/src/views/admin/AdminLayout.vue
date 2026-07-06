@@ -21,6 +21,8 @@
           <el-menu-item index="/admin/infra/menus">菜单权限</el-menu-item>
           <el-menu-item index="/admin/infra/audit">操作审计</el-menu-item>
           <el-menu-item index="/admin/infra/service-health">服务健康</el-menu-item>
+          <el-menu-item index="/admin/infra/search-feedback">搜索反馈</el-menu-item>
+          <el-menu-item index="/admin/infra/law-favorites">法规收藏</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="law">
@@ -30,6 +32,7 @@
           </template>
           <el-menu-item index="/admin/law/category-types">分类维度</el-menu-item>
           <el-menu-item index="/admin/law/categories">分类管理</el-menu-item>
+          <el-menu-item index="/admin/law/relations">关联管理</el-menu-item>
           <el-menu-item index="/admin/law/import">AI导入</el-menu-item>
         </el-sub-menu>
 
@@ -65,6 +68,7 @@
           <el-menu-item index="/admin/ai/gray">灰度发布</el-menu-item>
           <el-menu-item index="/admin/ai/llm">模型配置</el-menu-item>
           <el-menu-item index="/admin/ai/token">Token 用量</el-menu-item>
+          <el-menu-item index="/admin/ai/kb-chunks">分块管理</el-menu-item>
           <el-menu-item index="/admin/ai/milvus">Milvus 集合</el-menu-item>
         </el-sub-menu>
 
@@ -93,6 +97,7 @@
           </template>
           <el-menu-item index="/admin/sys/configs">系统参数</el-menu-item>
           <el-menu-item index="/admin/sys/dicts">数据字典</el-menu-item>
+          <el-menu-item index="/admin/sys/announcements">系统公告</el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>
@@ -112,6 +117,11 @@
         </div>
       </div>
       <el-main class="main">
+        <el-breadcrumb separator="/" class="page-breadcrumb">
+          <el-breadcrumb-item :to="{ path: '/admin' }">首页</el-breadcrumb-item>
+          <el-breadcrumb-item v-if="currentGroup">{{ currentGroup }}</el-breadcrumb-item>
+          <el-breadcrumb-item v-if="currentPage">{{ currentPage }}</el-breadcrumb-item>
+        </el-breadcrumb>
         <router-view />
       </el-main>
     </div>
@@ -129,6 +139,74 @@ const router = useRouter()
 const activeMenu = computed(() => route.path)
 const adminName = ref('管理员')
 const isDark = ref(false)
+
+const menuMap = {
+  'infra': '基础设施',
+  'law': '法规管理',
+  'biz': '数据资产',
+  'ai': 'AI 能力',
+  'ops': '运营分析',
+  'monitor': '监控告警',
+  'sys': '系统配置'
+}
+
+const pageNameMap = {
+  'users': '用户管理',
+  'roles': '角色权限',
+  'menus': '菜单权限',
+  'audit': '操作审计',
+  'service-health': '服务健康',
+  'search-feedback': '搜索反馈',
+  'law-favorites': '法规收藏',
+  'frontend-users': '前端用户',
+  'category-types': '分类维度',
+  'categories': '分类管理',
+  'relations': '关联管理',
+  'import': 'AI导入',
+  'mod01': '法规主数据',
+  'mod01-revisions': '法规修订',
+  'mod01-crawl': '爬虫任务',
+  'mod02': '案件主数据',
+  'mod02-elements': '案件要素',
+  'mod03-templates': '文书模板',
+  'mod03-drafts': '草稿复核',
+  'mod03-rules': '复核规则',
+  'mod04': '研究任务',
+  'mod05': '企业 API',
+  'mod06': '案例查询日志',
+  'mod07': '法规查询',
+  'mod08': '合同规则',
+  'mod09-kb': '知识库',
+  'mod09-strategy': '分块策略',
+  'mod10': '问答会话',
+  'prompts': 'Prompt 管理',
+  'gray': '灰度发布',
+  'llm': '模型配置',
+  'token': 'Token 用量',
+  'milvus': 'Milvus 集合',
+  'kb-chunks': '分块管理',
+  'feedback': '用户反馈',
+  'search-logs': '搜索日志',
+  'rules': '告警规则',
+  'history': '告警历史',
+  'configs': '系统参数',
+  'dicts': '数据字典'
+}
+
+const currentGroup = computed(() => {
+  const path = route.path
+  for (const key in menuMap) {
+    if (path.includes('/' + key)) return menuMap[key]
+  }
+  return ''
+})
+
+const currentPage = computed(() => {
+  const path = route.path
+  const segments = path.split('/')
+  const lastSegment = segments[segments.length - 1]
+  return pageNameMap[lastSegment] || ''
+})
 
 onMounted(() => {
   try {
@@ -225,9 +303,13 @@ const handleLogout = () => {
 
 .main {
   flex: 1;
-  padding: 20px;
+  padding: 16px 20px;
   background: #f1f5f9;
   overflow-x: hidden;
+}
+
+.page-breadcrumb {
+  margin-bottom: 16px;
 }
 </style>
 

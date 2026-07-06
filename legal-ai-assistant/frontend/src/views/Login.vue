@@ -99,6 +99,43 @@
         </div>
       </div>
 
+      <div class="announcements-section" v-if="announcements.length > 0">
+        <el-divider>
+          <span class="demo-divider-text">系统公告</span>
+        </el-divider>
+        <div class="announcements-list" v-loading="announcementsLoading">
+          <div v-for="a in announcements" :key="a.id" class="announcement-item" :class="'priority-' + a.priority">
+            <div class="announcement-header">
+              <el-tag v-if="a.priority === 2" type="danger" size="small" effect="dark">紧急</el-tag>
+              <el-tag v-else-if="a.priority === 1" type="warning" size="small">重要</el-tag>
+              <el-tag v-else type="info" size="small">{{ typeLabel(a.type) }}</el-tag>
+              <span class="announcement-title">{{ a.title }}</span>
+              <span class="announcement-time">{{ formatTime(a.created_at) }}</span>
+            </div>
+            <div class="announcement-content" v-if="expandedAnnouncements.includes(a.id)">
+              {{ a.content }}
+            </div>
+            <div class="announcement-content truncated" v-else-if="a.content && a.content.length > 100">
+              {{ a.content.substring(0, 100) }}...
+            </div>
+            <div class="announcement-actions">
+              <el-button link size="small" @click="toggleExpand(a.id)">
+                {{ expandedAnnouncements.includes(a.id) ? '收起' : '查看全部' }}
+              </el-button>
+            </div>
+          </div>
+        </div>
+        <div class="announcements-pagination" v-if="total > pageSize">
+          <el-pagination
+            layout="prev, pager, next"
+            :total="total"
+            :page-size="pageSize"
+            :current-page="currentPage"
+            @current-change="loadAnnouncements"
+          />
+        </div>
+      </div>
+
       <div class="dashboard-entry" v-if="isLoggedIn">
         <el-button
           type="primary"
@@ -126,8 +163,52 @@ const loginFormRef = ref(null)
 const loading = ref(false)
 const rememberMe = ref(false)
 const captchaText = ref('')
+const announcements = ref([])
+const expandedAnnouncements = ref([])
+const announcementsLoading = ref(false)
+const total = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(5)
 
 const isLoggedIn = computed(() => !!localStorage.getItem('token'))
+
+function typeLabel(t) { return ['', '系统公告', '功能更新', '维护通知', '安全警告'][t] || '公告' }
+
+function formatTime(timeStr) {
+  if (!timeStr) return ''
+  const date = new Date(timeStr)
+  const now = new Date()
+  const diff = now - date
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return minutes + '分钟前'
+  if (hours < 24) return hours + '小时前'
+  if (days < 7) return days + '天前'
+  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
+function toggleExpand(id) {
+  const i = expandedAnnouncements.value.indexOf(id)
+  if (i >= 0) expandedAnnouncements.value.splice(i, 1)
+  else expandedAnnouncements.value.push(id)
+}
+
+async function loadAnnouncements(page = 1) {
+  announcementsLoading.value = true
+  try {
+    currentPage.value = page
+    const res = await api.get('/api/v1/announcements', { params: { page, pageSize: pageSize.value } })
+    announcements.value = res.data?.list || []
+    total.value = res.data?.total || 0
+    expandedAnnouncements.value = announcements.value.filter(a => a.priority === 2).map(a => a.id)
+  } catch (e) {
+    announcements.value = []
+  } finally {
+    announcementsLoading.value = false
+  }
+}
 
 const loginForm = reactive({
   username: '',
@@ -211,6 +292,7 @@ const goDashboard = () => {
 
 onMounted(() => {
   refreshCaptcha()
+  loadAnnouncements()
   if (localStorage.getItem('darkMode') === 'true') {
     document.documentElement.classList.add('dark')
   }
@@ -509,5 +591,89 @@ onMounted(() => {
       box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
     }
   }
+}
+
+.announcements-section {
+  margin-top: 20px;
+
+  :deep(.el-divider) {
+    margin: 12px 0;
+
+    .el-divider__text {
+      background: #fff;
+      color: #9ca3af;
+      font-size: 12px;
+      padding: 0 12px;
+    }
+  }
+}
+
+.announcements-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.announcement-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+
+  &:last-child { border-bottom: none; }
+
+  &.priority-2 {
+    background: #fff5f5;
+    margin: 0 -12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-bottom: none;
+  }
+
+  &.priority-1 {
+    background: #fffbeb;
+    margin: 0 -12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-bottom: none;
+  }
+}
+
+.announcement-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .announcement-title {
+    font-size: 13px;
+    color: #374151;
+    font-weight: 500;
+  }
+}
+
+.announcement-content {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+  line-height: 1.5;
+  padding-left: 2px;
+}
+
+.truncated {
+  color: #9ca3af;
+}
+
+.announcement-actions {
+  margin-top: 2px;
+  text-align: right;
+}
+
+.announcement-time {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+.announcements-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
 }
 </style>

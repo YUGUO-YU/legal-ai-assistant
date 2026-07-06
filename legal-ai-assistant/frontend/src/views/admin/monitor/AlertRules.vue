@@ -7,6 +7,7 @@
       </div>
       <div class="header-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
+        <el-button type="success" @click="handleExport" :loading="exporting">导出</el-button>
         <el-button type="primary" @click="openCreate">新增规则</el-button>
       </div>
     </div>
@@ -164,6 +165,7 @@ import api from '../../../api'
 
 const rows = ref([])
 const loading = ref(false)
+const exporting = ref(false)
 const filter = reactive({ level: '', status: '' })
 const showDialog = ref(false)
 const form = reactive({ id: null, rule_name: '', metric: 'llm_latency_ms', operator: 'gt', threshold: 500, duration_sec: 60, level: 2, channels: '["feishu"]', receivers: '', silence_sec: 1800, biz_module: '', status: 1 })
@@ -236,6 +238,28 @@ async function toggleRule(row) {
 }
 
 function reset() { filter.level = ''; filter.status = ''; load() }
+
+async function handleExport() {
+  exporting.value = true
+  try {
+    const res = await fetch('/api/admin/monitor/alert-rules/export', {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    })
+    const text = await res.text()
+    const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'alert-rules-' + new Date().toISOString().slice(0, 10) + '.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
+
 onMounted(load)
 </script>
 

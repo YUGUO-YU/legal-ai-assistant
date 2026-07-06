@@ -33,6 +33,9 @@
           <el-button type="primary" @click="load">查询</el-button>
           <el-button @click="reset">重置</el-button>
         </el-form-item>
+        <el-form-item>
+          <el-button type="success" @click="showImportDialog">导入案例</el-button>
+        </el-form-item>
       </el-form>
     </el-card>
 
@@ -109,12 +112,67 @@
       <h4 style="margin-top:16px">裁判摘要</h4>
       <pre class="content-preview">{{ detail.judgment_summary || '-' }}</pre>
     </el-drawer>
+
+    <el-dialog v-model="showImport" title="导入案例" width="800px" :close-on-click-modal="false">
+      <div class="import-layout">
+        <div class="left-upload">
+          <el-upload
+            ref="uploadRef"
+            drag
+            :auto-upload="false"
+            :limit="1"
+            accept=".docx,.xlsx"
+            :on-change="handleFileChange"
+          >
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">拖拽 Word/Excel 文件到此处，或 <em>点击上传</em></div>
+            <template #tip>
+              <div class="el-upload__tip">支持 .docx, .xlsx 格式</div>
+            </template>
+          </el-upload>
+          <el-button type="primary" :disabled="!uploadFile || importing" style="margin-top: 16px; width: 100%;" @click="handlePreview">
+            {{ importing ? '解析中...' : '上传并预览' }}
+          </el-button>
+        </div>
+        <div class="right-preview">
+          <template v-if="importPreview">
+            <el-alert v-if="importPreview.errors > 0" type="warning" :closable="false" style="margin-bottom: 12px;">
+              存在 {{ importPreview.errors }} 条无效数据，请检查后确认导入
+            </el-alert>
+            <el-table :data="importPreview.previewRows" stripe border max-height="400" size="small">
+              <el-table-column prop="caseName" label="案件名称" min-width="160" show-overflow-tooltip />
+              <el-table-column prop="caseNo" label="案号" width="140" show-overflow-tooltip />
+              <el-table-column prop="courtName" label="法院" width="120" show-overflow-tooltip />
+              <el-table-column prop="judgeDate" label="裁判日期" width="100" />
+              <el-table-column prop="valid" label="有效" width="60">
+                <template #default="{ row }">
+                  <el-tag size="small" :type="row.valid ? 'success' : 'danger'">{{ row.valid ? '是' : '否' }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="error" label="错误" width="100" show-overflow-tooltip />
+            </el-table>
+            <div style="margin-top: 12px; text-align: right;">
+              <span style="color: #67c23a;">成功: {{ importPreview.totalRows - importPreview.errors }}</span>
+              <span style="margin-left: 12px; color: #f56c6c;">失败: {{ importPreview.errors }}</span>
+              <span style="margin-left: 12px;">共 {{ importPreview.totalRows }} 条</span>
+            </div>
+            <div style="margin-top: 16px; text-align: right;">
+              <el-button @click="showImport = false">取消</el-button>
+              <el-button type="primary" :disabled="importPreview.errors > 0" @click="handleConfirm">确认导入</el-button>
+            </div>
+          </template>
+          <el-empty v-else description="上传文件后可预览" />
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, watch, computed, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
+import { UploadFilled } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import api from '../../../api'
 
 const rows = ref([])
@@ -125,6 +183,11 @@ const pageSize = ref(20)
 const filter = reactive({ cause: '', type: '', result: '' })
 const showDetail = ref(false)
 const detail = ref(null)
+const showImport = ref(false)
+const uploadRef = ref(null)
+const uploadFile = ref(null)
+const importPreview = ref(null)
+const importing = ref(false)
 
 const stats = reactive({ total: 0, civil: 0, criminal: 0, admin: 0 })
 
@@ -136,7 +199,7 @@ function resultTag(r) { return ({ 1: 'success', 2: 'warning', 3: 'danger' }[r] |
 async function load() {
   loading.value = true
   try {
-    const res = await api.get('/admin/biz/mod02/cases', { params: { page: page.value, pageSize: pageSize.value, cause: filter.cause || undefined } })
+    const res = await api.get('/admin/biz/mod02/cases', { params: { page: page.value, pageSize: pageSize.value, cause: filter.cause || undefined, caseType: filter.type || undefined, judgment: filter.result || undefined } })
     const list = res.data?.list || []
     rows.value = list
     total.value = res.data?.total || list.length
@@ -152,6 +215,51 @@ function openDetail(row) { detail.value = row; showDetail.value = true }
 function reset() { filter.cause = ''; filter.type = ''; filter.result = ''; load() }
 watch([page, pageSize], load)
 onMounted(load)
+
+function showImportDialog() {
+  showImport.value = true
+  importPreview.value = null
+  uploadFile.value = null
+  uploadRef.value?.clearFiles()
+}
+
+function handleFileChange(file) {
+  uploadFile.value = file.raw
+}
+
+async function handlePreview() {
+  if (!uploadFile.value) return
+  importing.value = true
+  const formData = new FormData()
+  formData.append('file', uploadFile.value)
+  try {
+    const res = await api.judgmentImport.preview(formData)
+    importPreview.value = res.data
+    ElMessage.success('预览生成成功')
+  } catch (e) {
+    ElMessage.error('预览失败: ' + (e.message || '未知错误'))
+    importPreview.value = null
+  } finally {
+    importing.value = false
+  }
+}
+
+async function handleConfirm() {
+  if (!importPreview.value?.data) return
+  try {
+    const res = await api.judgmentImport.confirm({ cases: importPreview.value.data })
+    const imported = res.data?.imported || 0
+    const skipped = res.data?.skipped || 0
+    ElMessage.success(`导入完成：成功 ${imported} 条，跳过 ${skipped} 条`)
+    showImport.value = false
+    importPreview.value = null
+    uploadFile.value = null
+    uploadRef.value?.clearFiles()
+    load()
+  } catch (e) {
+    ElMessage.error('导入失败: ' + (e.message || '未知错误'))
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -166,4 +274,7 @@ onMounted(load)
 .mono { font-family:'Cascadia Code','Consolas',monospace; font-size:13px; }
 .pager { margin-top:14px; justify-content:flex-end; display:flex; }
 .content-preview { background:#f8fafc; padding:16px; border-radius:8px; white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.6; border:1px solid #e2e8f0; max-height:30vh; overflow-y:auto; }
+.import-layout { display: flex; gap: 20px; }
+.left-upload { width: 260px; flex-shrink: 0; }
+.right-preview { flex: 1; }
 </style>

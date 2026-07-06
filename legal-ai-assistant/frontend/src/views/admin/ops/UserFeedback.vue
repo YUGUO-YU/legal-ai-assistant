@@ -11,6 +11,7 @@
         <el-tag :type="filterStatus === 'resolved' ? 'success' : 'info'" size="small" @click="toggleFilter('resolved')" style="cursor:pointer">已解决 {{ counts.resolved }}</el-tag>
         <el-tag v-if="counts.overtime > 0" type="danger" size="small" @click="toggleFilter('overtime')" style="cursor:pointer">已超时 {{ counts.overtime }}</el-tag>
         <el-button :icon="Refresh" @click="load">刷新</el-button>
+        <el-button type="success" @click="handleExport" :loading="exporting">导出</el-button>
       </div>
     </div>
 
@@ -73,6 +74,7 @@ import api from '../../../api'
 
 const rows = ref([])
 const loading = ref(false)
+const exporting = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
@@ -171,6 +173,27 @@ onMounted(() => {
   load()
   timer = setInterval(() => { now.value = Date.now() }, 15000)
 })
+
+async function handleExport() {
+  exporting.value = true
+  try {
+    const res = await fetch('/api/admin/ops/user-feedback/export', {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    })
+    const text = await res.text()
+    const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'user-feedback-' + new Date().toISOString().slice(0, 10) + '.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
 
 onUnmounted(() => {
   clearInterval(timer)

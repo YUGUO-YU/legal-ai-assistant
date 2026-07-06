@@ -135,6 +135,7 @@ const routes = [
 
       { path: 'law/category-types', component: () => import('../views/admin/biz/LawCategoryTypes.vue') },
       { path: 'law/categories', component: () => import('../views/admin/biz/LawCategories.vue') },
+      { path: 'law/relations', component: () => import('../views/admin/biz/LawRelations.vue') },
       { path: 'law/import', component: () => import('../views/admin/biz/LawImport.vue') },
 
       { path: 'infra/users', component: () => import('../views/admin/infra/Users.vue') },
@@ -143,6 +144,8 @@ const routes = [
       { path: 'infra/menus', component: () => import('../views/admin/infra/Menus.vue') },
       { path: 'infra/audit', component: () => import('../views/admin/infra/AuditLogs.vue') },
       { path: 'infra/service-health', component: () => import('../views/admin/infra/ServiceHealth.vue') },
+      { path: 'infra/search-feedback', component: () => import('../views/admin/infra/SearchFeedback.vue') },
+      { path: 'infra/law-favorites', component: () => import('../views/admin/infra/LawFavorites.vue') },
 
       { path: 'biz/mod01', component: () => import('../views/admin/biz/Mod01Laws.vue') },
       { path: 'biz/mod01-revisions', component: () => import('../views/admin/biz/Mod01Revisions.vue') },
@@ -166,6 +169,7 @@ const routes = [
       { path: 'ai/llm', component: () => import('../views/admin/ai/LlmModels.vue') },
       { path: 'ai/token', component: () => import('../views/admin/ai/TokenUsage.vue') },
       { path: 'ai/milvus', component: () => import('../views/admin/ai/MilvusCollections.vue') },
+      { path: 'ai/kb-chunks', component: () => import('../views/admin/ai/KbChunks.vue') },
 
       { path: 'ops/feedback', component: () => import('../views/admin/ops/UserFeedback.vue') },
       { path: 'ops/search-logs', component: () => import('../views/admin/ops/SearchLogs.vue') },
@@ -174,7 +178,8 @@ const routes = [
       { path: 'monitor/history', component: () => import('../views/admin/monitor/AlertHistory.vue') },
 
       { path: 'sys/configs', component: () => import('../views/admin/sys/SysConfigs.vue') },
-      { path: 'sys/dicts', component: () => import('../views/admin/sys/SysDicts.vue') }
+      { path: 'sys/dicts', component: () => import('../views/admin/sys/SysDicts.vue') },
+      { path: 'sys/announcements', component: () => import('../views/admin/sys/Announcements.vue') }
     ]
   },
   {

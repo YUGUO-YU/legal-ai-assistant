@@ -72,12 +72,14 @@ CREATE TABLE IF NOT EXISTS frontend_user (
     email           VARCHAR(128),
     avatar          VARCHAR(500),
     status          TINYINT DEFAULT 1 COMMENT '1启用 0停用',
+    approved        TINYINT DEFAULT 0 COMMENT '0待审核 1已审核',
     last_login_at   DATETIME,
     last_login_ip   VARCHAR(64),
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_username (username),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_approved (approved)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '前端用户';
 
 CREATE TABLE IF NOT EXISTS admin_role (
@@ -141,6 +143,46 @@ CREATE TABLE IF NOT EXISTS admin_audit_log (
     INDEX idx_module_biz (biz_module, biz_type),
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '审计日志';
+
+CREATE TABLE IF NOT EXISTS sys_announcement (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    title           VARCHAR(256) NOT NULL,
+    content         TEXT NOT NULL,
+    type            TINYINT DEFAULT 1 COMMENT '1=系统公告 2=功能更新 3=维护通知 4=安全警告',
+    priority        TINYINT DEFAULT 0 COMMENT '0=普通 1=重要 2=紧急',
+    status          TINYINT DEFAULT 1 COMMENT '1=发布 0=草稿',
+    published_at    DATETIME,
+    expired_at      DATETIME,
+    created_by      VARCHAR(64),
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_status_published (status, published_at),
+    INDEX idx_type (type),
+    INDEX idx_priority (priority)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '系统公告';
+
+CREATE TABLE IF NOT EXISTS password_reset_code (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username        VARCHAR(64) NOT NULL,
+    code            VARCHAR(8) NOT NULL,
+    expire_at       DATETIME NOT NULL,
+    used            TINYINT DEFAULT 0,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_username (username),
+    INDEX idx_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '密码重置验证码';
+
+CREATE TABLE IF NOT EXISTS user_login_history (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id         VARCHAR(64) NOT NULL,
+    username        VARCHAR(64),
+    ip              VARCHAR(64),
+    user_agent      VARCHAR(500),
+    login_type      VARCHAR(16) COMMENT 'frontend/admin',
+    login_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user (user_id),
+    INDEX idx_login_at (login_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '用户登录历史';
 
 -- ===== 域 02：数据资产 =====
 CREATE TABLE IF NOT EXISTS doc_template (
@@ -443,9 +485,9 @@ INSERT INTO admin_user (id, username, password, real_name, status) VALUES
 (1, 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', '超级管理员', 1)
 ON DUPLICATE KEY UPDATE password = VALUES(password), real_name = VALUES(real_name), status = VALUES(status);
 
-INSERT INTO frontend_user (id, username, password, real_name, email, status) VALUES
-('u-001', 'demo', 'd3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791', '演示用户', 'demo@legal-ai.local', 1)
-ON DUPLICATE KEY UPDATE password = VALUES(password), real_name = VALUES(real_name), email = VALUES(email), status = VALUES(status);
+INSERT INTO frontend_user (id, username, password, real_name, email, status, approved) VALUES
+('u-001', 'demo', 'd3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791', '演示用户', 'demo@legal-ai.local', 1, 1)
+ON DUPLICATE KEY UPDATE password = VALUES(password), real_name = VALUES(real_name), email = VALUES(email), status = VALUES(status), approved = VALUES(approved);
 
 INSERT IGNORE INTO admin_role (id, role_code, role_name, data_scope, status, remark) VALUES
 (1, 'SUPER_ADMIN', '超级管理员', 4, 1, '全部权限'),
@@ -624,3 +666,29 @@ INSERT IGNORE INTO kb_chunk_strategy (id, kb_id, chunk_size, chunk_overlap, spli
 (1, NULL, 512, 64, 'recursive', 1),
 (2, NULL, 1024, 128, 'semantic', 1),
 (3, NULL, 256, 32, 'sentence', 1);
+
+-- 系统公告（4条）
+INSERT IGNORE INTO sys_announcement (id, title, content, type, priority, status, published_at, created_by) VALUES
+(1, '法律AI助手系统正式上线', '欢迎使用法律AI助手系统，本系统提供智能法律咨询、文书生成、案件分析等功能。如有疑问请联系管理员。', 1, 0, 1, NOW(), 'admin'),
+(2, '系统功能更新通知 v2.1', '本次更新：1) 新增前端用户注册审核功能；2) 优化审计日志查看体验；3) 修复若干已知问题。', 2, 0, 1, NOW(), 'admin'),
+(3, '数据备份通知', '系统将于每周日凌晨2:00-6:00进行数据备份，届时系统服务可能短暂中断，请提前做好准备。', 3, 1, 1, NOW(), 'admin'),
+(4, '账户安全提醒', '请勿将账户密码告知他人，定期更换密码。如发现异常登录请立即联系管理员。', 4, 1, 1, NOW(), 'admin');
+
+-- 合同审查记录表
+CREATE TABLE IF NOT EXISTS contract_review (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    review_uuid     VARCHAR(64) NOT NULL UNIQUE COMMENT '审查记录UUID',
+    user_id         BIGINT COMMENT '用户ID',
+    username        VARCHAR(64),
+    file_name       VARCHAR(255),
+    file_size       BIGINT,
+    review_type     VARCHAR(32) COMMENT 'risk_detection/full_review',
+    risk_level      VARCHAR(20) COMMENT 'low/medium/high/critical',
+    risk_count      INT DEFAULT 0,
+    summary         TEXT,
+    risk_details    LONGTEXT COMMENT 'JSON格式的风险点列表',
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user (user_id),
+    INDEX idx_risk_level (risk_level),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='合同审查记录';

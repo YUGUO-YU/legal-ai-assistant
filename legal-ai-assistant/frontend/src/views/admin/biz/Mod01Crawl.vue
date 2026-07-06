@@ -26,9 +26,10 @@
         <el-table-column label="状态" width="90"><template #default="{row}"><el-tag :type="crawlTag(row.status)" size="small">{{crawlLabel(row.status)}}</el-tag></template></el-table-column>
         <el-table-column prop="last_run_at" label="上次执行" width="170" />
         <el-table-column prop="next_run_at" label="下次执行" width="170" />
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{row}">
             <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
+            <el-button link type="warning" size="small" @click="openLogs(row)">查看日志</el-button>
             <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -49,6 +50,34 @@
       </el-form>
       <template #footer><el-button @click="showDialog=false">取消</el-button><el-button type="primary" @click="handleSave">保存</el-button></template>
     </el-dialog>
+
+    <el-drawer v-model="showLogDrawer" :title="'爬虫日志 - ' + (logTask.task_name||'')" size="700px">
+      <el-table :data="logRows" v-loading="logLoading" stripe border max-height="60vh">
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column label="状态" width="90">
+          <template #default="{row}">
+            <el-tag :type="logTag(row.status)" size="small">{{ row.status }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="抓取结果" width="140">
+          <template #default="{row}">
+            <span class="text-success">{{ row.success_count||0 }}</span> /
+            <span class="text-danger">{{ row.fail_count||0 }}</span> /
+            <span>{{ row.total_fetched||0 }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="duration_seconds" label="耗时(秒)" width="90" />
+        <el-table-column prop="started_at" label="开始时间" width="160" />
+        <el-table-column prop="finished_at" label="结束时间" width="160" />
+        <el-table-column label="错误信息" min-width="120">
+          <template #default="{row}">
+            <span v-if="row.error_message" class="text-danger">{{ row.error_message }}</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-pagination v-model:current-page="logPage" v-model:page-size="logPageSize" :total="logTotal" layout="total,sizes,prev,pager,next" :page-sizes="[10,20,50]" class="pager" @change="loadLogs" />
+    </el-drawer>
   </div>
 </template>
 
@@ -57,13 +86,33 @@ import {ref,reactive,computed,watch,onMounted} from 'vue'
 import {Refresh} from '@element-plus/icons-vue'
 import {ElMessage,ElMessageBox} from 'element-plus'
 import api from '../../../api'
+const API_CREATE='/admin/crawl_task/create'
+const API_UPDATE=(id)=>`/admin/crawl_task/${id}/update`
+const API_DELETE=(id)=>`/admin/crawl_task/${id}/delete`
 const rows=ref([]);const total=ref(0);const loading=ref(false);const page=ref(1);const pageSize=ref(20)
 const filter=reactive({status:''});const showDialog=ref(false)
-const form=reactive({id:null,task_name:'',source:'官方网站',crawl_type:'full',target_url:'',cron_expression:'0 2 * * *',config:'{}',status:0})
+const form=reactive({id:null,task_name:'',source:'官方网站',crawl_type:'full',target_url:'',cron_expression:'0 2 * *',config:'{}',status:0})
 const sources=['官方网站','裁判文书网','政府公告','法律法规库','学术期刊']
 const runningCount=computed(()=>rows.value.filter(r=>r.status===1).length)
 function crawlLabel(s){return({0:'待启动',1:'运行中',2:'已完成',3:'失败',4:'暂停'}[s]||s)}
 function crawlTag(s){return({0:'info',1:'warning',2:'success',3:'danger',4:'info'}[s]||'')}
+
+const showLogDrawer=ref(false)
+const logTask=ref({})
+const logRows=ref([]);const logTotal=ref(0);const logLoading=ref(false)
+const logPage=ref(1);const logPageSize=ref(20)
+function logTag(s){return({RUNNING:'warning',SUCCESS:'success',FAILED:'danger',UNKNOWN:'info'}[s]||'')}
+async function loadLogs(){
+  logLoading.value=true
+  try{
+    const res=await api.get('/admin/biz/mod01/crawl-logs',{params:{taskId:logTask.value.id,page:logPage.value,pageSize:logPageSize.value}})
+    logRows.value=res.data?.list||[];logTotal.value=res.data?.total||0
+  }catch(e){logRows.value=[];logTotal.value=0}
+  finally{logLoading.value=false}
+}
+function openLogs(row){
+  logTask.value=row;logPage.value=1;showLogDrawer.value=true;loadLogs()
+}
 async function load(){
   loading.value=true
   try{const res=await api.get('/admin/biz/mod01/crawl-tasks',{params:{page:page.value,pageSize:pageSize.value}});rows.value=res.data?.list||[];total.value=res.data?.total||rows.value.length}catch(e){rows.value=[];total.value=0}finally{loading.value=false}
@@ -73,9 +122,9 @@ function openEdit(row){Object.assign(form,{...row});showDialog.value=true}
 async function handleSave(){
   if(!form.task_name){ElMessage.warning('任务名称必填');return}
   const p={...form};delete p.id
-  try{const res=form.id?await api.post(`/admin/{table}/${form.id}/update`.replace('{table}','crawl_task'),p):await api.post('/admin/{table}/create'.replace('{table}','crawl_task'),p);if(res.data?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else ElMessage.error(res.data?.error||'保存失败')}catch(e){ElMessage.error('保存失败')}
+  try{const res=form.id?await api.post(API_UPDATE(form.id),p):await api.post(API_CREATE,p);if(res.data?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else ElMessage.error(res.data?.error||'保存失败')}catch(e){ElMessage.error('保存失败')}
 }
-async function handleDelete(row){try{await ElMessageBox.confirm(`删除任务「${row.task_name}」？`,'确认',{type:'warning'});await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}','crawl_task'));ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
+async function handleDelete(row){try{await ElMessageBox.confirm(`删除任务「${row.task_name}」？`,'确认',{type:'warning'});await api.post(API_DELETE(row.id));ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
 watch([page,pageSize],load)
 onMounted(load)
 </script>

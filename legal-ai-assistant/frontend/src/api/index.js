@@ -232,6 +232,12 @@ export default {
     vectorize: (data) => withRetry(() => api.post('/admin/data/vectorize', data)),
     importAll: (data) => withRetry(() => api.post('/admin/data/import-all', data))
   },
+  judgmentImport: {
+    preview: (formData) => withRetry(() => api.post('/admin/data-import/judgments/preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })),
+    confirm: (data) => withRetry(() => api.post('/admin/data-import/judgments/confirm', data))
+  },
   lawImport: {
     webSearch: (data) => withRetry(() => api.post('/admin/law-import/web-search', data)),
     upload: (data) => withRetry(() => api.post('/admin/law-import/upload', data)),

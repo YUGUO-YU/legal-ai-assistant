@@ -1,6 +1,7 @@
 package com.legalai.admin.controller;
 
 import com.legalai.admin.service.AdminDataService;
+import com.legalai.admin.service.AlertMonitorService;
 import com.legalai.admin.service.LawCategoryService;
 import com.legalai.dto.ApiResponse;
 import com.legalai.model.LawCategory;
@@ -30,6 +31,9 @@ public class AdminController {
 
     @Autowired
     private LawCategoryService lawCategoryService;
+
+    @Autowired
+    private AlertMonitorService alertMonitorService;
 
     @Autowired(required = false)
     private CacheService cacheService;
@@ -329,6 +333,77 @@ public class AdminController {
         return ApiResponse.success(adminDataService.audit(userId, operation, module, page, pageSize));
     }
 
+    @GetMapping("/infra/search-feedback")
+    public ApiResponse<Map<String, Object>> listSearchFeedback(
+            @RequestParam(required = false) Long articleId,
+            @RequestParam(required = false) Integer isHelpful,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ApiResponse.success(adminDataService.listSearchFeedback(articleId, isHelpful, startDate, endDate, page, pageSize));
+    }
+
+    @GetMapping("/infra/search-feedback/stats")
+    public ApiResponse<Map<String, Object>> searchFeedbackStats(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return ApiResponse.success(adminDataService.searchFeedbackStats(startDate, endDate));
+    }
+
+    @GetMapping("/infra/law-favorites")
+    public ApiResponse<Map<String, Object>> listLawFavorites(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) Long articleId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ApiResponse.success(adminDataService.listLawFavorites(userId, username, articleId, page, pageSize));
+    }
+
+    @DeleteMapping("/infra/law-favorites/{id}")
+    public ApiResponse<Map<String, Object>> deleteLawFavorite(@PathVariable Long id) {
+        return ApiResponse.success(adminDataService.deleteLawFavorite(id));
+    }
+
+    @GetMapping("/infra/law-favorites/stats")
+    public ApiResponse<Map<String, Object>> lawFavoriteStats() {
+        return ApiResponse.success(adminDataService.lawFavoriteStats());
+    }
+
+    @GetMapping(value = "/infra/audit-logs/export", produces = "text/csv")
+    public String exportAuditLogs(
+            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) String operation,
+            @RequestParam(required = false) String module) {
+        recordAudit("EXPORT", "audit_log", null);
+        return adminDataService.exportAuditLogsCsv(userId, operation, module);
+    }
+
+    @GetMapping(value = "/monitor/alert-rules/export", produces = "text/csv")
+    public String exportAlertRules() {
+        recordAudit("EXPORT", "alert_rule", null);
+        return adminDataService.exportAlertRulesCsv();
+    }
+
+    @GetMapping(value = "/monitor/alert-history/export", produces = "text/csv")
+    public String exportAlertHistory() {
+        recordAudit("EXPORT", "alert_history", null);
+        return adminDataService.exportAlertHistoryCsv();
+    }
+
+    @GetMapping(value = "/ops/search-logs/export", produces = "text/csv")
+    public String exportSearchLogs() {
+        recordAudit("EXPORT", "search_log", null);
+        return adminDataService.exportSearchLogsCsv();
+    }
+
+    @GetMapping(value = "/ops/user-feedback/export", produces = "text/csv")
+    public String exportUserFeedback() {
+        recordAudit("EXPORT", "user_feedback", null);
+        return adminDataService.exportUserFeedbackCsv();
+    }
+
     @GetMapping("/infra/frontend-users")
     public ApiResponse<Map<String, Object>> listFrontendUsers(
             @RequestParam(defaultValue = "1") int page,
@@ -365,6 +440,85 @@ public class AdminController {
         return ApiResponse.success(data);
     }
 
+    @GetMapping("/infra/frontend-users/pending")
+    public ApiResponse<Map<String, Object>> listPendingApprovals() {
+        return ApiResponse.success(adminDataService.listPendingApprovals());
+    }
+
+    @PostMapping("/infra/frontend-users/{id}/approve")
+    public ApiResponse<Map<String, Object>> approveFrontendUser(@PathVariable String id) {
+        Map<String, Object> data = adminDataService.approveFrontendUser(id);
+        recordAudit("APPROVE", "frontend_user", id);
+        return ApiResponse.success(data);
+    }
+
+    @PostMapping("/infra/frontend-users/{id}/reject")
+    public ApiResponse<Map<String, Object>> rejectFrontendUser(@PathVariable String id) {
+        Map<String, Object> data = adminDataService.rejectFrontendUser(id);
+        recordAudit("REJECT", "frontend_user", id);
+        return ApiResponse.success(data);
+    }
+
+    @GetMapping("/infra/announcements")
+    public ApiResponse<Map<String, Object>> listAnnouncements(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) String keyword) {
+        return ApiResponse.success(adminDataService.listAnnouncements(page, pageSize, keyword));
+    }
+
+    @PostMapping("/infra/announcements")
+    public ApiResponse<Map<String, Object>> createAnnouncement(@RequestBody Map<String, Object> payload) {
+        Map<String, Object> data = adminDataService.createAnnouncement(payload);
+        recordAudit("CREATE", "announcement", String.valueOf(data.get("id")));
+        return ApiResponse.success(data);
+    }
+
+    @PutMapping("/infra/announcements/{id}")
+    public ApiResponse<Map<String, Object>> updateAnnouncement(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        Map<String, Object> data = adminDataService.updateAnnouncement(id, payload);
+        recordAudit("UPDATE", "announcement", String.valueOf(id));
+        return ApiResponse.success(data);
+    }
+
+    @DeleteMapping("/infra/announcements/{id}")
+    public ApiResponse<Map<String, Object>> deleteAnnouncement(@PathVariable Long id) {
+        Map<String, Object> data = adminDataService.deleteAnnouncement(id);
+        recordAudit("DELETE", "announcement", String.valueOf(id));
+        return ApiResponse.success(data);
+    }
+
+    @GetMapping("/announcements/active")
+    public ApiResponse<Map<String, Object>> listActiveAnnouncements() {
+        return ApiResponse.success(adminDataService.listActiveAnnouncements());
+    }
+
+    @GetMapping("/infra/dicts/list")
+    public ApiResponse<Map<String, Object>> listDicts(@RequestParam(required = false) String dict_type) {
+        return ApiResponse.success(adminDataService.listDicts(dict_type));
+    }
+
+    @PostMapping("/infra/dicts")
+    public ApiResponse<Map<String, Object>> createDict(@RequestBody Map<String, Object> payload) {
+        Map<String, Object> data = adminDataService.createDict(payload);
+        recordAudit("CREATE", "sys_dict", String.valueOf(data.get("id")));
+        return ApiResponse.success(data);
+    }
+
+    @PutMapping("/infra/dicts/{id}")
+    public ApiResponse<Map<String, Object>> updateDict(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        Map<String, Object> data = adminDataService.updateDict(id, payload);
+        recordAudit("UPDATE", "sys_dict", String.valueOf(id));
+        return ApiResponse.success(data);
+    }
+
+    @DeleteMapping("/infra/dicts/{id}")
+    public ApiResponse<Map<String, Object>> deleteDict(@PathVariable Long id) {
+        Map<String, Object> data = adminDataService.deleteDict(id);
+        recordAudit("DELETE", "sys_dict", String.valueOf(id));
+        return ApiResponse.success(data);
+    }
+
     // ============================================================
     // 域 02 数据资产：MOD-01..MOD-10 各模块数据
     // ============================================================
@@ -382,6 +536,34 @@ public class AdminController {
         return ApiResponse.success(adminDataService.listRevisionsByLawId(id));
     }
 
+    @GetMapping("/biz/mod01/law-relations")
+    public ApiResponse<Map<String, Object>> listLawRelations(
+            @RequestParam(required = false) Long sourceArticleId,
+            @RequestParam(required = false) Long targetArticleId,
+            @RequestParam(required = false) String relationType,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ApiResponse.success(adminDataService.listLawRelations(sourceArticleId, targetArticleId, relationType, page, pageSize));
+    }
+
+    @PostMapping("/biz/mod01/law-relations")
+    public ApiResponse<Map<String, Object>> createLawRelation(@RequestBody Map<String, Object> data) {
+        recordAudit("CREATE", "law_relation", null);
+        return ApiResponse.success(adminDataService.createLawRelation(data));
+    }
+
+    @PutMapping("/biz/mod01/law-relations/{id}")
+    public ApiResponse<Map<String, Object>> updateLawRelation(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        recordAudit("UPDATE", "law_relation", String.valueOf(id));
+        return ApiResponse.success(adminDataService.updateLawRelation(id, data));
+    }
+
+    @DeleteMapping("/biz/mod01/law-relations/{id}")
+    public ApiResponse<Map<String, Object>> deleteLawRelation(@PathVariable Long id) {
+        recordAudit("DELETE", "law_relation", String.valueOf(id));
+        return ApiResponse.success(adminDataService.deleteLawRelation(id));
+    }
+
     @GetMapping("/biz/mod01/crawl-tasks")
     public ApiResponse<Map<String, Object>> mod01CrawlTasks(
             @RequestParam(defaultValue = "1") int page,
@@ -389,12 +571,22 @@ public class AdminController {
         return ApiResponse.success(adminDataService.list("crawl_task", null, page, pageSize, null));
     }
 
+    @GetMapping("/biz/mod01/crawl-logs")
+    public ApiResponse<Map<String, Object>> mod01CrawlLogs(
+            @RequestParam Long taskId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ApiResponse.success(adminDataService.listCrawlLogs(taskId, page, pageSize));
+    }
+
     @GetMapping("/biz/mod02/cases")
     public ApiResponse<Map<String, Object>> mod02Cases(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(required = false) String keyword) {
-        return ApiResponse.success(adminDataService.list("tb_case", "MOD-02", page, pageSize, keyword));
+            @RequestParam(required = false) String cause,
+            @RequestParam(required = false) Integer caseType,
+            @RequestParam(required = false) Integer judgment) {
+        return ApiResponse.success(adminDataService.listMod02Cases(page, pageSize, cause, caseType, judgment));
     }
 
     @GetMapping("/biz/mod02/case-elements")
@@ -429,6 +621,11 @@ public class AdminController {
         return ApiResponse.success(adminDataService.list("legal_research_task", "MOD-04", page, pageSize, null));
     }
 
+    @GetMapping("/biz/mod04/research-tasks/{id}")
+    public ApiResponse<Map<String, Object>> mod04TaskDetail(@PathVariable Long id) {
+        return ApiResponse.success(adminDataService.getResearchTask(id));
+    }
+
     @GetMapping("/biz/mod05/company-apis")
     public ApiResponse<Map<String, Object>> mod05CompanyApis() {
         return ApiResponse.success(adminDataService.list("company_api_config", null, 1, 100, null));
@@ -447,6 +644,20 @@ public class AdminController {
     @GetMapping("/biz/mod08/contract-rules")
     public ApiResponse<Map<String, Object>> mod08ContractRules() {
         return ApiResponse.success(adminDataService.list("contract_review_rule", null, 1, 100, null));
+    }
+
+    @GetMapping("/biz/contract-reviews")
+    public ApiResponse<Map<String, Object>> listContractReviews(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String riskLevel,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ApiResponse.success(adminDataService.listContractReviews(userId, riskLevel, page, pageSize));
+    }
+
+    @GetMapping("/biz/contract-reviews/{id}")
+    public ApiResponse<Map<String, Object>> getContractReview(@PathVariable Long id) {
+        return ApiResponse.success(adminDataService.getContractReview(id));
     }
 
     @GetMapping("/biz/mod09/kb-bases")
@@ -492,6 +703,11 @@ public class AdminController {
         return ApiResponse.success(adminDataService.list("llm_model_config", null, 1, 50, null));
     }
 
+    @GetMapping("/ai/llm-models/summary")
+    public ApiResponse<Map<String, Object>> llmModelsSummary() {
+        return ApiResponse.success(adminDataService.llmModelsSummary());
+    }
+
     @PostMapping("/ai/llm-models/{id}/set-active")
     public ApiResponse<Map<String, Object>> setActiveModel(@PathVariable Long id) {
         boolean ok = adminDataService.setActiveModel(id);
@@ -514,11 +730,46 @@ public class AdminController {
         return ApiResponse.error(500, "更新失败");
     }
 
+    @PostMapping("/ai/llm-models")
+    public ApiResponse<Map<String, Object>> createModelConfig(@RequestBody Map<String, Object> payload) {
+        Map<String, Object> data = adminDataService.createModelConfig(payload);
+        recordAudit("CREATE", "llm_model_config", String.valueOf(data.get("id")));
+        return ApiResponse.success(data);
+    }
+
+    @PutMapping("/ai/llm-models/{id}")
+    public ApiResponse<Map<String, Object>> updateModelConfig(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        Map<String, Object> data = adminDataService.updateModelConfig(id, payload);
+        recordAudit("UPDATE", "llm_model_config", String.valueOf(id));
+        return ApiResponse.success(data);
+    }
+
+    @DeleteMapping("/ai/llm-models/{id}")
+    public ApiResponse<Map<String, Object>> deleteModelConfig(@PathVariable Long id) {
+        Map<String, Object> data = adminDataService.deleteModelConfig(id);
+        recordAudit("DELETE", "llm_model_config", String.valueOf(id));
+        return ApiResponse.success(data);
+    }
+
     @GetMapping("/ai/token-usage")
     public ApiResponse<Map<String, Object>> tokenUsage(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize) {
         return ApiResponse.success(adminDataService.list("llm_token_usage", null, page, pageSize, null));
+    }
+
+    @GetMapping("/ai/kb-chunks")
+    public ApiResponse<Map<String, Object>> listKbChunks(
+            @RequestParam(required = false) Long kbId,
+            @RequestParam(required = false) String fileName,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ApiResponse.success(adminDataService.listKbChunks(kbId, fileName, page, pageSize));
+    }
+
+    @GetMapping("/ai/kb-chunks/stats")
+    public ApiResponse<Map<String, Object>> kbChunksStats() {
+        return ApiResponse.success(adminDataService.kbChunksStats());
     }
 
     // ============================================================
@@ -530,6 +781,14 @@ public class AdminController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize) {
         return ApiResponse.success(adminDataService.list("user_feedback", null, page, pageSize, null));
+    }
+
+    @PostMapping("/ops/user-feedback/{id}/update")
+    public ApiResponse<Map<String, Object>> updateUserFeedback(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> data) {
+        recordAudit("UPDATE", "user_feedback", String.valueOf(id));
+        return ApiResponse.success(adminDataService.updateUserFeedback(id, data));
     }
 
     @GetMapping("/ops/search-logs")
@@ -546,11 +805,47 @@ public class AdminController {
         return ApiResponse.success(adminDataService.list("alert_rule", null, 1, 100, null));
     }
 
+    @PostMapping("/monitor/alert-rules")
+    public ApiResponse<Map<String, Object>> createAlertRule(@RequestBody Map<String, Object> data) {
+        recordAudit("CREATE", "alert_rule", null);
+        return ApiResponse.success(adminDataService.createAlertRule(data));
+    }
+
+    @PutMapping("/monitor/alert-rules/{id}")
+    public ApiResponse<Map<String, Object>> updateAlertRule(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        recordAudit("UPDATE", "alert_rule", String.valueOf(id));
+        return ApiResponse.success(adminDataService.updateAlertRule(id, data));
+    }
+
+    @DeleteMapping("/monitor/alert-rules/{id}")
+    public ApiResponse<Map<String, Object>> deleteAlertRule(@PathVariable Long id) {
+        recordAudit("DELETE", "alert_rule", String.valueOf(id));
+        return ApiResponse.success(adminDataService.deleteAlertRule(id));
+    }
+
+    @PostMapping("/monitor/alert-rules/{id}/toggle")
+    public ApiResponse<Map<String, Object>> toggleAlertRule(@PathVariable Long id) {
+        recordAudit("TOGGLE", "alert_rule", String.valueOf(id));
+        return ApiResponse.success(adminDataService.toggleAlertRule(id));
+    }
+
     @GetMapping("/monitor/alert-history")
     public ApiResponse<Map<String, Object>> alertHistory(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize) {
         return ApiResponse.success(adminDataService.list("alert_history", null, page, pageSize, null));
+    }
+
+    @GetMapping("/alert_history/list")
+    public ApiResponse<Map<String, Object>> alertHistoryList(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ApiResponse.success(adminDataService.list("alert_history", null, page, pageSize, null));
+    }
+
+    @PostMapping("/monitor/alert-check")
+    public ApiResponse<Map<String, Object>> triggerAlertCheck() {
+        return ApiResponse.success(alertMonitorService.checkAlerts());
     }
 
     // ============================================================
@@ -634,6 +929,11 @@ public class AdminController {
             result.put("message", "Redis 连接失败: " + e.getMessage());
         }
         return ApiResponse.success(result);
+    }
+
+    @GetMapping("/infra/es-health")
+    public ApiResponse<Map<String, Object>> esHealth() {
+        return ApiResponse.success(adminDataService.esHealth());
     }
 
     @GetMapping("/health")

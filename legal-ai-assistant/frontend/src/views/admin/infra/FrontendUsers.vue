@@ -6,12 +6,16 @@
         <p>基础设施域 · 前端注册用户账号管理</p>
       </div>
       <div class="header-actions">
+        <el-badge :value="pendingCount" :hidden="pendingCount === 0" type="warning">
+          <el-button @click="switchTab('pending')">待审核 {{ pendingCount > 0 ? `(${pendingCount})` : '' }}</el-button>
+        </el-badge>
+        <el-button @click="switchTab('all')">全部用户</el-button>
         <el-button :icon="Refresh" @click="load">刷新</el-button>
         <el-button type="primary" @click="openCreate">新增用户</el-button>
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="filter-card" v-if="activeTab === 'all'">
       <el-form inline>
         <el-form-item label="关键词">
           <el-input v-model="filter.keyword" placeholder="用户名/姓名/邮箱/手机" clearable style="width:220px" @keyup.enter="load" />
@@ -29,13 +33,18 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <el-card v-if="activeTab === 'all'">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="用户ID" width="160" show-overflow-tooltip />
         <el-table-column prop="username" label="用户名" min-width="130" />
         <el-table-column prop="real_name" label="姓名" width="120" />
         <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
         <el-table-column prop="phone" label="手机" width="130" />
+        <el-table-column label="审核状态" width="100">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.approved === 1 ? 'success' : 'warning'">{{ row.approved === 1 ? '已审核' : '待审核' }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
             <el-tag size="small" :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag>
@@ -66,6 +75,31 @@
           :current-page="currentPage"
           @current-change="handlePageChange"
         />
+      </div>
+    </el-card>
+
+    <el-card v-if="activeTab === 'pending'">
+      <template #header>
+        <div class="card-header">
+          <span>待审核注册申请</span>
+          <el-button link type="primary" @click="loadPending">刷新</el-button>
+        </div>
+      </template>
+      <el-table :data="pendingRows" v-loading="pendingLoading" stripe border>
+        <el-table-column prop="username" label="用户名" min-width="130" />
+        <el-table-column prop="real_name" label="姓名" width="120" />
+        <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="phone" label="手机" width="130" />
+        <el-table-column prop="created_at" label="申请时间" width="170" />
+        <el-table-column label="操作" width="180" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="success" size="small" @click="approveUser(row)">通过</el-button>
+            <el-button link type="danger" size="small" @click="rejectUser(row)">拒绝</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div v-if="pendingRows.length === 0 && !pendingLoading" class="empty-tip">
+        <p>暂无待审核申请</p>
       </div>
     </el-card>
 
@@ -128,6 +162,10 @@ const loading = ref(false)
 const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(20)
+const activeTab = ref('all')
+const pendingRows = ref([])
+const pendingLoading = ref(false)
+const pendingCount = ref(0)
 const filter = reactive({ keyword: '', status: '' })
 const showDialog = ref(false)
 const form = reactive({ id: '', username: '', password: '', real_name: '', email: '', phone: '', status: 1 })
@@ -150,6 +188,45 @@ async function load() {
     ElMessage.error('加载失败，请检查数据库连接')
   }
   finally { loading.value = false }
+}
+
+async function loadPending() {
+  pendingLoading.value = true
+  try {
+    const res = await api.get('/admin/infra/frontend-users/pending')
+    pendingRows.value = res.data?.list || []
+    pendingCount.value = pendingRows.value.length
+  } catch (e) {
+    pendingRows.value = []
+    pendingCount.value = 0
+  }
+  finally { pendingLoading.value = false }
+}
+
+function switchTab(tab) {
+  activeTab.value = tab
+  if (tab === 'pending') {
+    loadPending()
+  }
+}
+
+async function approveUser(row) {
+  try {
+    await ElMessageBox.confirm(`通过用户「${row.username}」的注册申请？`, '确认通过', { type: 'success' })
+    await api.post('/admin/infra/frontend-users/' + row.id + '/approve')
+    ElMessage.success('已通过')
+    loadPending()
+    load()
+  } catch (e) { if (e !== 'cancel') ElMessage.error('操作失败') }
+}
+
+async function rejectUser(row) {
+  try {
+    await ElMessageBox.confirm(`拒绝用户「${row.username}」的注册申请？此操作将删除该申请！`, '确认拒绝', { type: 'warning' })
+    await api.post('/admin/infra/frontend-users/' + row.id + '/reject')
+    ElMessage.success('已拒绝')
+    loadPending()
+  } catch (e) { if (e !== 'cancel') ElMessage.error('操作失败') }
 }
 
 function openCreate() {
@@ -190,11 +267,13 @@ async function handleDelete(row) {
 }
 
 async function toggleUser(row) {
+  const action = row.status === 1 ? '停用' : '启用'
   try {
+    await ElMessageBox.confirm(`确定要${action}用户「${row.username}（${row.real_name}）」？${action === '停用' ? '停用后该用户将无法登录。' : '启用后该用户将恢复登录权限。'}`, `确认${action}`, { type: 'warning' })
     await api.post('/admin/infra/frontend-users/' + row.id + '/toggle')
     row.status = row.status === 1 ? 0 : 1
     ElMessage.success(row.status === 1 ? '已启用' : '已停用')
-  } catch (e) { ElMessage.error('操作失败') }
+  } catch (e) { if (e !== 'cancel') ElMessage.error('操作失败') }
 }
 
 function handlePageChange(page) {
@@ -203,7 +282,7 @@ function handlePageChange(page) {
 }
 
 function reset() { filter.keyword = ''; filter.status = ''; currentPage.value = 1; load() }
-onMounted(load)
+onMounted(() => { load(); loadPending() })
 </script>
 
 <style lang="scss" scoped>
@@ -216,4 +295,6 @@ onMounted(load)
 .filter-card { margin-bottom: 16px; }
 .login-ip { font-size:11px; color:#94a3b8; margin-top:2px; }
 .pagination-wrap { margin-top: 16px; display: flex; justify-content: flex-end; }
+.card-header { display:flex; justify-content:space-between; align-items:center; }
+.empty-tip { padding: 40px 0; text-align: center; color: #94a3b8; }
 </style>

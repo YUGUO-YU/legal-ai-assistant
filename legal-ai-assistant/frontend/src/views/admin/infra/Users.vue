@@ -32,6 +32,13 @@
 
     <el-card>
       <el-table :data="rows" v-loading="loading" stripe border>
+        <template #empty>
+          <div class="empty-tip">
+            <el-icon :size="48"><Document /></el-icon>
+            <p v-if="loadError">{{ loadError }}</p>
+            <p v-else>暂无数据</p>
+          </div>
+        </template>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="username" label="用户名" min-width="130" />
         <el-table-column prop="real_name" label="姓名" width="120" />
@@ -60,7 +67,7 @@
             <el-button link type="warning" size="small" @click="openAssignRoles(row)">分配角色</el-button>
             <el-button link :type="row.status === 1 ? 'warning' : 'success'" size="small" @click="toggleUser(row)">{{ row.status === 1 ? '停用' : '启用' }}</el-button>
             <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
-          </template>
+          </el-table-column>
         </el-table-column>
       </el-table>
     </el-card>
@@ -137,12 +144,13 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { Refresh } from '@element-plus/icons-vue'
+import { Refresh, Document } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../../api'
 
 const rows = ref([])
 const loading = ref(false)
+const loadError = ref('')
 const filter = reactive({ keyword: '', status: '' })
 const showDialog = ref(false)
 const showRoleDialog = ref(false)
@@ -155,18 +163,21 @@ function statusTag(s) { return ({ 1: 'success', 0: 'info', 2: 'danger' }[s] || '
 
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
     const res = await api.get('/admin/infra/users', { params: { ...filter } })
     if (res.data?.error) {
-      ElMessage.error('加载失败: ' + res.data.error)
+      loadError.value = '数据加载失败: ' + res.data.error
       if (res.data.errorType === 'table_not_found') {
-        ElMessage.warning('数据库未初始化，请联系管理员执行数据库初始化脚本')
+        loadError.value = '数据库表未初始化，请联系管理员执行数据库初始化脚本'
       }
+      rows.value = []
+    } else {
+      rows.value = res.data?.list || []
     }
-    rows.value = res.data?.list || []
   } catch (e) {
     rows.value = []
-    ElMessage.error('加载失败，请检查数据库连接')
+    loadError.value = '网络错误，无法加载数据'
   }
   finally { loading.value = false }
 }
@@ -209,12 +220,14 @@ async function handleDelete(row) {
 }
 
 async function toggleUser(row) {
+  const action = row.status === 1 ? '停用' : '启用'
   try {
+    await ElMessageBox.confirm(`确定要${action}用户「${row.username}（${row.real_name}）」？${action === '停用' ? '停用后该用户将无法登录。' : '启用后该用户将恢复登录权限。'}`, `确认${action}`, { type: 'warning' })
     const newStatus = row.status === 1 ? 0 : 1
     await api.post(`/admin/{table}/${row.id}/toggle`.replace('{table}', 'admin_user'), { status: newStatus })
     row.status = newStatus
     ElMessage.success(statusLabel(newStatus))
-  } catch (e) { ElMessage.error('操作失败') }
+  } catch (e) { if (e !== 'cancel') ElMessage.error('操作失败') }
 }
 
 async function openAssignRoles(row) {
@@ -262,4 +275,11 @@ onMounted(load)
 .header-actions { display:flex; gap:8px; align-items:center; }
 .filter-card { margin-bottom: 16px; }
 .login-ip { font-size:11px; color:#94a3b8; margin-top:2px; }
+.empty-tip {
+  padding: 40px 0;
+  text-align: center;
+  color: #94a3b8;
+  .el-icon { color: #cbd5e1; }
+  p { margin: 12px 0 0; font-size: 14px; }
+}
 </style>

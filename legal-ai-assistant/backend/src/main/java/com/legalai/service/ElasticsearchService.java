@@ -175,6 +175,27 @@ public class ElasticsearchService {
         }
     }
 
+    public Map<String, Object> getClusterHealth() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (client.orElse(null) == null || !esConfig.isEnabled()) {
+            result.put("status", "unavailable");
+            return result;
+        }
+
+        try {
+            var response = client.get().cluster().health();
+            result.put("status", response.status().jsonValue());
+            result.put("clusterName", response.clusterName());
+            result.put("numberOfNodes", response.numberOfNodes());
+            result.put("activeShards", response.activeShards());
+            result.put("activePrimaryShards", response.activePrimaryShards());
+        } catch (Exception e) {
+            log.warn("Elasticsearch cluster health check failed: {}", e.getMessage());
+            result.put("status", "unavailable");
+        }
+        return result;
+    }
+
     public record LawArticleDocument(
             String articleId,
             String lawId,

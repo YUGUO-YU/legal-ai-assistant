@@ -139,7 +139,7 @@ function reset() { filter.keyword = ''; filterStatus.value = 'all'; filter.page 
 
 async function openDetail(row) {
   try {
-    const res = await api.get(`/admin/{table}/${row.id}`.replace('{table}', 'document_draft'))
+    const res = await api.get(`/admin/doc_draft/${row.id}`)
     detail.value = res.data?.data || row
     showDetail.value = true
   } catch (e) {

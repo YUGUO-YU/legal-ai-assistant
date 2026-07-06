@@ -162,19 +162,17 @@ async function handleDelete(row) {
 }
 
 async function handleRefreshCache() {
-  refreshing.value = true
   try {
+    await ElMessageBox.confirm('此操作将清除所有系统缓存，可能导致短暂性能下降，是否确认刷新？', '确认刷新缓存', { type: 'warning', confirmButtonText: '确认刷新', cancelButtonText: '取消' })
+    refreshing.value = true
     const res = await api.post('/admin/sys/cache/refresh')
     if (res.data?.ok) {
       ElMessage.success(res.data?.message || '缓存已刷新')
     } else {
       ElMessage.error(res.data?.error || '刷新失败')
     }
-  } catch (e) {
-    ElMessage.error('刷新失败')
-  } finally {
-    refreshing.value = false
-  }
+  } catch (e) { if (e !== 'cancel') ElMessage.error('刷新失败') }
+  finally { refreshing.value = false }
 }
 
 onMounted(load)

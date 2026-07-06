@@ -10,6 +10,7 @@
           未解决 {{ activeCount }}
         </el-tag>
         <el-button :icon="Refresh" @click="load">刷新</el-button>
+        <el-button type="success" @click="handleExport" :loading="exporting">导出</el-button>
       </div>
     </div>
 
@@ -91,6 +92,7 @@ import api from '../../../api'
 const rows = ref([])
 const total = ref(0)
 const loading = ref(false)
+const exporting = ref(false)
 const filter = reactive({ page: 1, pageSize: 20, notify: null, level: null })
 const activeFilter = ref('all')
 
@@ -159,6 +161,27 @@ async function handleResolve(row) {
     }
   } catch (e) {
     if (e !== 'cancel') ElMessage.error('操作失败：' + (e.message || ''))
+  }
+}
+
+async function handleExport() {
+  exporting.value = true
+  try {
+    const res = await fetch('/api/admin/monitor/alert-history/export', {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    })
+    const text = await res.text()
+    const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'alert-history-' + new Date().toISOString().slice(0, 10) + '.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
   }
 }
 

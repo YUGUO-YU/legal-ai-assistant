@@ -22,7 +22,7 @@
     </el-card>
 
     <el-card>
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <el-table :data="rows" v-loading="loading" stripe border @row-click="openDetail">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="user_id" label="用户ID" width="100" />
         <el-table-column prop="username" label="用户" width="120" />
@@ -31,7 +31,6 @@
         <el-table-column prop="biz_type" label="对象类型" width="160" />
         <el-table-column prop="biz_id" label="对象ID" width="140" />
         <el-table-column prop="request_method" label="方法" width="80" />
-        <el-table-column prop="request_url" label="URL" width="240" show-overflow-tooltip />
         <el-table-column prop="ip" label="IP" width="140" />
         <el-table-column prop="duration_ms" label="耗时ms" width="90" />
         <el-table-column prop="status" label="状态" width="80">
@@ -40,6 +39,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="时间" width="170" />
+        <el-table-column label="操作" width="80" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click.stop="openDetail(row)">详情</el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <el-pagination
         v-model:current-page="filter.page"
@@ -52,6 +56,32 @@
         @size-change="load"
       />
     </el-card>
+
+    <el-dialog v-model="showDetail" title="审计日志详情" width="700px">
+      <el-descriptions :column="2" border v-if="currentRow">
+        <el-descriptions-item label="ID">{{ currentRow.id }}</el-descriptions-item>
+        <el-descriptions-item label="用户">{{ currentRow.username }} ({{ currentRow.user_id }})</el-descriptions-item>
+        <el-descriptions-item label="操作">{{ currentRow.operation }}</el-descriptions-item>
+        <el-descriptions-item label="模块">{{ currentRow.biz_module }}</el-descriptions-item>
+        <el-descriptions-item label="对象类型">{{ currentRow.biz_type }}</el-descriptions-item>
+        <el-descriptions-item label="对象ID">{{ currentRow.biz_id }}</el-descriptions-item>
+        <el-descriptions-item label="请求方法">{{ currentRow.request_method }}</el-descriptions-item>
+        <el-descriptions-item label="耗时">{{ currentRow.duration_ms }} ms</el-descriptions-item>
+        <el-descriptions-item label="IP" :span="2">{{ currentRow.ip }}</el-descriptions-item>
+        <el-descriptions-item label="请求URL" :span="2">{{ currentRow.request_url }}</el-descriptions-item>
+        <el-descriptions-item label="请求参数" :span="2">
+          <pre class="json-pre">{{ currentRow.request_params || '-' }}</pre>
+        </el-descriptions-item>
+        <el-descriptions-item label="响应结果" :span="2">
+          <pre class="json-pre">{{ currentRow.response_result || '-' }}</pre>
+        </el-descriptions-item>
+        <el-descriptions-item label="错误信息" :span="2" v-if="currentRow.error_msg">
+          <span style="color: #ef4444">{{ currentRow.error_msg }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="Trace ID">{{ currentRow.trace_id || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="时间">{{ currentRow.created_at }}</el-descriptions-item>
+      </el-descriptions>
+    </el-dialog>
   </div>
 </template>
 
@@ -64,9 +94,16 @@ const rows = ref([])
 const total = ref(0)
 const loading = ref(false)
 const exporting = ref(false)
+const showDetail = ref(false)
+const currentRow = ref(null)
 const filter = reactive({ page: 1, pageSize: 20, userId: '', operation: '', module: '' })
 const operations = ['CREATE', 'UPDATE', 'DELETE', 'EXPORT', 'LOGIN', 'AUDIT', 'LIST', 'DETAIL']
 const modules = ['MOD-01', 'MOD-02', 'MOD-03', 'MOD-04', 'MOD-05', 'MOD-06', 'MOD-07', 'MOD-08', 'MOD-09', 'MOD-10', 'ADMIN']
+
+function openDetail(row) {
+  currentRow.value = row
+  showDetail.value = true
+}
 
 async function load() {
   loading.value = true
@@ -90,29 +127,29 @@ function reset() {
   filter.page = 1; load()
 }
 
-function exportData() {
+async function exportData() {
   exporting.value = true
-  const headers = ['ID', '用户ID', '用户名', '操作', '模块', '对象类型', '对象ID', '方法', 'URL', 'IP', '耗时ms', '状态', '时间']
-  const fields = ['id', 'user_id', 'username', 'operation', 'biz_module', 'biz_type', 'biz_id', 'request_method', 'request_url', 'ip', 'duration_ms', 'status', 'created_at']
-  const csv = [headers.join(',')]
-  for (const row of rows.value) {
-    const values = fields.map(f => {
-      let v = row[f] == null ? '' : String(row[f])
-      if (v.includes(',') || v.includes('"') || v.includes('\n')) {
-        v = '"' + v.replace(/"/g, '""') + '"'
-      }
-      return v
+  try {
+    const params = new URLSearchParams()
+    if (filter.userId) params.append('userId', filter.userId)
+    if (filter.operation) params.append('operation', filter.operation)
+    if (filter.module) params.append('module', filter.module)
+    const res = await fetch('/api/admin/infra/audit-logs/export?' + params.toString(), {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
     })
-    csv.push(values.join(','))
+    const text = await res.text()
+    const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'audit_logs_' + new Date().toISOString().slice(0, 10) + '.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
   }
-  const blob = new Blob(['\ufeff' + csv.join('\n')], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'audit_logs_' + new Date().toISOString().slice(0, 10) + '.csv'
-  a.click()
-  URL.revokeObjectURL(url)
-  exporting.value = false
 }
 
 onMounted(load)
@@ -126,4 +163,15 @@ onMounted(load)
 .header-content p { margin: 0; color: #64748b; font-size: 13px; }
 .filter-card { margin-bottom: 16px; }
 .pager { margin-top: 16px; justify-content: flex-end; display: flex; }
+.json-pre {
+  margin: 0;
+  padding: 8px;
+  background: #f8fafc;
+  border-radius: 4px;
+  font-size: 12px;
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
 </style>

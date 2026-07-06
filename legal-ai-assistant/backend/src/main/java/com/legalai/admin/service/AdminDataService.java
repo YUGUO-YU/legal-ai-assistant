@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,9 @@ public class AdminDataService {
 
     @Autowired(required = false)
     private MilvusService milvusService;
+
+    @Autowired(required = false)
+    private com.legalai.service.ElasticsearchService elasticsearchService;
 
     public JdbcTemplate jdbc() {
         return jdbc;
@@ -105,6 +109,49 @@ public class AdminDataService {
         return result;
     }
 
+    public Map<String, Object> listMod02Cases(int page, int pageSize, String cause, Integer caseType, Integer judgment) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1 AND biz_module = 'MOD-02' ");
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (cause != null && !cause.isEmpty()) {
+                where.append(" AND case_cause LIKE ? ");
+                args.add("%" + cause + "%");
+            }
+            if (caseType != null) {
+                where.append(" AND case_type = ? ");
+                args.add(caseType);
+            }
+            if (judgment != null) {
+                where.append(" AND judgment_result = ? ");
+                args.add(judgment);
+            }
+
+            Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM tb_case" + where, Integer.class, args.toArray());
+            int offset = Math.max(0, (page - 1) * pageSize);
+
+            StringBuilder q = new StringBuilder("SELECT * FROM tb_case").append(where);
+            q.append(" ORDER BY id DESC LIMIT ? OFFSET ?");
+            args.add(pageSize);
+            args.add(offset);
+            List<Map<String, Object>> rows = jdbc.queryForList(q.toString(), args.toArray());
+
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] listMod02Cases 失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
     public Map<String, Object> listRevisionsByLawId(Long lawId) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
@@ -121,6 +168,169 @@ public class AdminDataService {
             result.put("page", 1);
             result.put("pageSize", 0);
             result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> listLawRelations(Long sourceArticleId, Long targetArticleId, String relationType, int page, int pageSize) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (sourceArticleId != null) {
+                where.append(" AND lr.source_article_id = ? ");
+                args.add(sourceArticleId);
+            }
+            if (targetArticleId != null) {
+                where.append(" AND lr.target_article_id = ? ");
+                args.add(targetArticleId);
+            }
+            if (relationType != null && !relationType.isEmpty()) {
+                where.append(" AND lr.relation_type = ? ");
+                args.add(relationType);
+            }
+
+            StringBuilder countSql = new StringBuilder("SELECT COUNT(*) FROM law_relation lr ");
+            countSql.append(where);
+
+            Integer total = jdbc.queryForObject(countSql.toString(), Integer.class, args.toArray());
+            int offset = Math.max(0, (page - 1) * pageSize);
+
+            StringBuilder q = new StringBuilder();
+            q.append("SELECT lr.id, lr.source_article_id, lr.target_article_id, lr.relation_type, lr.weight, lr.created_at, ");
+            q.append("src.title AS source_article_title, tgt.title AS target_article_title ");
+            q.append("FROM law_relation lr ");
+            q.append("LEFT JOIN law_document src ON lr.source_article_id = src.id ");
+            q.append("LEFT JOIN law_document tgt ON lr.target_article_id = tgt.id ");
+            q.append(where);
+            q.append(" ORDER BY lr.id DESC LIMIT ? OFFSET ?");
+            args.add(pageSize);
+            args.add(offset);
+
+            List<Map<String, Object>> rows = jdbc.queryForList(q.toString(), args.toArray());
+
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 法规关联列表查询失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> createLawRelation(Map<String, Object> data) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (data == null || data.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "数据为空");
+            return result;
+        }
+        Long sourceArticleId = data.get("sourceArticleId") != null ? ((Number) data.get("sourceArticleId")).longValue() : null;
+        Long targetArticleId = data.get("targetArticleId") != null ? ((Number) data.get("targetArticleId")).longValue() : null;
+        String relationType = (String) data.get("relationType");
+        BigDecimal weight = data.get("weight") != null ? new BigDecimal(data.get("weight").toString()) : new BigDecimal("1.0");
+
+        if (sourceArticleId == null || targetArticleId == null) {
+            result.put("ok", false);
+            result.put("error", "来源条款ID和目标条款ID不能为空");
+            return result;
+        }
+        if (sourceArticleId.equals(targetArticleId)) {
+            result.put("ok", false);
+            result.put("error", "来源条款和目标条款不能相同");
+            return result;
+        }
+        if (weight.compareTo(new BigDecimal("0.01")) < 0 || weight.compareTo(new BigDecimal("10.00")) > 0) {
+            result.put("ok", false);
+            result.put("error", "权重范围为0.01-10.00");
+            return result;
+        }
+        try {
+            String sql = "INSERT INTO law_relation (source_article_id, target_article_id, relation_type, weight) VALUES (?, ?, ?, ?)";
+            jdbc.update(sql, sourceArticleId, targetArticleId, relationType, weight);
+            List<Map<String, Object>> ids = jdbc.queryForList("SELECT LAST_INSERT_ID() as id");
+            Long id = ids.isEmpty() ? null : (Long) ids.get(0).get("id");
+            result.put("ok", true);
+            result.put("id", id);
+            log.info("创建法规关联: id={}, source={}, target={}, type={}", id, sourceArticleId, targetArticleId, relationType);
+        } catch (Exception e) {
+            if (e.getMessage() != null && e.getMessage().contains("Duplicate entry")) {
+                result.put("ok", false);
+                result.put("error", "该关联关系已存在");
+            } else {
+                log.warn("[Admin] 创建法规关联失败: {}", e.getMessage());
+                result.put("ok", false);
+                result.put("error", e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    public Map<String, Object> updateLawRelation(Long id, Map<String, Object> data) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (data == null || data.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "数据为空");
+            return result;
+        }
+        try {
+            var rows = jdbc.queryForList("SELECT id FROM law_relation WHERE id = ?", id);
+            if (rows.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "关联记录不存在");
+                return result;
+            }
+            java.util.List<String> sets = new java.util.ArrayList<>();
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (data.containsKey("relationType")) {
+                sets.add("relation_type = ?");
+                args.add(data.get("relationType"));
+            }
+            if (data.containsKey("weight")) {
+                BigDecimal weight = new BigDecimal(data.get("weight").toString());
+                if (weight.compareTo(new BigDecimal("0.01")) < 0 || weight.compareTo(new BigDecimal("10.00")) > 0) {
+                    result.put("ok", false);
+                    result.put("error", "权重范围为0.01-10.00");
+                    return result;
+                }
+                sets.add("weight = ?");
+                args.add(weight);
+            }
+            if (sets.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "没有需要更新的字段");
+                return result;
+            }
+            args.add(id);
+            jdbc.update("UPDATE law_relation SET " + String.join(", ", sets) + " WHERE id = ?", args.toArray());
+            result.put("ok", true);
+            log.info("更新法规关联 id={}", id);
+        } catch (Exception e) {
+            log.warn("[Admin] 更新法规关联失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> deleteLawRelation(Long id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            int n = jdbc.update("DELETE FROM law_relation WHERE id = ?", id);
+            result.put("ok", n > 0);
+            if (n == 0) result.put("error", "关联记录不存在");
+            log.info("删除法规关联 id={}, affected={}", id, n);
+        } catch (Exception e) {
+            log.warn("[Admin] 删除法规关联失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
             result.put("error", e.getMessage());
         }
         return result;
@@ -191,6 +401,16 @@ public class AdminDataService {
             int offset = Math.max(0, (page - 1) * pageSize);
             args.add(pageSize); args.add(offset);
             List<Map<String, Object>> rows = jdbc.queryForList("SELECT * FROM admin_audit_log" + where + " ORDER BY id DESC LIMIT ? OFFSET ?", args.toArray());
+            for (Map<String, Object> row : rows) {
+                Object responseResult = row.get("response_result");
+                if (responseResult != null) {
+                    row.put("response_result", maskSensitiveData(String.valueOf(responseResult)));
+                }
+                Object requestParams = row.get("request_params");
+                if (requestParams != null) {
+                    row.put("request_params", maskSensitiveData(String.valueOf(requestParams)));
+                }
+            }
             result.put("total", total == null ? 0 : total);
             result.put("list", rows);
         } catch (Exception e) {
@@ -201,18 +421,203 @@ public class AdminDataService {
         return result;
     }
 
+    public String exportAuditLogsCsv(String userId, String operation, String module) {
+        StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+        List<Object> args = new java.util.ArrayList<>();
+        if (userId != null && !userId.isEmpty()) {
+            try { where.append(" AND user_id = ? "); args.add(Long.valueOf(userId)); } catch (Exception ignored) {}
+        }
+        if (operation != null && !operation.isEmpty()) { where.append(" AND operation = ? "); args.add(operation); }
+        if (module != null && !module.isEmpty()) { where.append(" AND biz_module = ? "); args.add(module); }
+        String[] headers = {"ID", "用户ID", "用户名", "操作", "模块", "对象类型", "对象ID", "请求方法", "URL", "IP", "耗时ms", "状态", "错误信息", "时间"};
+        StringBuilder csv = new StringBuilder();
+        csv.append(String.join(",", headers)).append("\n");
+        try {
+            var rows = jdbc.queryForList("SELECT * FROM admin_audit_log" + where + " ORDER BY id DESC LIMIT 10000", args.toArray());
+            for (Map<String, Object> r : rows) {
+                csv.append(safeCsv(r.get("id"))).append(",");
+                csv.append(safeCsv(r.get("user_id"))).append(",");
+                csv.append(safeCsv(r.get("username"))).append(",");
+                csv.append(safeCsv(r.get("operation"))).append(",");
+                csv.append(safeCsv(r.get("biz_module"))).append(",");
+                csv.append(safeCsv(r.get("biz_type"))).append(",");
+                csv.append(safeCsv(r.get("biz_id"))).append(",");
+                csv.append(safeCsv(r.get("request_method"))).append(",");
+                csv.append(safeCsv(r.get("request_url"))).append(",");
+                csv.append(safeCsv(r.get("ip"))).append(",");
+                csv.append(safeCsv(r.get("duration_ms"))).append(",");
+                csv.append(safeCsv(r.get("status"))).append(",");
+                csv.append(safeCsv(r.get("error_msg"))).append(",");
+                csv.append(safeCsv(r.get("created_at"))).append("\n");
+            }
+        } catch (Exception e) {
+            log.warn("[Admin] 导出审计日志失败: {}", e.getMessage());
+        }
+        return csv.toString();
+    }
+
+    private String safeCsv(Object v) {
+        if (v == null) return "";
+        String s = String.valueOf(v);
+        if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
+            return "\"" + s.replace("\"", "\"\"") + "\"";
+        }
+        return s;
+    }
+
+    public String exportAlertRulesCsv() {
+        String[] headers = {"规则名称", "指标", "运算符", "阈值", "持续时间(秒)", "严重程度", "启用状态", "创建时间"};
+        StringBuilder csv = new StringBuilder();
+        csv.append(String.join(",", headers)).append("\n");
+        try {
+            var rows = jdbc.queryForList("SELECT rule_name, metric, operator, threshold, duration_sec, level, status, created_at FROM alert_rule ORDER BY id DESC LIMIT 10000");
+            for (Map<String, Object> r : rows) {
+                csv.append(safeCsv(r.get("rule_name"))).append(",");
+                csv.append(safeCsv(r.get("metric"))).append(",");
+                csv.append(safeCsv(r.get("operator"))).append(",");
+                csv.append(safeCsv(r.get("threshold"))).append(",");
+                csv.append(safeCsv(r.get("duration_sec"))).append(",");
+                csv.append(safeCsv(r.get("level"))).append(",");
+                csv.append(safeCsv(r.get("status"))).append(",");
+                csv.append(safeCsv(r.get("created_at"))).append("\n");
+            }
+        } catch (Exception e) {
+            log.warn("[Admin] 导出告警规则失败: {}", e.getMessage());
+        }
+        return csv.toString();
+    }
+
+    public String exportAlertHistoryCsv() {
+        String[] headers = {"规则ID", "指标", "阈值", "当前值", "严重程度", "状态", "触发时间", "确认时间", "解决时间"};
+        StringBuilder csv = new StringBuilder();
+        csv.append(String.join(",", headers)).append("\n");
+        try {
+            var rows = jdbc.queryForList("SELECT ah.rule_id, ah.metric, ah.threshold, ah.metric_value, ah.level, ah.notify_status, ah.triggered_at, ah.acked_at, ah.resolved_at FROM alert_history ah ORDER BY ah.id DESC LIMIT 10000");
+            for (Map<String, Object> r : rows) {
+                csv.append(safeCsv(r.get("rule_id"))).append(",");
+                csv.append(safeCsv(r.get("metric"))).append(",");
+                csv.append(safeCsv(r.get("threshold"))).append(",");
+                csv.append(safeCsv(r.get("metric_value"))).append(",");
+                csv.append(safeCsv(r.get("level"))).append(",");
+                csv.append(safeCsv(r.get("notify_status"))).append(",");
+                csv.append(safeCsv(r.get("triggered_at"))).append(",");
+                csv.append(safeCsv(r.get("acked_at"))).append(",");
+                csv.append(safeCsv(r.get("resolved_at"))).append("\n");
+            }
+        } catch (Exception e) {
+            log.warn("[Admin] 导出告警历史失败: {}", e.getMessage());
+        }
+        return csv.toString();
+    }
+
+    public String exportSearchLogsCsv() {
+        String[] headers = {"用户", "搜索内容", "结果数", "耗时(ms)", "意图分类", "搜索时间"};
+        StringBuilder csv = new StringBuilder();
+        csv.append(String.join(",", headers)).append("\n");
+        try {
+            var rows = jdbc.queryForList("SELECT user_id, query_text, result_count, response_time_ms, intent_type, created_at FROM search_log ORDER BY id DESC LIMIT 10000");
+            for (Map<String, Object> r : rows) {
+                csv.append(safeCsv(r.get("user_id"))).append(",");
+                csv.append(safeCsv(r.get("query_text"))).append(",");
+                csv.append(safeCsv(r.get("result_count"))).append(",");
+                csv.append(safeCsv(r.get("response_time_ms"))).append(",");
+                csv.append(safeCsv(r.get("intent_type"))).append(",");
+                csv.append(safeCsv(r.get("created_at"))).append("\n");
+            }
+        } catch (Exception e) {
+            log.warn("[Admin] 导出搜索日志失败: {}", e.getMessage());
+        }
+        return csv.toString();
+    }
+
+    public String exportUserFeedbackCsv() {
+        String[] headers = {"用户", "标题", "内容", "状态", "处理人", "处理备注", "创建时间", "解决时间"};
+        StringBuilder csv = new StringBuilder();
+        csv.append(String.join(",", headers)).append("\n");
+        try {
+            var rows = jdbc.queryForList("SELECT user_id, title, content, status, assigned_to_name, handler_note, created_at, resolved_at FROM user_feedback ORDER BY id DESC LIMIT 10000");
+            for (Map<String, Object> r : rows) {
+                csv.append(safeCsv(r.get("user_id"))).append(",");
+                csv.append(safeCsv(r.get("title"))).append(",");
+                csv.append(safeCsv(r.get("content"))).append(",");
+                csv.append(safeCsv(r.get("status"))).append(",");
+                csv.append(safeCsv(r.get("assigned_to_name"))).append(",");
+                csv.append(safeCsv(r.get("handler_note"))).append(",");
+                csv.append(safeCsv(r.get("created_at"))).append(",");
+                csv.append(safeCsv(r.get("resolved_at"))).append("\n");
+            }
+        } catch (Exception e) {
+            log.warn("[Admin] 导出用户反馈失败: {}", e.getMessage());
+        }
+        return csv.toString();
+    }
+
     public void recordAudit(Long userId, String username, String operation, String bizModule,
                             String bizType, String bizId, String url, String method,
                             String params, String result, String ip, int duration, boolean ok, String error) {
         try {
+            String maskedParams = maskSensitiveData(params);
+            String maskedResult = maskSensitiveData(result);
             jdbc.update("INSERT INTO admin_audit_log(user_id, username, operation, biz_module, biz_type, biz_id, request_url, request_method, request_params, response_result, ip, duration_ms, status, error_msg, trace_id, created_at) " +
                             "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())",
                     userId, username, operation, bizModule, bizType, bizId, url, method,
-                    truncate(params, 4000), truncate(result, 4000), ip, duration, ok ? 1 : 0,
+                    truncate(maskedParams, 4000), truncate(maskedResult, 4000), ip, duration, ok ? 1 : 0,
                     truncate(error, 2000), java.util.UUID.randomUUID().toString().replace("-", ""));
         } catch (Exception e) {
             log.warn("[Admin] 审计写入失败: {}", e.getMessage());
         }
+    }
+
+    private String maskSensitiveData(String params) {
+        if (params == null || params.isEmpty()) {
+            return params;
+        }
+        String trimmed = params.trim();
+        if (!trimmed.startsWith("{")) {
+            return params;
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode tree = mapper.readTree(trimmed);
+            maskNode(tree);
+            return mapper.writeValueAsString(tree);
+        } catch (Exception e) {
+            return params;
+        }
+    }
+
+    private void maskNode(com.fasterxml.jackson.databind.JsonNode node) {
+        if (node.isObject()) {
+            java.util.Iterator<java.util.Map.Entry<String, com.fasterxml.jackson.databind.JsonNode>> fields = node.fields();
+            java.util.Set<String> toRemove = new java.util.HashSet<>();
+            java.util.Map<String, com.fasterxml.jackson.databind.JsonNode> toAdd = new java.util.LinkedHashMap<>();
+            while (fields.hasNext()) {
+                java.util.Map.Entry<String, com.fasterxml.jackson.databind.JsonNode> field = fields.next();
+                String fieldName = field.getKey();
+                com.fasterxml.jackson.databind.JsonNode value = field.getValue();
+                if (isSensitiveField(fieldName)) {
+                    toRemove.add(fieldName);
+                    toAdd.put(fieldName, com.fasterxml.jackson.databind.JsonNodeFactory.instance.textNode("****"));
+                } else if (value.isObject() || value.isArray()) {
+                    maskNode(value);
+                }
+            }
+            ((com.fasterxml.jackson.databind.ObjectNode) node).remove(toRemove);
+            ((com.fasterxml.jackson.databind.ObjectNode) node).setAll(toAdd);
+        } else if (node.isArray()) {
+            for (com.fasterxml.jackson.databind.JsonNode element : node) {
+                if (element.isObject() || element.isArray()) {
+                    maskNode(element);
+                }
+            }
+        }
+    }
+
+    private boolean isSensitiveField(String fieldName) {
+        return "password".equals(fieldName) || "code".equals(fieldName) ||
+               "token".equals(fieldName) || "apiKey".equals(fieldName) ||
+               "api_key".equals(fieldName) || "secret".equals(fieldName) ||
+               "authorization".equals(fieldName);
     }
 
     private static String sanitize(String table) {
@@ -505,6 +910,11 @@ public class AdminDataService {
             Integer pendingFeedback = jdbc.queryForObject("SELECT COUNT(*) FROM user_feedback WHERE status = 0", Integer.class);
             Integer totalTokens = jdbc.queryForObject("SELECT COALESCE(SUM(total_tokens), 0) FROM llm_token_usage WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", Integer.class);
             Integer totalCost = jdbc.queryForObject("SELECT COALESCE(SUM(cost_cny), 0) FROM llm_token_usage WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", Integer.class);
+            Integer totalFrontendUsers = jdbc.queryForObject("SELECT COUNT(*) FROM frontend_user", Integer.class);
+            Integer pendingApprovals = jdbc.queryForObject("SELECT COUNT(*) FROM frontend_user WHERE approved = 0", Integer.class);
+            Integer todayLogins = jdbc.queryForObject("SELECT COUNT(*) FROM frontend_user WHERE DATE(last_login_at) = CURDATE()", Integer.class);
+            Integer todayRegs = jdbc.queryForObject("SELECT COUNT(*) FROM frontend_user WHERE DATE(created_at) = CURDATE()", Integer.class);
+            Integer activeAnnouncements = jdbc.queryForObject("SELECT COUNT(*) FROM sys_announcement WHERE status = 1 AND (expired_at IS NULL OR expired_at > NOW())", Integer.class);
 
             result.put("activeAlerts", activeAlerts == null ? 0 : activeAlerts);
             result.put("pendingDrafts", pendingDrafts == null ? 0 : pendingDrafts);
@@ -512,6 +922,11 @@ public class AdminDataService {
             result.put("pendingFeedback", pendingFeedback == null ? 0 : pendingFeedback);
             result.put("weeklyTokens", totalTokens == null ? 0 : totalTokens);
             result.put("weeklyCost", totalCost == null ? 0 : totalCost);
+            result.put("totalFrontendUsers", totalFrontendUsers == null ? 0 : totalFrontendUsers);
+            result.put("pendingApprovals", pendingApprovals == null ? 0 : pendingApprovals);
+            result.put("todayLogins", todayLogins == null ? 0 : todayLogins);
+            result.put("todayRegs", todayRegs == null ? 0 : todayRegs);
+            result.put("activeAnnouncements", activeAnnouncements == null ? 0 : activeAnnouncements);
 
             // 按模块 token 分布
             List<Map<String, Object>> moduleTokens = jdbc.queryForList(
@@ -532,6 +947,13 @@ public class AdminDataService {
             );
             result.put("tokenTrend", tokenTrend);
 
+            // 近 7 天活跃用户趋势
+            List<Map<String, Object>> userTrend = jdbc.queryForList(
+                "SELECT DATE(last_login_at) AS day, COUNT(*) AS cnt FROM frontend_user " +
+                "WHERE last_login_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY DATE(last_login_at) ORDER BY day"
+            );
+            result.put("userTrend", userTrend);
+
             // 告警最近 10 条
             List<Map<String, Object>> recentAlerts = jdbc.queryForList(
                 "SELECT * FROM alert_history ORDER BY triggered_at DESC LIMIT 10"
@@ -545,8 +967,141 @@ public class AdminDataService {
     }
 
     // ============================================================
+    // Elasticsearch 健康检查
+    // ============================================================
+
+    public Map<String, Object> esHealth() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            if (elasticsearchService == null || !elasticsearchService.isAvailable()) {
+                result.put("status", "unavailable");
+                result.put("message", "Elasticsearch 未启用或连接失败");
+                return result;
+            }
+            var info = elasticsearchService.getClusterHealth();
+            result.put("status", info.get("status"));
+            result.put("clusterName", info.get("clusterName"));
+            result.put("numberOfNodes", info.get("numberOfNodes"));
+            result.put("activeShards", info.get("activeShards"));
+            result.put("activePrimaryShards", info.get("activePrimaryShards"));
+        } catch (Exception e) {
+            result.put("status", "unavailable");
+            result.put("message", "Elasticsearch 健康检查失败: " + e.getMessage());
+        }
+        return result;
+    }
+
+    // ============================================================
+    // LLM 模型摘要
+    // ============================================================
+
+    public Map<String, Object> llmModelsSummary() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            Integer totalModels = jdbc.queryForObject("SELECT COUNT(*) FROM llm_model_config", Integer.class);
+            Integer enabledModels = jdbc.queryForObject("SELECT COUNT(*) FROM llm_model_config WHERE status = 1", Integer.class);
+            var activeRows = jdbc.queryForList("SELECT * FROM llm_model_config WHERE is_primary = 1 AND status = 1 LIMIT 1");
+
+            result.put("totalModels", totalModels == null ? 0 : totalModels);
+            result.put("enabledModels", enabledModels == null ? 0 : enabledModels);
+
+            if (!activeRows.isEmpty()) {
+                var active = activeRows.get(0);
+                result.put("activeModel", active.get("model_code"));
+                result.put("provider", active.get("provider"));
+                result.put("modelName", active.get("model_name"));
+                result.put("status", "active");
+            } else {
+                result.put("activeModel", null);
+                result.put("provider", null);
+                result.put("modelName", null);
+                result.put("status", "inactive");
+            }
+        } catch (Exception e) {
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    // ============================================================
     // LLM 健康探测（模拟）
     // ============================================================
+
+    // ============================================================
+    // 合同审查记录查询
+    // ============================================================
+
+    public Map<String, Object> listContractReviews(Long userId, String riskLevel, int page, int pageSize) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+            List<Object> args = new java.util.ArrayList<>();
+            if (userId != null) {
+                where.append(" AND user_id = ? ");
+                args.add(userId);
+            }
+            if (riskLevel != null && !riskLevel.isEmpty()) {
+                where.append(" AND risk_level = ? ");
+                args.add(riskLevel.toLowerCase());
+            }
+
+            Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM contract_review" + where, Integer.class, args.toArray());
+            int offset = Math.max(0, (page - 1) * pageSize);
+            args.add(pageSize);
+            args.add(offset);
+
+            StringBuilder q = new StringBuilder();
+            q.append("SELECT id, review_uuid, user_id, username, file_name, file_size, review_type, ");
+            q.append("risk_level, risk_count, summary, created_at ");
+            q.append("FROM contract_review").append(where);
+            q.append(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+
+            List<Map<String, Object>> rows = jdbc.queryForList(q.toString(), args.toArray());
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] listContractReviews 失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> getContractReview(Long id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT cr.*, cr.risk_details FROM contract_review cr WHERE cr.id = ?", id
+            );
+            if (rows.isEmpty()) {
+                result.put("data", null);
+                result.put("error", "审查记录不存在");
+            } else {
+                Map<String, Object> row = rows.get(0);
+                String riskDetails = row.get("risk_details") != null ? row.get("risk_details").toString() : null;
+                if (riskDetails != null && riskDetails.startsWith("{")) {
+                    try {
+                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                        Object parsed = mapper.readValue(riskDetails, Object.class);
+                        row.put("riskDetailsJson", parsed);
+                    } catch (Exception ignore) {}
+                }
+                result.put("data", row);
+            }
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] getContractReview 失败 id={}: {}", id, e.getMessage());
+            result.put("data", null);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
 
     public Map<String, Object> llmHealthCheck() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -648,6 +1203,100 @@ public class AdminDataService {
             log.warn("获取活跃模型失败: {}", e.getMessage());
         }
         return null;
+    }
+
+    public Map<String, Object> createModelConfig(Map<String, Object> payload) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (payload == null || payload.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "payload 为空");
+            return result;
+        }
+        String modelCode = (String) payload.get("model_code");
+        String modelName = (String) payload.get("model_name");
+        if (modelCode == null || modelCode.isEmpty() || modelName == null || modelName.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "模型编码和名称不能为空");
+            return result;
+        }
+        try {
+            String provider = (String) payload.getOrDefault("provider", "minimax");
+            String endpoint = (String) payload.getOrDefault("endpoint", "https://api.minimax.chat/v1");
+            String apiKey = (String) payload.get("api_key_enc");
+            BigDecimal temperature = payload.get("temperature") != null ? new BigDecimal(payload.get("temperature").toString()) : new BigDecimal("0.7");
+            Integer maxTokens = payload.get("max_tokens") != null ? ((Number) payload.get("max_tokens")).intValue() : 4096;
+            BigDecimal topP = payload.get("top_p") != null ? new BigDecimal(payload.get("top_p").toString()) : new BigDecimal("0.95");
+            Integer isPrimary = payload.get("is_primary") != null ? ((Number) payload.get("is_primary")).intValue() : 0;
+            if (isPrimary == 1) {
+                jdbc.update("UPDATE llm_model_config SET is_primary = 0");
+            }
+            String sql = "INSERT INTO llm_model_config (model_code, model_name, provider, endpoint, api_key_enc, temperature, max_tokens, top_p, is_primary, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
+            jdbc.update(sql, modelCode, modelName, provider, endpoint, apiKey, temperature, maxTokens, topP, isPrimary);
+            var ids = jdbc.queryForList("SELECT LAST_INSERT_ID()");
+            long id = ((Number) ids.get(0).get("LAST_INSERT_ID()")).longValue();
+            result.put("ok", true);
+            result.put("id", id);
+        } catch (Exception e) {
+            log.warn("[Admin] 创建模型配置失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> updateModelConfig(Long id, Map<String, Object> payload) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            var rows = jdbc.queryForList("SELECT id FROM llm_model_config WHERE id = ?", id);
+            if (rows.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "模型配置不存在");
+                return result;
+            }
+            List<String> sets = new java.util.ArrayList<>();
+            List<Object> args = new java.util.ArrayList<>();
+            if (payload.containsKey("model_code")) { sets.add("model_code = ?"); args.add(payload.get("model_code")); }
+            if (payload.containsKey("model_name")) { sets.add("model_name = ?"); args.add(payload.get("model_name")); }
+            if (payload.containsKey("provider")) { sets.add("provider = ?"); args.add(payload.get("provider")); }
+            if (payload.containsKey("endpoint")) { sets.add("endpoint = ?"); args.add(payload.get("endpoint")); }
+            if (payload.containsKey("api_key_enc")) { sets.add("api_key_enc = ?"); args.add(payload.get("api_key_enc")); }
+            if (payload.containsKey("temperature")) { sets.add("temperature = ?"); args.add(new BigDecimal(payload.get("temperature").toString())); }
+            if (payload.containsKey("max_tokens")) { sets.add("max_tokens = ?"); args.add(((Number) payload.get("max_tokens")).intValue()); }
+            if (payload.containsKey("top_p")) { sets.add("top_p = ?"); args.add(new BigDecimal(payload.get("top_p").toString())); }
+            if (payload.containsKey("is_primary")) {
+                Integer ip = ((Number) payload.get("is_primary")).intValue();
+                if (ip == 1) { jdbc.update("UPDATE llm_model_config SET is_primary = 0"); }
+                sets.add("is_primary = ?"); args.add(ip);
+            }
+            if (payload.containsKey("status")) { sets.add("status = ?"); args.add(((Number) payload.get("status")).intValue()); }
+            if (sets.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "没有需要更新的字段");
+                return result;
+            }
+            args.add(id);
+            jdbc.update("UPDATE llm_model_config SET " + String.join(", ", sets) + " WHERE id = ?", args.toArray());
+            result.put("ok", true);
+        } catch (Exception e) {
+            log.warn("[Admin] 更新模型配置失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> deleteModelConfig(Long id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            int n = jdbc.update("DELETE FROM llm_model_config WHERE id = ?", id);
+            result.put("ok", n > 0);
+            if (n == 0) result.put("error", "模型配置不存在");
+        } catch (Exception e) {
+            log.warn("[Admin] 删除模型配置失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
     }
 
     // ============================================================
@@ -1046,6 +1695,967 @@ public class AdminDataService {
         } catch (Exception e) {
             log.warn("[Admin] 切换前端用户状态失败 id={}: {}", id, e.getMessage());
             result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> listPendingApprovals() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT id, username, real_name, email, phone, created_at FROM frontend_user WHERE approved = 0 ORDER BY created_at DESC");
+            result.put("total", rows.size());
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 待审核用户列表查询失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> approveFrontendUser(String id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            var rows = jdbc.queryForList("SELECT id, approved FROM frontend_user WHERE id = ?", id);
+            if (rows.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "用户不存在");
+                return result;
+            }
+            jdbc.update("UPDATE frontend_user SET approved = 1 WHERE id = ?", id);
+            result.put("ok", true);
+            result.put("message", "用户已审核通过");
+        } catch (Exception e) {
+            log.warn("[Admin] 审核用户失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> rejectFrontendUser(String id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            var rows = jdbc.queryForList("SELECT id FROM frontend_user WHERE id = ?", id);
+            if (rows.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "用户不存在");
+                return result;
+            }
+            jdbc.update("DELETE FROM frontend_user WHERE id = ?", id);
+            result.put("ok", true);
+            result.put("message", "用户已拒绝并删除");
+        } catch (Exception e) {
+            log.warn("[Admin] 拒绝用户失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> listAnnouncements(int page, int pageSize, String keyword) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            List<Object> args = new java.util.ArrayList<>();
+            StringBuilder where = new StringBuilder(" WHERE 1=1");
+            if (keyword != null && !keyword.isEmpty()) {
+                where.append(" AND (title LIKE ? OR content LIKE ?)");
+                args.add("%" + keyword + "%");
+                args.add("%" + keyword + "%");
+            }
+            Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM sys_announcement" + where, Integer.class, args.toArray());
+            int offset = Math.max(0, (page - 1) * pageSize);
+            String sql = "SELECT * FROM sys_announcement" + where + " ORDER BY priority DESC, published_at DESC LIMIT ? OFFSET ?";
+            args.add(pageSize);
+            args.add(offset);
+            List<Map<String, Object>> rows = jdbc.queryForList(sql, args.toArray());
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 公告列表查询失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> createAnnouncement(Map<String, Object> payload) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (payload == null || payload.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "payload 为空");
+            return result;
+        }
+        String title = (String) payload.get("title");
+        String content = (String) payload.get("content");
+        if (title == null || title.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "标题不能为空");
+            return result;
+        }
+        if (content == null || content.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "内容不能为空");
+            return result;
+        }
+        try {
+            Integer type = payload.get("type") != null ? ((Number) payload.get("type")).intValue() : 1;
+            Integer priority = payload.get("priority") != null ? ((Number) payload.get("priority")).intValue() : 0;
+            Integer status = payload.get("status") != null ? ((Number) payload.get("status")).intValue() : 1;
+            String createdBy = (String) payload.get("created_by");
+            String publishedAt = (String) payload.get("published_at");
+            String expiredAt = (String) payload.get("expired_at");
+            String sql = "INSERT INTO sys_announcement (title, content, type, priority, status, published_at, expired_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            Object pubAt = (publishedAt != null && !publishedAt.isEmpty()) ? publishedAt : (status == 1 ? new java.sql.Timestamp(System.currentTimeMillis()) : null);
+            jdbc.update(sql, title, content, type, priority, status, pubAt, expiredAt, createdBy);
+            var ids = jdbc.queryForList("SELECT LAST_INSERT_ID()");
+            long id = ((Number) ids.get(0).get("LAST_INSERT_ID()")).longValue();
+            result.put("ok", true);
+            result.put("id", id);
+        } catch (Exception e) {
+            log.warn("[Admin] 创建公告失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> updateAnnouncement(Long id, Map<String, Object> payload) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            var rows = jdbc.queryForList("SELECT id FROM sys_announcement WHERE id = ?", id);
+            if (rows.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "公告不存在");
+                return result;
+            }
+            List<String> sets = new java.util.ArrayList<>();
+            List<Object> args = new java.util.ArrayList<>();
+            if (payload.containsKey("title")) { sets.add("title = ?"); args.add(payload.get("title")); }
+            if (payload.containsKey("content")) { sets.add("content = ?"); args.add(payload.get("content")); }
+            if (payload.containsKey("type")) { sets.add("type = ?"); args.add(payload.get("type")); }
+            if (payload.containsKey("priority")) { sets.add("priority = ?"); args.add(payload.get("priority")); }
+            if (payload.containsKey("status")) { sets.add("status = ?"); args.add(payload.get("status")); }
+            if (payload.containsKey("published_at")) { sets.add("published_at = ?"); args.add(payload.get("published_at")); }
+            if (payload.containsKey("expired_at")) { sets.add("expired_at = ?"); args.add(payload.get("expired_at")); }
+            if (sets.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "没有需要更新的字段");
+                return result;
+            }
+            args.add(id);
+            jdbc.update("UPDATE sys_announcement SET " + String.join(", ", sets) + " WHERE id = ?", args.toArray());
+            result.put("ok", true);
+        } catch (Exception e) {
+            log.warn("[Admin] 更新公告失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> deleteAnnouncement(Long id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            int n = jdbc.update("DELETE FROM sys_announcement WHERE id = ?", id);
+            result.put("ok", n > 0);
+            if (n == 0) result.put("error", "公告不存在");
+        } catch (Exception e) {
+            log.warn("[Admin] 删除公告失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> listActiveAnnouncements() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT id, title, content, type, priority, published_at FROM sys_announcement WHERE status = 1 AND (expired_at IS NULL OR expired_at > NOW()) ORDER BY priority DESC, published_at DESC LIMIT 10");
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 获取活跃公告失败: {}", e.getMessage());
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> listDicts(String dictType) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            String where = "";
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (dictType != null && !dictType.isEmpty()) {
+                where = " WHERE dict_type = ?";
+                args.add(dictType);
+            }
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT * FROM sys_dict" + where + " ORDER BY dict_type, sort_order, id", args.toArray());
+            result.put("list", rows);
+            result.put("total", rows.size());
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 字典列表查询失败: {}", e.getMessage());
+            result.put("list", java.util.Collections.emptyList());
+            result.put("total", 0);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> createDict(Map<String, Object> payload) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        String dictType = (String) payload.get("dict_type");
+        String dictLabel = (String) payload.get("dict_label");
+        String dictValue = (String) payload.get("dict_value");
+        if (dictType == null || dictType.isEmpty() || dictLabel == null || dictLabel.isEmpty() || dictValue == null || dictValue.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "分组/标签/值不能为空");
+            return result;
+        }
+        try {
+            Integer sortOrder = payload.get("sort_order") != null ? ((Number) payload.get("sort_order")).intValue() : 0;
+            Integer status = payload.get("status") != null ? ((Number) payload.get("status")).intValue() : 1;
+            String sql = "INSERT INTO sys_dict (dict_type, dict_label, dict_value, sort_order, status) VALUES (?, ?, ?, ?, ?)";
+            jdbc.update(sql, dictType, dictLabel, dictValue, sortOrder, status);
+            var ids = jdbc.queryForList("SELECT LAST_INSERT_ID()");
+            long id = ((Number) ids.get(0).get("LAST_INSERT_ID()")).longValue();
+            result.put("ok", true);
+            result.put("id", id);
+        } catch (Exception e) {
+            log.warn("[Admin] 创建字典项失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> updateDict(Long id, Map<String, Object> payload) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            var rows = jdbc.queryForList("SELECT id FROM sys_dict WHERE id = ?", id);
+            if (rows.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "字典项不存在");
+                return result;
+            }
+            List<String> sets = new java.util.ArrayList<>();
+            List<Object> args = new java.util.ArrayList<>();
+            if (payload.containsKey("dict_type")) { sets.add("dict_type = ?"); args.add(payload.get("dict_type")); }
+            if (payload.containsKey("dict_label")) { sets.add("dict_label = ?"); args.add(payload.get("dict_label")); }
+            if (payload.containsKey("dict_value")) { sets.add("dict_value = ?"); args.add(payload.get("dict_value")); }
+            if (payload.containsKey("sort_order")) { sets.add("sort_order = ?"); args.add(((Number) payload.get("sort_order")).intValue()); }
+            if (payload.containsKey("status")) { sets.add("status = ?"); args.add(((Number) payload.get("status")).intValue()); }
+            if (sets.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "没有需要更新的字段");
+                return result;
+            }
+            args.add(id);
+            jdbc.update("UPDATE sys_dict SET " + String.join(", ", sets) + " WHERE id = ?", args.toArray());
+            result.put("ok", true);
+        } catch (Exception e) {
+            log.warn("[Admin] 更新字典项失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> deleteDict(Long id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            int n = jdbc.update("DELETE FROM sys_dict WHERE id = ?", id);
+            result.put("ok", n > 0);
+            if (n == 0) result.put("error", "字典项不存在");
+        } catch (Exception e) {
+            log.warn("[Admin] 删除字典项失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    // ============================================================
+    // 搜索反馈统计
+    // ============================================================
+
+    public Map<String, Object> listSearchFeedback(Long articleId, Integer isHelpful, String startDate, String endDate, int page, int pageSize) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (articleId != null) {
+                where.append(" AND sf.article_id = ? ");
+                args.add(articleId);
+            }
+            if (isHelpful != null) {
+                where.append(" AND sf.is_helpful = ? ");
+                args.add(isHelpful);
+            }
+            if (startDate != null && !startDate.isEmpty()) {
+                where.append(" AND sf.created_at >= ? ");
+                args.add(startDate);
+            }
+            if (endDate != null && !endDate.isEmpty()) {
+                where.append(" AND sf.created_at < DATE_ADD(?, INTERVAL 1 DAY) ");
+                args.add(endDate);
+            }
+
+            String countSql = "SELECT COUNT(*) FROM search_feedback sf " + where;
+            Integer total = jdbc.queryForObject(countSql, Integer.class, args.toArray());
+            int offset = Math.max(0, (page - 1) * pageSize);
+
+            StringBuilder q = new StringBuilder();
+            q.append("SELECT sf.id, sf.search_log_id, sf.article_id, sf.is_helpful, sf.user_comment, sf.created_at, ");
+            q.append("COALESCE(la.title, ld.title) AS article_title ");
+            q.append("FROM search_feedback sf ");
+            q.append("LEFT JOIN law_article la ON sf.article_id = la.id ");
+            q.append("LEFT JOIN law_document ld ON sf.article_id = ld.id ");
+            q.append(where);
+            q.append(" ORDER BY sf.id DESC LIMIT ? OFFSET ?");
+            args.add(pageSize);
+            args.add(offset);
+
+            List<Map<String, Object>> rows = jdbc.queryForList(q.toString(), args.toArray());
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 搜索反馈列表查询失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> searchFeedbackStats(String startDate, String endDate) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (startDate != null && !startDate.isEmpty()) {
+                where.append(" AND created_at >= ? ");
+                args.add(startDate);
+            }
+            if (endDate != null && !endDate.isEmpty()) {
+                where.append(" AND created_at < DATE_ADD(?, INTERVAL 1 DAY) ");
+                args.add(endDate);
+            }
+
+            Integer totalFeedbacks = jdbc.queryForObject("SELECT COUNT(*) FROM search_feedback" + where, Integer.class, args.toArray());
+
+            java.util.List<Object> helpfulArgs = new java.util.ArrayList<>(args);
+            StringBuilder helpfulWhere = new StringBuilder(" WHERE is_helpful = 1 ");
+            if (startDate != null && !startDate.isEmpty()) {
+                helpfulWhere.append(" AND created_at >= ? ");
+                helpfulArgs.add(startDate);
+            }
+            if (endDate != null && !endDate.isEmpty()) {
+                helpfulWhere.append(" AND created_at < DATE_ADD(?, INTERVAL 1 DAY) ");
+                helpfulArgs.add(endDate);
+            }
+            Integer helpfulCount = jdbc.queryForObject("SELECT COUNT(*) FROM search_feedback" + helpfulWhere, Integer.class, helpfulArgs.toArray());
+
+            Integer unhelpfulCount = (totalFeedbacks == null ? 0 : totalFeedbacks) - (helpfulCount == null ? 0 : helpfulCount);
+            double helpfulRate = totalFeedbacks != null && totalFeedbacks > 0 ? ((double) (helpfulCount == null ? 0 : helpfulCount) * 100.0 / totalFeedbacks) : 0.0;
+
+            String dailySql = "SELECT DATE(created_at) AS day, COUNT(*) AS total, " +
+                    "SUM(CASE WHEN is_helpful = 1 THEN 1 ELSE 0 END) AS helpful, " +
+                    "SUM(CASE WHEN is_helpful = 0 THEN 1 ELSE 0 END) AS unhelpful " +
+                    "FROM search_feedback " +
+                    "WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) " +
+                    "GROUP BY DATE(created_at) ORDER BY day";
+            List<Map<String, Object>> dailyStats = jdbc.queryForList(dailySql);
+
+            result.put("totalFeedbacks", totalFeedbacks == null ? 0 : totalFeedbacks);
+            result.put("helpfulCount", helpfulCount == null ? 0 : helpfulCount);
+            result.put("unhelpfulCount", Math.max(0, unhelpfulCount));
+            result.put("helpfulRate", String.format("%.1f", helpfulRate));
+            result.put("dailyStats", dailyStats);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 搜索反馈统计查询失败: {}", e.getMessage());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    // ============================================================
+    // 法规收藏管理
+    // ============================================================
+
+    public Map<String, Object> listLawFavorites(Long userId, String username, Long articleId, int page, int pageSize) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (userId != null) {
+                where.append(" AND lf.user_id = ? ");
+                args.add(userId);
+            }
+            if (username != null && !username.isEmpty()) {
+                where.append(" AND lf.username LIKE ? ");
+                args.add("%" + username + "%");
+            }
+            if (articleId != null) {
+                where.append(" AND lf.article_id = ? ");
+                args.add(articleId);
+            }
+
+            String countSql = "SELECT COUNT(*) FROM law_favorite lf " + where;
+            Integer total = jdbc.queryForObject(countSql, Integer.class, args.toArray());
+            int offset = Math.max(0, (page - 1) * pageSize);
+
+            StringBuilder q = new StringBuilder();
+            q.append("SELECT lf.id, lf.user_id, lf.username, lf.article_id, lf.created_at, ");
+            q.append("COALESCE(la.title, ld.title) AS article_title ");
+            q.append("FROM law_favorite lf ");
+            q.append("LEFT JOIN law_article la ON lf.article_id = la.id ");
+            q.append("LEFT JOIN law_document ld ON lf.article_id = ld.id ");
+            q.append(where);
+            q.append(" ORDER BY lf.id DESC LIMIT ? OFFSET ?");
+            args.add(pageSize);
+            args.add(offset);
+
+            List<Map<String, Object>> rows = jdbc.queryForList(q.toString(), args.toArray());
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 法规收藏列表查询失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> deleteLawFavorite(Long id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            int n = jdbc.update("DELETE FROM law_favorite WHERE id = ?", id);
+            result.put("ok", n > 0);
+            if (n == 0) result.put("error", "收藏记录不存在");
+            log.info("删除法规收藏 id={}, affected={}", id, n);
+        } catch (Exception e) {
+            log.warn("[Admin] 删除法规收藏失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> lawFavoriteStats() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            Integer totalFavorites = jdbc.queryForObject("SELECT COUNT(*) FROM law_favorite", Integer.class);
+            Integer todayNew = jdbc.queryForObject("SELECT COUNT(*) FROM law_favorite WHERE DATE(created_at) = CURDATE()", Integer.class);
+
+            List<Map<String, Object>> topArticles = jdbc.queryForList(
+                "SELECT lf.article_id, COALESCE(la.title, ld.title) AS article_title, COUNT(*) AS favorite_count " +
+                "FROM law_favorite lf " +
+                "LEFT JOIN law_article la ON lf.article_id = la.id " +
+                "LEFT JOIN law_document ld ON lf.article_id = ld.id " +
+                "GROUP BY lf.article_id " +
+                "ORDER BY favorite_count DESC LIMIT 10"
+            );
+
+            List<Map<String, Object>> topUsers = jdbc.queryForList(
+                "SELECT user_id, username, COUNT(*) AS favorite_count " +
+                "FROM law_favorite " +
+                "GROUP BY user_id, username " +
+                "ORDER BY favorite_count DESC LIMIT 10"
+            );
+
+            result.put("totalFavorites", totalFavorites == null ? 0 : totalFavorites);
+            result.put("todayNew", todayNew == null ? 0 : todayNew);
+            result.put("topArticles", topArticles);
+            result.put("topUsers", topUsers);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 法规收藏统计查询失败: {}", e.getMessage());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    // ============================================================
+    // 爬虫日志查询
+    // ============================================================
+
+    public Map<String, Object> listKbChunks(Long kbId, String fileName, int page, int pageSize) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (kbId != null) {
+                where.append(" AND c.kb_id = ? ");
+                args.add(kbId);
+            }
+            if (fileName != null && !fileName.isEmpty()) {
+                where.append(" AND c.file_name LIKE ? ");
+                args.add("%" + fileName + "%");
+            }
+            String countSql = "SELECT COUNT(*) FROM kb_chunk_store c" + where;
+            Integer total = jdbc.queryForObject(countSql, Integer.class, args.toArray());
+            int offset = Math.max(0, (page - 1) * pageSize);
+
+            StringBuilder q = new StringBuilder();
+            q.append("SELECT c.id, c.kb_id, c.file_name, c.content, c.chunk_index, c.token_count, ");
+            q.append("c.vector_id, c.created_at, k.kb_name ");
+            q.append("FROM kb_chunk_store c ");
+            q.append("LEFT JOIN kb_knowledge_base k ON c.kb_id = k.id ");
+            q.append(where);
+            q.append(" ORDER BY c.id DESC LIMIT ? OFFSET ?");
+            args.add(pageSize);
+            args.add(offset);
+
+            List<Map<String, Object>> rows = jdbc.queryForList(q.toString(), args.toArray());
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] listKbChunks 失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> kbChunksStats() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            Integer totalChunks = jdbc.queryForObject("SELECT COUNT(*) FROM kb_chunk_store", Integer.class);
+            Integer totalTokens = jdbc.queryForObject("SELECT COALESCE(SUM(token_count), 0) FROM kb_chunk_store", Integer.class);
+            Double avgChunkSize = jdbc.queryForObject("SELECT COALESCE(AVG(token_count), 0) FROM kb_chunk_store", Double.class);
+
+            result.put("totalChunks", totalChunks == null ? 0 : totalChunks);
+            result.put("totalTokens", totalTokens == null ? 0 : totalTokens);
+            result.put("avgChunkSize", avgChunkSize == null ? 0 : Math.round(avgChunkSize * 100) / 100.0);
+
+            List<Map<String, Object>> topKb = jdbc.queryForList(
+                "SELECT k.id, k.kb_name, COUNT(c.id) AS chunk_count, COALESCE(SUM(c.token_count), 0) AS total_tokens " +
+                "FROM kb_knowledge_base k " +
+                "LEFT JOIN kb_chunk_store c ON k.id = c.kb_id " +
+                "GROUP BY k.id, k.kb_name " +
+                "ORDER BY chunk_count DESC LIMIT 10"
+            );
+            result.put("topKbByChunks", topKb);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] kbChunksStats 失败: {}", e.getMessage());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> listCrawlLogs(Long taskId, int page, int pageSize) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (taskId != null) {
+                where.append(" AND task_id = ? ");
+                args.add(taskId);
+            }
+            Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM crawl_log" + where, Integer.class, args.toArray());
+            int offset = Math.max(0, (page - 1) * pageSize);
+            String sql = "SELECT id, task_id, status, crawled_count AS total_fetched, success_count, fail_count, " +
+                    "error_log AS error_message, started_at, finished_at, " +
+                    "TIMESTAMPDIFF(SECOND, started_at, finished_at) AS duration_seconds " +
+                    "FROM crawl_log" + where + " ORDER BY id DESC LIMIT ? OFFSET ?";
+            args.add(pageSize);
+            args.add(offset);
+            List<Map<String, Object>> rows = jdbc.queryForList(sql, args.toArray());
+            for (Map<String, Object> row : rows) {
+                Integer status = row.get("status") != null ? ((Number) row.get("status")).intValue() : null;
+                row.put("status", status != null ? switch (status) {
+                    case 0 -> "RUNNING";
+                    case 1 -> "SUCCESS";
+                    case 2 -> "FAILED";
+                    default -> "UNKNOWN";
+                } : null);
+            }
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 爬虫日志查询失败 taskId={}: {}", taskId, e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    // ============================================================
+    // ALERT_RULE CRUD
+    // ============================================================
+
+    private static final Set<String> ALERT_METRICS = Set.of(
+        "llm_latency_ms", "milvus_query_latency", "cpu_usage_percent", "memory_usage_percent", "error_rate_5m"
+    );
+    private static final Set<String> ALERT_OPERATORS = Set.of(">", "<", ">=", "<=", "=");
+    private static final Set<String> ALERT_SEVERITIES = Set.of("info", "warning", "critical");
+
+    public Map<String, Object> createAlertRule(Map<String, Object> data) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (data == null || data.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "数据为空");
+            return result;
+        }
+        String name = (String) data.get("name");
+        String metric = (String) data.get("metric");
+        String operator = (String) data.get("operator");
+        if (name == null || name.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "规则名称不能为空");
+            return result;
+        }
+        if (name.length() > 100) {
+            result.put("ok", false);
+            result.put("error", "规则名称最大100字符");
+            return result;
+        }
+        if (metric == null || metric.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "指标名不能为空");
+            return result;
+        }
+        if (!ALERT_METRICS.contains(metric)) {
+            result.put("ok", false);
+            result.put("error", "无效的指标名，允许值: " + String.join(", ", ALERT_METRICS));
+            return result;
+        }
+        if (operator == null || operator.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "操作符不能为空");
+            return result;
+        }
+        if (!ALERT_OPERATORS.contains(operator)) {
+            result.put("ok", false);
+            result.put("error", "无效的操作符，允许值: " + String.join(", ", ALERT_OPERATORS));
+            return result;
+        }
+        if (data.get("threshold") == null) {
+            result.put("ok", false);
+            result.put("error", "阈值不能为空");
+            return result;
+        }
+        BigDecimal threshold;
+        try {
+            threshold = new BigDecimal(data.get("threshold").toString());
+        } catch (NumberFormatException e) {
+            result.put("ok", false);
+            result.put("error", "阈值必须是数值");
+            return result;
+        }
+        String severity = (String) data.getOrDefault("severity", "warning");
+        if (!ALERT_SEVERITIES.contains(severity)) {
+            result.put("ok", false);
+            result.put("error", "无效的严重程度，允许值: " + String.join(", ", ALERT_SEVERITIES));
+            return result;
+        }
+        try {
+            Integer durationSec = data.get("duration_sec") != null ? ((Number) data.get("duration_sec")).intValue() : 0;
+            Integer enabled = data.get("enabled") != null ? ((Number) data.get("enabled")).intValue() : 1;
+            String channels = (String) data.get("channels");
+            String template = (String) data.get("template");
+            String sql = "INSERT INTO alert_rule (name, metric, operator, threshold, duration_sec, severity, enabled, channels, template) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            jdbc.update(sql, name, metric, operator, threshold, durationSec, severity, enabled, channels, template);
+            var ids = jdbc.queryForList("SELECT LAST_INSERT_ID()");
+            long id = ((Number) ids.get(0).get("LAST_INSERT_ID()")).longValue();
+            result.put("ok", true);
+            result.put("id", id);
+            log.info("创建告警规则: id={}, name={}", id, name);
+        } catch (Exception e) {
+            log.warn("[Admin] 创建告警规则失败: {}", e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> updateAlertRule(Long id, Map<String, Object> data) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (data == null || data.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "数据为空");
+            return result;
+        }
+        try {
+            var rows = jdbc.queryForList("SELECT id FROM alert_rule WHERE id = ?", id);
+            if (rows.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "告警规则不存在");
+                return result;
+            }
+            List<String> sets = new java.util.ArrayList<>();
+            List<Object> args = new java.util.ArrayList<>();
+            if (data.containsKey("name")) {
+                String name = (String) data.get("name");
+                if (name == null || name.isEmpty()) {
+                    result.put("ok", false);
+                    result.put("error", "规则名称不能为空");
+                    return result;
+                }
+                if (name.length() > 100) {
+                    result.put("ok", false);
+                    result.put("error", "规则名称最大100字符");
+                    return result;
+                }
+                sets.add("name = ?");
+                args.add(name);
+            }
+            if (data.containsKey("metric")) {
+                String metric = (String) data.get("metric");
+                if (metric == null || metric.isEmpty() || !ALERT_METRICS.contains(metric)) {
+                    result.put("ok", false);
+                    result.put("error", "无效的指标名，允许值: " + String.join(", ", ALERT_METRICS));
+                    return result;
+                }
+                sets.add("metric = ?");
+                args.add(metric);
+            }
+            if (data.containsKey("operator")) {
+                String operator = (String) data.get("operator");
+                if (operator == null || operator.isEmpty() || !ALERT_OPERATORS.contains(operator)) {
+                    result.put("ok", false);
+                    result.put("error", "无效的操作符，允许值: " + String.join(", ", ALERT_OPERATORS));
+                    return result;
+                }
+                sets.add("operator = ?");
+                args.add(operator);
+            }
+            if (data.containsKey("threshold")) {
+                try {
+                    BigDecimal threshold = new BigDecimal(data.get("threshold").toString());
+                    sets.add("threshold = ?");
+                    args.add(threshold);
+                } catch (NumberFormatException e) {
+                    result.put("ok", false);
+                    result.put("error", "阈值必须是数值");
+                    return result;
+                }
+            }
+            if (data.containsKey("duration_sec")) {
+                sets.add("duration_sec = ?");
+                args.add(((Number) data.get("duration_sec")).intValue());
+            }
+            if (data.containsKey("severity")) {
+                String severity = (String) data.get("severity");
+                if (severity == null || !ALERT_SEVERITIES.contains(severity)) {
+                    result.put("ok", false);
+                    result.put("error", "无效的严重程度，允许值: " + String.join(", ", ALERT_SEVERITIES));
+                    return result;
+                }
+                sets.add("severity = ?");
+                args.add(severity);
+            }
+            if (data.containsKey("enabled")) {
+                sets.add("enabled = ?");
+                args.add(((Number) data.get("enabled")).intValue());
+            }
+            if (data.containsKey("channels")) {
+                sets.add("channels = ?");
+                args.add(data.get("channels"));
+            }
+            if (data.containsKey("template")) {
+                sets.add("template = ?");
+                args.add(data.get("template"));
+            }
+            if (sets.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "没有需要更新的字段");
+                return result;
+            }
+            args.add(id);
+            jdbc.update("UPDATE alert_rule SET " + String.join(", ", sets) + " WHERE id = ?", args.toArray());
+            result.put("ok", true);
+            log.info("更新告警规则 id={}", id);
+        } catch (Exception e) {
+            log.warn("[Admin] 更新告警规则失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> deleteAlertRule(Long id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            int n = jdbc.update("DELETE FROM alert_rule WHERE id = ?", id);
+            result.put("ok", n > 0);
+            if (n == 0) result.put("error", "告警规则不存在");
+            log.info("删除告警规则 id={}, affected={}", id, n);
+        } catch (Exception e) {
+            log.warn("[Admin] 删除告警规则失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> toggleAlertRule(Long id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            var rows = jdbc.queryForList("SELECT enabled FROM alert_rule WHERE id = ?", id);
+            if (rows.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "告警规则不存在");
+                return result;
+            }
+            Object cur = rows.get(0).get("enabled");
+            int next = (cur != null && Integer.parseInt(String.valueOf(cur)) == 1) ? 0 : 1;
+            jdbc.update("UPDATE alert_rule SET enabled = ? WHERE id = ?", next, id);
+            result.put("ok", true);
+            result.put("enabled", next);
+            log.info("切换告警规则 id={} enabled={}", id, next);
+        } catch (Exception e) {
+            log.warn("[Admin] 切换告警规则状态失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+}
+        return result;
+    }
+
+    // ============================================================
+    // 用户反馈状态更新
+    // ============================================================
+
+    public Map<String, Object> updateUserFeedback(Long id, Map<String, Object> data) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (data == null || data.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "数据为空");
+            return result;
+        }
+        try {
+            var rows = jdbc.queryForList("SELECT id, status FROM user_feedback WHERE id = ?", id);
+            if (rows.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "反馈记录不存在");
+                return result;
+            }
+            String currentStatus = rows.get(0).get("status") != null ? String.valueOf(rows.get(0).get("status")) : "pending";
+            String newStatus = data.get("status") != null ? String.valueOf(data.get("status")) : currentStatus;
+
+            List<String> sets = new java.util.ArrayList<>();
+            List<Object> args = new java.util.ArrayList<>();
+
+            sets.add("status = ?");
+            args.add(newStatus);
+
+            switch (newStatus) {
+                case "assigned" -> {
+                    if (data.containsKey("handlerId")) {
+                        sets.add("handler_id = ?");
+                        args.add(data.get("handlerId"));
+                    }
+                    if (data.containsKey("handlerName")) {
+                        sets.add("handler_name = ?");
+                        args.add(data.get("handlerName"));
+                    }
+                }
+                case "resolved" -> {
+                    if (data.containsKey("resolveNote")) {
+                        sets.add("resolve_note = ?");
+                        args.add(data.get("resolveNote"));
+                    }
+                    sets.add("resolved_at = NOW()");
+                }
+                case "reopened" -> {
+                    sets.add("resolved_at = NULL");
+                }
+                case "closed" -> {
+                }
+                default -> {
+                    result.put("ok", false);
+                    result.put("error", "无效的状态: " + newStatus + "，允许的值: assigned/resolved/reopened/closed");
+                    return result;
+                }
+            }
+
+            args.add(id);
+            jdbc.update("UPDATE user_feedback SET " + String.join(", ", sets) + " WHERE id = ?", args.toArray());
+
+            var updated = jdbc.queryForList("SELECT * FROM user_feedback WHERE id = ?", id);
+            result.put("ok", true);
+            result.put("data", updated.isEmpty() ? null : updated.get(0));
+            log.info("更新用户反馈状态 id={}, {} -> {}", id, currentStatus, newStatus);
+        } catch (Exception e) {
+            log.warn("[Admin] 更新用户反馈状态失败 id={}: {}", id, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> getResearchTask(Long id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT * FROM legal_research_task WHERE id = ?", id);
+            if (rows.isEmpty()) {
+                result.put("data", null);
+                result.put("error", "任务不存在");
+                return result;
+            }
+            Map<String, Object> row = rows.get(0);
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("id", row.get("id"));
+            data.put("taskName", row.get("topic"));
+            data.put("taskUuid", row.get("task_uuid"));
+            data.put("researchType", null);
+            data.put("status", row.get("status"));
+            data.put("requestParams", row.get("sources"));
+            data.put("report", row.get("report"));
+            data.put("errorMessage", null);
+            data.put("createdBy", row.get("user_id"));
+            data.put("createdAt", row.get("created_at"));
+            data.put("startedAt", row.get("updated_at"));
+            data.put("completedAt", null);
+            result.put("data", data);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] getResearchTask 失败 id={}: {}", id, e.getMessage());
+            result.put("data", null);
             result.put("error", e.getMessage());
         }
         return result;

@@ -34,7 +34,7 @@
             </template>
             <el-form :model="previewForm" label-width="110px">
               <el-form-item label="法规标题">
-                <el-input v-model="previewForm.title" />
+                <el-input v-model="previewForm.lawTitle" />
               </el-form-item>
               <el-form-item label="文号">
                 <el-input v-model="previewForm.documentNo" />
@@ -122,7 +122,7 @@ const handlePreview = async () => {
     const res = await api.importPreview(formData)
     previewData.value = res.data || res
     previewForm.value = {
-      lawTitle: res.data?.lawTitle || '',
+      lawTitle: res.data?.lawTitle || res.data?.title || '',
       shortTitle: res.data?.shortTitle || '',
       documentNo: res.data?.documentNo || '',
       issuingAuthority: res.data?.issuingAuthority || '',
@@ -140,7 +140,8 @@ const handleConfirm = async () => {
     await api.importConfirm({
       ...previewForm.value,
       categoryIds: selectedCategoryIds.value,
-      chapters: previewData.value?.chapters || []
+      chapters: previewData.value?.chapters || [],
+      articles: previewData.value?.articles || []
     })
     ElMessage.success('导入成功')
     previewData.value = null

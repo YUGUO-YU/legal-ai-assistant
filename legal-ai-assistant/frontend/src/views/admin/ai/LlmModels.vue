@@ -200,13 +200,13 @@ async function handleSave() {
   if (!form.model_code || !form.endpoint) { ElMessage.warning('模型代码和端点URL必填'); return }
   const payload = { ...form }
   if (!payload.api_key_enc) delete payload.api_key_enc
-  delete payload.id
+  if (form.id) delete payload.id
   try {
     let res
     if (form.id) {
-      res = await api.post(`/admin/{table}/${form.id}/update`.replace('{table}', 'llm_model_config'), payload)
+      res = await api.put('/admin/ai/llm-models/' + form.id, payload)
     } else {
-      res = await api.post('/admin/{table}/create'.replace('{table}', 'llm_model_config'), payload)
+      res = await api.post('/admin/ai/llm-models', payload)
     }
     if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
     else ElMessage.error(res.data?.error || '保存失败')
@@ -216,7 +216,7 @@ async function handleSave() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除模型「${row.model_name}」？`, '确认', { type: 'warning' })
-    await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}', 'llm_model_config'))
+    await api.delete('/admin/ai/llm-models/' + row.id)
     ElMessage.success('已删除')
     load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
@@ -231,10 +231,13 @@ async function handleCheck(row) {
 }
 
 async function toggleModel(row) {
+  const action = row.status === 1 ? '停用' : '启用'
   try {
-    await api.post(`/admin/{table}/${row.id}/toggle`.replace('{table}', 'llm_model_config'), { status: row.status === 1 ? 0 : 1 })
+    await ElMessageBox.confirm(`确定要${action}模型「${row.model_name}」？${action === '停用' ? '停用后该模型将无法使用。' : '启用后该模型将恢复正常使用。'}`, `确认${action}`, { type: 'warning' })
+    await api.put('/admin/ai/llm-models/' + row.id, { status: row.status === 1 ? 0 : 1 })
     row.status = row.status === 1 ? 0 : 1
-  } catch (e) { ElMessage.error('切换失败') }
+    ElMessage.success(`已${action}`)
+  } catch (e) { if (e !== 'cancel') ElMessage.error('切换失败') }
 }
 
 async function handleSetActive(row) {
@@ -263,6 +266,7 @@ async function handleUpdateKey() {
     return
   }
   try {
+    await ElMessageBox.confirm('此操作将更新模型「' + keyForm.modelName + '」的 API 密钥，是否确认？', '确认更新密钥', { type: 'warning' })
     const res = await api.post(`/admin/ai/llm-models/${keyForm.id}/update-key`, { apiKey: keyForm.apiKey })
     if (res.data?.ok) {
       ElMessage.success('API 密钥已更新')
@@ -270,7 +274,7 @@ async function handleUpdateKey() {
     } else {
       ElMessage.error(res.data?.error || '更新失败')
     }
-  } catch (e) { ElMessage.error('更新失败') }
+  } catch (e) { if (e !== 'cancel') ElMessage.error('更新失败') }
 }
 
 onMounted(load)

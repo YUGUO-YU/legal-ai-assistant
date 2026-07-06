@@ -121,7 +121,7 @@ const groupedRows = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const res = await api.get('/admin/{table}/list'.replace('{table}', 'sys_dict'), { params: { dict_type: filter.dict_type || undefined } })
+    const res = await api.get('/admin/infra/dicts/list', { params: { dict_type: filter.dict_type || undefined } })
     rows.value = res.data?.list || []
   } catch (e) { rows.value = [] }
   finally { loading.value = false }
@@ -147,9 +147,9 @@ async function handleSave() {
   try {
     let res
     if (form.id) {
-      res = await api.post(`/admin/{table}/${form.id}/update`.replace('{table}', 'sys_dict'), payload)
+      res = await api.put('/admin/infra/dicts/' + form.id, payload)
     } else {
-      res = await api.post('/admin/{table}/create'.replace('{table}', 'sys_dict'), payload)
+      res = await api.post('/admin/infra/dicts', payload)
     }
     if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
     else ElMessage.error(res.data?.error || '保存失败')
@@ -159,7 +159,7 @@ async function handleSave() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除 ${row.dict_label}？`, '确认', { type: 'warning' })
-    await api.post(`/admin/{table}/${row.id}/delete`.replace('{table}', 'sys_dict'))
+    await api.delete('/admin/infra/dicts/' + row.id)
     ElMessage.success('已删除')
     load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
