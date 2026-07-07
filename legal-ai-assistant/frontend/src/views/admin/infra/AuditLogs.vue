@@ -45,16 +45,18 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination
-        v-model:current-page="filter.page"
-        v-model:page-size="filter.pageSize"
-        :total="total"
-        :page-sizes="[20, 50, 100]"
-        layout="total, sizes, prev, pager, next"
-        class="pager"
-        @current-change="load"
-        @size-change="load"
-      />
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="filter.page"
+          v-model:page-size="filter.pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next"
+          :background="true"
+          @current-change="load"
+          @size-change="load"
+        />
+      </div>
     </el-card>
 
     <el-dialog v-model="showDetail" title="审计日志详情" width="700px">
@@ -162,7 +164,7 @@ onMounted(load)
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
 .header-content p { margin: 0; color: var(--color-text-secondary); font-size: 13px; }
 .filter-card { margin-bottom: 16px; }
-.pager { margin-top: 16px; justify-content: flex-end; display: flex; }
+
 .json-pre {
   margin: 0;
   padding: 8px;

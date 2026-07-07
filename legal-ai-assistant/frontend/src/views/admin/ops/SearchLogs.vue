@@ -82,14 +82,16 @@
         <el-table-column prop="user_id" label="用户" width="100" show-overflow-tooltip />
         <el-table-column prop="created_at" label="时间" width="170" />
       </el-table>
-      <el-pagination
-        v-model:current-page="page"
-        v-model:page-size="pageSize"
-        :total="total"
-        layout="total, sizes, prev, pager, next"
-        :page-sizes="[10, 20, 50]"
-        class="pager"
-      />
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next"
+          :background="true"
+        />
+      </div>
     </el-card>
   </div>
 </template>
@@ -209,5 +211,5 @@ onMounted(load)
 .text-warning { color:#f59e0b; font-weight:600; }
 .text-danger { color:#ef4444; font-weight:600; }
 .empty-hint { height:120px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:13px; }
-.pager { margin-top:14px; justify-content:flex-end; display:flex; }
+
 </style>

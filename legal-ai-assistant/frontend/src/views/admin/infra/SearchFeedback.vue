@@ -116,16 +116,18 @@
         <el-table-column prop="user_comment" label="用户评论" min-width="200" show-overflow-tooltip />
         <el-table-column prop="created_at" label="反馈时间" width="170" />
       </el-table>
-      <el-pagination
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :total="pagination.total"
-        :page-sizes="[10, 20, 50, 100]"
-        layout="total, sizes, prev, pager, next"
-        @size-change="loadList"
-        @current-change="loadList"
-        style="margin-top: 12px;"
-      />
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.pageSize"
+          :total="pagination.total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next"
+          :background="true"
+          @size-change="loadList"
+          @current-change="loadList"
+        />
+      </div>
     </el-card>
   </div>
 </template>

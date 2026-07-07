@@ -54,14 +54,16 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination
-        v-model:current-page="page"
-        v-model:page-size="pageSize"
-        :total="total"
-        layout="total, sizes, prev, pager, next"
-        :page-sizes="[10, 20, 50]"
-        class="pager"
-      />
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next"
+          :background="true"
+        />
+      </div>
     </el-card>
   </div>
 </template>
@@ -216,5 +218,5 @@ onUnmounted(() => {
   .sla-ok { color: #10b981; }
   .sla-done { color: #6366f1; }
 }
-.pager { margin-top: 14px; justify-content: flex-end; display: flex; }
+
 </style>

@@ -26,7 +26,10 @@
     </el-card>
 
     <el-card>
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <template v-if="rows.length === 0 && !loading">
+        <table-empty-state text="暂无数据" />
+      </template>
+      <el-table v-else :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="title" label="标题" min-width="320" show-overflow-tooltip />
         <el-table-column prop="category_l1" label="效力级别" width="110" />
@@ -51,16 +54,18 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination
-        v-model:current-page="filter.page"
-        v-model:page-size="filter.pageSize"
-        :total="total"
-        layout="total, sizes, prev, pager, next"
-        :page-sizes="[10, 20, 50]"
-        class="pager"
-        @current-change="load"
-        @size-change="load"
-      />
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="filter.page"
+          v-model:page-size="filter.pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next"
+          :background="true"
+          @current-change="load"
+          @size-change="load"
+        />
+      </div>
     </el-card>
 
     <el-drawer v-model="showDetail" :title="detail?.title || '详情'" size="55%" direction="rtl">
@@ -87,6 +92,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../../api'
+import TableEmptyState from '../components/TableEmptyState.vue'
 
 const rows = ref([])
 const total = ref(0)
@@ -169,5 +175,5 @@ onMounted(load)
 .header-content p { margin: 0; color: #64748b; font-size: 13px; }
 .header-actions { display:flex; gap:8px; flex-wrap: wrap; }
 .filter-card { margin-bottom: 16px; }
-.pager { margin-top: 16px; justify-content: flex-end; display: flex; }
+
 </style>

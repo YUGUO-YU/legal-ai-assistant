@@ -34,7 +34,10 @@
     </el-card>
 
     <el-card v-if="activeTab === 'all'">
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <template v-if="rows.length === 0 && !loading">
+        <table-empty-state text="暂无数据" />
+      </template>
+      <el-table v-else :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="用户ID" width="160" show-overflow-tooltip />
         <el-table-column prop="username" label="用户名" min-width="130" />
         <el-table-column prop="real_name" label="姓名" width="120" />
@@ -66,13 +69,15 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrap">
+      <div class="pagination-container">
         <el-pagination
           background
-          layout="total, prev, pager, next"
+          layout="total, sizes, prev, pager, next"
           :total="total"
           :page-size="pageSize"
           :current-page="currentPage"
+          :page-sizes="[10, 20, 50, 100]"
+          @size-change="load"
           @current-change="handlePageChange"
         />
       </div>
@@ -85,7 +90,10 @@
           <el-button link type="primary" @click="loadPending">刷新</el-button>
         </div>
       </template>
-      <el-table :data="pendingRows" v-loading="pendingLoading" stripe border>
+      <template v-if="pendingRows.length === 0 && !pendingLoading">
+        <table-empty-state text="暂无待审核申请" />
+      </template>
+      <el-table v-else :data="pendingRows" v-loading="pendingLoading" stripe border>
         <el-table-column prop="username" label="用户名" min-width="130" />
         <el-table-column prop="real_name" label="姓名" width="120" />
         <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
@@ -98,9 +106,6 @@
           </template>
         </el-table-column>
       </el-table>
-      <div v-if="pendingRows.length === 0 && !pendingLoading" class="empty-tip">
-        <p>暂无待审核申请</p>
-      </div>
     </el-card>
 
     <el-dialog v-model="showDialog" :title="form.id ? '编辑用户' : '新增用户'" width="560px">
@@ -156,6 +161,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../../api'
+import TableEmptyState from '../components/TableEmptyState.vue'
 
 const rows = ref([])
 const loading = ref(false)
@@ -294,7 +300,6 @@ onMounted(() => { load(); loadPending() })
 .header-actions { display:flex; gap:8px; align-items:center; }
 .filter-card { margin-bottom: 16px; }
 .login-ip { font-size:11px; color:var(--color-text-placeholder); margin-top:2px; }
-.pagination-wrap { margin-top: 16px; display: flex; justify-content: flex-end; }
+
 .card-header { display:flex; justify-content:space-between; align-items:center; }
-.empty-tip { padding: 40px 0; text-align: center; color: var(--color-text-placeholder); }
 </style>

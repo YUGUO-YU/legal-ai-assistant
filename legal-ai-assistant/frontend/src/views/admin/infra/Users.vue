@@ -31,14 +31,10 @@
     </el-card>
 
     <el-card>
-      <el-table :data="rows" v-loading="loading" stripe border>
-        <template #empty>
-          <div class="empty-tip">
-            <el-icon :size="48"><Document /></el-icon>
-            <p v-if="loadError">{{ loadError }}</p>
-            <p v-else>暂无数据</p>
-          </div>
-        </template>
+      <template v-if="rows.length === 0 && !loading">
+        <table-empty-state :text="loadError || '暂无数据'" />
+      </template>
+      <el-table v-else :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="username" label="用户名" min-width="130" />
         <el-table-column prop="real_name" label="姓名" width="120" />
@@ -144,9 +140,10 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { Refresh, Document } from '@element-plus/icons-vue'
+import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../../api'
+import TableEmptyState from '../components/TableEmptyState.vue'
 
 const rows = ref([])
 const loading = ref(false)
@@ -275,11 +272,4 @@ onMounted(load)
 .header-actions { display:flex; gap:8px; align-items:center; }
 .filter-card { margin-bottom: 16px; }
 .login-ip { font-size:11px; color:var(--color-text-placeholder); margin-top:2px; }
-.empty-tip {
-  padding: 40px 0;
-  text-align: center;
-  color: var(--color-text-placeholder);
-  .el-icon { color: var(--color-border-dark); }
-  p { margin: 12px 0 0; font-size: 14px; }
-}
 </style>

@@ -55,7 +55,10 @@
     </el-row>
 
     <el-card>
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <template v-if="rows.length === 0 && !loading">
+        <table-empty-state text="暂无数据" />
+      </template>
+      <el-table v-else :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="case_no" label="案号" width="180" show-overflow-tooltip />
         <el-table-column prop="case_name" label="案件名称" min-width="240" show-overflow-tooltip />
@@ -85,11 +88,16 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination
-        v-model:current-page="page" v-model:page-size="pageSize" :total="total"
-        layout="total, sizes, prev, pager, next" :page-sizes="[10,20,50]"
-        class="pager"
-      />
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next"
+          :background="true"
+        />
+      </div>
     </el-card>
 
     <el-drawer v-model="showDetail" title="案件详情" size="55%" direction="rtl">
@@ -174,6 +182,7 @@ import { Refresh } from '@element-plus/icons-vue'
 import { UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '../../../api'
+import TableEmptyState from '../components/TableEmptyState.vue'
 
 const rows = ref([])
 const total = ref(0)
@@ -272,7 +281,7 @@ async function handleConfirm() {
 .filter-card { margin-bottom:16px; }
 .kpi-card { background:#fff; border-radius:10px; padding:16px; border:1px solid #e2e8f0; .kpi-label { font-size:12px; color:#64748b; margin-bottom:6px; } .kpi-value { font-size:22px; font-weight:700; color:#0f172a; } }
 .mono { font-family:'Cascadia Code','Consolas',monospace; font-size:13px; }
-.pager { margin-top:14px; justify-content:flex-end; display:flex; }
+
 .content-preview { background:#f8fafc; padding:16px; border-radius:8px; white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.6; border:1px solid #e2e8f0; max-height:30vh; overflow-y:auto; }
 .import-layout { display: flex; gap: 20px; }
 .left-upload { width: 260px; flex-shrink: 0; }

@@ -12,7 +12,10 @@
     </div>
 
     <el-card>
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <template v-if="rows.length === 0 && !loading">
+        <table-empty-state text="暂无数据" />
+      </template>
+      <el-table v-else :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="role_code" label="角色代码" width="140">
           <template #default="{ row }">
@@ -95,6 +98,7 @@ import { ref, reactive, onMounted, nextTick } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../../api'
+import TableEmptyState from '../components/TableEmptyState.vue'
 
 const rows = ref([])
 const loading = ref(false)

@@ -1,11 +1,11 @@
 <template>
-  <div class="admin-layout">
-    <el-aside width="240px" class="aside">
+  <div :class="['admin-layout', { 'sidebar-collapsed': sidebarCollapsed }]">
+    <el-aside :class="['aside', { 'aside--collapsed': sidebarCollapsed }]">
       <div class="aside-header">
-        <el-icon><Setting /></el-icon>
-        <span>后台管理系统</span>
+        <span v-if="!sidebarCollapsed">法律AI助手</span>
+        <el-icon @click="toggleSidebar" class="collapse-icon"><component :is="sidebarCollapsed ? Expand : Fold" /></el-icon>
       </div>
-      <el-menu :default-active="activeMenu" router class="aside-menu" background-color="#1e293b" text-color="#cbd5e1" active-text-color="#60a5fa">
+      <el-menu :default-active="activeMenu" :collapse="sidebarCollapsed" router class="aside-menu" background-color="#1e293b" text-color="#cbd5e1" active-text-color="#60a5fa">
         <el-menu-item index="/admin">
           <el-icon><Odometer /></el-icon>
           <span>概览</span>
@@ -131,7 +131,7 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Setting, Odometer, Tools, Document, MagicStick, DataAnalysis, Bell, SwitchButton, Sunny, Moon } from '@element-plus/icons-vue'
+import { Setting, Odometer, Tools, Document, MagicStick, DataAnalysis, Bell, SwitchButton, Sunny, Moon, Fold, Expand } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -139,6 +139,12 @@ const router = useRouter()
 const activeMenu = computed(() => route.path)
 const adminName = ref('管理员')
 const isDark = ref(false)
+const sidebarCollapsed = ref(false)
+
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+  localStorage.setItem('sidebar_collapsed', sidebarCollapsed.value)
+}
 
 const menuMap = {
   'infra': '基础设施',
@@ -213,10 +219,14 @@ onMounted(() => {
     const u = JSON.parse(localStorage.getItem('admin_user') || '{}')
     adminName.value = u.nickname || u.username || '管理员'
   } catch (e) { /* ignore */ }
-  const saved = localStorage.getItem('darkMode')
-  if (saved === 'true') {
+  const savedDark = localStorage.getItem('darkMode')
+  if (savedDark === 'true') {
     isDark.value = true
     document.documentElement.classList.add('dark')
+  }
+  const savedCollapsed = localStorage.getItem('sidebar_collapsed')
+  if (savedCollapsed === 'true') {
+    sidebarCollapsed.value = true
   }
 })
 
@@ -246,24 +256,43 @@ const handleLogout = () => {
 }
 
 .aside {
+  width: 240px;
   background: var(--color-bg-secondary);
   color: #fff;
+  transition: width 0.3s ease;
+  overflow: hidden;
+
+  &--collapsed {
+    width: 64px;
+
+    .aside-menu {
+      width: 64px;
+    }
+  }
 
   .aside-header {
     height: 56px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
-    padding: 0 20px;
+    padding: 0 16px;
     font-size: 15px;
     font-weight: 600;
     color: #fff;
     background: var(--color-bg);
     border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+
+    .collapse-icon {
+      cursor: pointer;
+      flex-shrink: 0;
+    }
   }
 
   .aside-menu {
     border-right: none;
+    transition: width 0.3s ease;
   }
 }
 
@@ -271,6 +300,12 @@ const handleLogout = () => {
   flex: 1;
   display: flex;
   flex-direction: column;
+  margin-left: 240px;
+  transition: margin-left 0.3s ease;
+
+  .aside--collapsed + & {
+    margin-left: 64px;
+  }
 }
 
 .top-bar {

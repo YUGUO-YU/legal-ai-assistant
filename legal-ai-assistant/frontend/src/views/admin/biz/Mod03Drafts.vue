@@ -59,16 +59,18 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination
-        v-model:current-page="filter.page"
-        v-model:page-size="filter.pageSize"
-        :total="total"
-        layout="total, sizes, prev, pager, next"
-        :page-sizes="[10, 20, 50]"
-        class="pager"
-        @current-change="load"
-        @size-change="load"
-      />
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="filter.page"
+          v-model:page-size="filter.pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next"
+          :background="true"
+          @current-change="load"
+          @size-change="load"
+        />
+      </div>
     </el-card>
 
     <el-drawer v-model="showDetail" :title="detail?.doc_title || '文书详情'" size="60%" direction="rtl">
@@ -178,7 +180,7 @@ onMounted(load)
 .header-content p { margin: 0; color: #64748b; font-size: 13px; }
 .header-actions { display:flex; gap:8px; flex-wrap: wrap; }
 .filter-card { margin-bottom: 16px; }
-.pager { margin-top: 16px; justify-content: flex-end; display: flex; }
+
 .content-preview {
   background: #f8fafc;
   padding: 16px;

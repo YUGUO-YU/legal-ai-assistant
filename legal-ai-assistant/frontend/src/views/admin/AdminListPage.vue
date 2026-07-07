@@ -29,7 +29,10 @@
     </el-card>
 
     <el-card class="table-card">
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <template v-if="rows.length === 0 && !loading">
+        <table-empty-state text="暂无数据" />
+      </template>
+      <el-table v-else :data="rows" v-loading="loading" stripe border>
         <el-table-column type="index" label="#" width="60" />
         <el-table-column v-for="col in columns" :key="col.prop" :prop="col.prop" :label="col.label" :min-width="col.width || 120" :show-overflow-tooltip="true">
           <template #default="{ row }">
@@ -73,6 +76,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
+import TableEmptyState from './components/TableEmptyState.vue'
 
 const props = defineProps({
   title: { type: String, required: true },

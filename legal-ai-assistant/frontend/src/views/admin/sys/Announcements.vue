@@ -53,13 +53,15 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrap">
+      <div class="pagination-container">
         <el-pagination
           background
-          layout="total, prev, pager, next"
+          layout="total, sizes, prev, pager, next"
           :total="total"
           :page-size="pageSize"
           :current-page="currentPage"
+          :page-sizes="[10, 20, 50, 100]"
+          @size-change="load"
           @current-change="handlePageChange"
         />
       </div>
@@ -217,5 +219,5 @@ onMounted(load)
 .header-content p { margin: 0; color: #64748b; font-size: 13px; }
 .header-actions { display:flex; gap:8px; align-items:center; }
 .filter-card { margin-bottom: 16px; }
-.pagination-wrap { margin-top: 16px; display: flex; justify-content: flex-end; }
+
 </style>
