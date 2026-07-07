@@ -224,31 +224,65 @@ const handleRegister = async () => {
 }
 
 .bg-animation {
-  position: absolute;
-  width: 100%;
-  height: 100%;
+  position: fixed;
   top: 0;
   left: 0;
-  pointer-events: none;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
   .circle {
     position: absolute;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(67, 97, 238, 0.3));
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(1px);
+    will-change: transform;
     animation: float 20s infinite ease-in-out;
 
     &.circle-1 { width: 400px; height: 400px; top: -100px; left: -100px; animation-delay: 0s; }
-    &.circle-2 { width: 300px; height: 300px; top: 50%; right: -100px; animation-delay: -5s; background: linear-gradient(135deg, rgba(254, 202, 87, 0.2), rgba(238, 90, 36, 0.2)); }
-    &.circle-3 { width: 200px; height: 200px; bottom: -50px; left: 30%; animation-delay: -10s; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2)); }
-    &.circle-4 { width: 150px; height: 150px; top: 20%; left: 20%; animation-delay: -15s; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2)); }
+    &.circle-2 { width: 300px; height: 300px; top: 50%; right: -50px; animation-delay: -5s; background: rgba(255, 255, 255, 0.08); }
+    &.circle-3 { width: 250px; height: 250px; bottom: -50px; left: 30%; animation-delay: -10s; background: rgba(255, 255, 255, 0.08); }
+    &.circle-4 { width: 350px; height: 350px; bottom: 20%; right: 20%; animation-delay: -15s; background: rgba(255, 255, 255, 0.08); }
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 20%;
+    left: 20%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: pulse 8s infinite ease-in-out;
   }
 }
 
 @keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(50px, 50px) scale(1.1); }
-  50% { transform: translate(0, 100px) scale(1); }
-  75% { transform: translate(-50px, 50px) scale(0.9); }
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  25% { transform: translate3d(30px, -30px, 0) rotate(5deg); }
+  50% { transform: translate3d(-20px, 20px, 0) rotate(-5deg); }
+  75% { transform: translate3d(20px, 30px, 0) rotate(3deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.1); }
+}
+
+@media (max-width: 768px) {
+  .bg-animation {
+    .circle {
+      width: 200px !important;
+      height: 200px !important;
+    }
+    &::before {
+      width: 250px !important;
+      height: 250px !important;
+    }
+  }
 }
 
 .login-box {
@@ -269,7 +303,7 @@ const handleRegister = async () => {
   .logo-icon {
     width: 80px;
     height: 80px;
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, var(--color-success), #059669);
     border-radius: 20px;
     display: flex;
     align-items: center;
@@ -283,7 +317,7 @@ const handleRegister = async () => {
     margin: 0 0 8px 0;
     font-size: 26px;
     font-weight: 600;
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, var(--color-success), #059669);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -291,7 +325,7 @@ const handleRegister = async () => {
 
   p {
     margin: 0;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     font-size: 14px;
   }
 }
@@ -304,10 +338,10 @@ const handleRegister = async () => {
   :deep(.el-input__wrapper) {
     padding: 4px 16px;
     border-radius: 12px;
-    box-shadow: 0 0 0 1px #e5e7eb;
+    box-shadow: 0 0 0 1px var(--color-border);
 
     &:hover, &.is-focus {
-      box-shadow: 0 0 0 2px #10b981;
+      box-shadow: 0 0 0 2px var(--color-success);
     }
   }
 
@@ -317,7 +351,7 @@ const handleRegister = async () => {
     border-radius: 12px;
     font-size: 16px;
     font-weight: 500;
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, var(--color-success), #059669);
     border: none;
     box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
     transition: all 0.3s;
@@ -340,7 +374,7 @@ const handleRegister = async () => {
   .strength-bar {
     flex: 1;
     height: 4px;
-    background: #e5e7eb;
+    background: var(--color-border);
     border-radius: 2px;
     overflow: hidden;
 
@@ -361,7 +395,7 @@ const handleRegister = async () => {
 .login-footer {
   text-align: center;
   margin-top: 20px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 </style>

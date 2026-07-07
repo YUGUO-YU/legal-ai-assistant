@@ -246,7 +246,7 @@ const handleLogout = () => {
 }
 
 .aside {
-  background: #1e293b;
+  background: var(--color-bg-secondary);
   color: #fff;
 
   .aside-header {
@@ -258,8 +258,8 @@ const handleLogout = () => {
     font-size: 15px;
     font-weight: 600;
     color: #fff;
-    background: #0f172a;
-    border-bottom: 1px solid #334155;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .aside-menu {
@@ -275,8 +275,8 @@ const handleLogout = () => {
 
 .top-bar {
   height: 56px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -284,7 +284,7 @@ const handleLogout = () => {
 
   .top-bar-title {
     font-size: 14px;
-    color: #64748b;
+    color: var(--color-text-secondary);
     font-weight: 500;
   }
 
@@ -295,7 +295,7 @@ const handleLogout = () => {
 
     .user-name {
       font-size: 13px;
-      color: #334155;
+      color: var(--color-text-primary);
       font-weight: 500;
     }
   }
@@ -304,7 +304,7 @@ const handleLogout = () => {
 .main {
   flex: 1;
   padding: 16px 20px;
-  background: #f1f5f9;
+  background: var(--color-bg-secondary);
   overflow-x: hidden;
 }
 
@@ -315,33 +315,33 @@ const handleLogout = () => {
 
 <style>
 html.dark .aside {
-  background: #1e293b !important;
+  background: var(--color-bg-secondary) !important;
 }
 html.dark .aside-header {
-  background: #0f172a !important;
-  border-bottom-color: #334155 !important;
+  background: var(--color-bg) !important;
+  border-bottom-color: var(--color-border) !important;
 }
 html.dark .top-bar {
-  background: #1e293b !important;
-  border-bottom-color: #334155 !important;
+  background: var(--color-bg-secondary) !important;
+  border-bottom-color: var(--color-border) !important;
 }
 html.dark .top-bar-title {
-  color: #94a3b8 !important;
+  color: var(--color-text-placeholder) !important;
 }
 html.dark .user-name {
-  color: #e2e8f0 !important;
+  color: var(--color-border-light) !important;
 }
 html.dark .main {
-  background: #0f172a !important;
+  background: var(--color-bg) !important;
 }
 html.dark .right-area {
-  background: #0f172a !important;
+  background: var(--color-bg) !important;
 }
 html.dark .el-menu {
   background: transparent !important;
 }
 html.dark .el-menu-item {
-  color: #cbd5e1 !important;
+  color: var(--color-border-dark) !important;
 }
 html.dark .el-menu-item:hover {
   background: rgba(255, 255, 255, 0.08) !important;
@@ -351,6 +351,6 @@ html.dark .el-menu-item.is-active {
   color: #818cf8 !important;
 }
 html.dark .el-sub-menu__title {
-  color: #cbd5e1 !important;
+  color: var(--color-border-dark) !important;
 }
 </style>

@@ -10,10 +10,10 @@ body {
 }
 
 .page-card {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .page-header {
@@ -24,7 +24,7 @@ body {
   }
   p {
     margin: 0;
-    color: #666;
+    color: var(--color-text-secondary);
     font-size: 14px;
   }
 }
@@ -40,13 +40,13 @@ body {
 
 .result-item {
   padding: 16px;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
   margin-bottom: 16px;
   transition: all 0.3s;
   &:hover {
-    border-color: #1890ff;
-    box-shadow: 0 2px 12px rgba(24,144,255,0.1);
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
   }
 }
 
@@ -59,19 +59,19 @@ body {
 
 .highlight-text {
   em {
-    color: #ff4d4f;
+    color: var(--color-danger);
     font-style: normal;
   }
 }
 
-.risk-high { color: #ff4d4f; }
-.risk-medium { color: #faad14; }
-.risk-low { color: #52c41a; }
+.risk-high { color: var(--color-danger); }
+.risk-medium { color: var(--color-warning); }
+.risk-low { color: var(--color-success); }
 
 .loading-state {
   text-align: center;
   padding: 48px;
-  color: #999;
+  color: var(--color-text-placeholder);
 }
 
 .el-message {

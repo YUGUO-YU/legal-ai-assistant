@@ -70,25 +70,7 @@
             </div>
           </template>
           <div class="chart-area">
-            <svg viewBox="0 0 600 180" preserveAspectRatio="none" class="line-chart">
-              <g v-for="(g, i) in gridLines" :key="'g'+i">
-                <line :x1="0" :x2="600" :y1="g.y" :y2="g.y" stroke="#e2e8f0" stroke-dasharray="3 3" stroke-width="1" />
-                <text :x="0" :y="g.y - 4" font-size="10" fill="#94a3b8">{{ g.label }}</text>
-              </g>
-              <polyline v-if="tokenPoints.length > 1" :points="tokenPoints" fill="none" stroke="#3b82f6" stroke-width="2" />
-              <polygon v-if="tokenPoints.length > 1" :points="tokenAreaPoints" fill="url(#grad)" opacity="0.25" />
-              <defs>
-                <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.6" />
-                  <stop offset="100%" stop-color="#3b82f6" stop-opacity="0" />
-                </linearGradient>
-              </defs>
-              <g v-for="(p, i) in tokenCircles" :key="'c'+i">
-                <circle :cx="p.x" :cy="p.y" r="3" fill="#3b82f6" />
-                <text :x="p.x" :y="180 - 8" font-size="10" fill="#64748b" text-anchor="middle">{{ p.label }}</text>
-              </g>
-              <text v-if="tokenPoints.length === 0" x="300" y="90" font-size="13" fill="#94a3b8" text-anchor="middle">暂无数据</text>
-            </svg>
+            <v-chart :option="tokenTrendOption" autoresize />
           </div>
         </el-card>
       </el-col>
@@ -101,15 +83,8 @@
               <el-tag size="small" type="info">近 7 日</el-tag>
             </div>
           </template>
-          <div class="bar-chart">
-            <div v-for="b in moduleBars" :key="b.module" class="bar-row">
-              <div class="bar-label">{{ b.module || '未分类' }}</div>
-              <div class="bar-track">
-                <div class="bar-fill" :style="{ width: b.pct + '%', background: b.color }"></div>
-              </div>
-              <div class="bar-value">{{ formatNum(b.tokens) }}</div>
-            </div>
-            <el-empty v-if="moduleBars.length === 0" description="暂无数据" :image-size="60" />
+          <div class="chart-area">
+            <v-chart :option="moduleTokenOption" autoresize />
           </div>
         </el-card>
       </el-col>
@@ -169,7 +144,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Refresh, Link, InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { LineChart, BarChart } from 'echarts/charts'
+import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
 import api from '../../api'
+
+use([CanvasRenderer, LineChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
 
 const counts = ref({})
 const overview = ref({})
@@ -193,54 +175,93 @@ const kpis = computed(() => [
   { label: '活跃公告', value: overview.value.activeAnnouncements ?? '-', foot: '在有效期', tone: 'info' }
 ])
 
-const moduleBars = computed(() => {
-  const list = overview.value.moduleTokens || []
-  if (!list.length) return []
-  const max = Math.max(...list.map(x => Number(x.tokens) || 0))
-  const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1']
-  return list.map((x, i) => ({
-    module: x.module,
-    tokens: Number(x.tokens) || 0,
-    pct: max ? Math.round((Number(x.tokens) / max) * 100) : 0,
-    color: palette[i % palette.length]
-  }))
-})
-
 const tokenTrend = computed(() => overview.value.tokenTrend || [])
 
-const tokenPoints = computed(() => {
+const tokenTrendOption = computed(() => {
   const t = tokenTrend.value
-  if (t.length < 2) return ''
-  const max = Math.max(...t.map(x => Number(x.tokens) || 1))
-  return t.map((x, i) => {
-    const x0 = (i / (t.length - 1)) * 600
-    const y0 = 180 - 30 - ((Number(x.tokens) || 0) / max) * 120
-    return `${x0.toFixed(1)},${y0.toFixed(1)}`
-  }).join(' ')
+  const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
+  return {
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params) => {
+        const p = params[0]
+        return `${p.name}<br/>Tokens: ${Number(p.value).toLocaleString()}`
+      }
+    },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: t.map(x => String(x.day).slice(5)),
+      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisLabel: { color: '#64748b', fontSize: 11 }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10 }
+    },
+    series: [{
+      type: 'line',
+      data: t.map(x => Number(x.tokens) || 0),
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: { color: palette[0], width: 2 },
+      itemStyle: { color: palette[0] },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: `${palette[0]}40` },
+            { offset: 1, color: `${palette[0]}05` }
+          ]
+        }
+      }
+    }]
+  }
 })
 
-const tokenAreaPoints = computed(() => {
-  if (!tokenPoints.value) return ''
-  return `0,180 ${tokenPoints.value} 600,180`
+const moduleTokenOption = computed(() => {
+  const list = overview.value.moduleTokens || []
+  const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1']
+  const data = list.map((x, i) => ({
+    name: x.module || '未分类',
+    value: Number(x.tokens) || 0,
+    itemStyle: { color: palette[i % palette.length] }
+  }))
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params) => {
+        const p = params[0]
+        return `${p.name}<br/>Tokens: ${Number(p.value).toLocaleString()}`
+      }
+    },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '3%', containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10 }
+    },
+    yAxis: {
+      type: 'category',
+      data: list.map(x => x.module || '未分类'),
+      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisLabel: { color: '#475569', fontSize: 11 }
+    },
+    series: [{
+      type: 'bar',
+      data,
+      barWidth: 14,
+      itemStyle: { borderRadius: [0, 6, 6, 0] },
+      label: { show: true, position: 'right', formatter: (p) => formatNum(p.value), fontSize: 10, color: '#64748b' }
+    }]
+  }
 })
-
-const tokenCircles = computed(() => {
-  const t = tokenTrend.value
-  if (t.length < 2) return []
-  const max = Math.max(...t.map(x => Number(x.tokens) || 1))
-  return t.map((x, i) => {
-    const x0 = (i / (t.length - 1)) * 600
-    const y0 = 180 - 30 - ((Number(x.tokens) || 0) / max) * 120
-    return { x: x0, y: y0, label: String(x.day).slice(5) }
-  })
-})
-
-const gridLines = [
-  { y: 30, label: '' },
-  { y: 75, label: '' },
-  { y: 120, label: '' },
-  { y: 165, label: '' }
-]
 
 const totalTokensFmt = computed(() => formatNum(overview.value.weeklyTokens))
 const totalCostFmt = computed(() => Number(overview.value.weeklyCost || 0).toFixed(2))
@@ -348,7 +369,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
   margin-bottom: 16px;
 
   .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-  .header-content p { margin: 0; color: #64748b; font-size: 13px; }
+  .header-content p { margin: 0; color: var(--color-text-secondary); font-size: 13px; }
 }
 
 .db-alert {
@@ -363,19 +384,19 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 .kpi-card {
   position: relative;
   overflow: hidden;
-  border-left: 4px solid #cbd5e1;
+  border-left: 4px solid var(--color-border-dark);
   transition: transform 0.2s;
 
   &:hover { transform: translateY(-2px); }
 
-  &.danger { border-left-color: #ef4444; }
-  &.warning { border-left-color: #f59e0b; }
-  &.info { border-left-color: #3b82f6; }
-  &.primary { border-left-color: #8b5cf6; }
+  &.danger { border-left-color: var(--color-danger); }
+  &.warning { border-left-color: var(--color-warning); }
+  &.info { border-left-color: var(--color-info); }
+  &.primary { border-left-color: var(--color-primary); }
 
-  .kpi-label { font-size: 12px; color: #64748b; }
-  .kpi-value { font-size: 24px; font-weight: 700; color: #1e293b; margin: 4px 0; }
-  .kpi-foot { font-size: 11px; color: #94a3b8; }
+  .kpi-label { font-size: 12px; color: var(--color-text-secondary); }
+  .kpi-value { font-size: 24px; font-weight: 700; color: var(--color-text-primary); margin: 4px 0; }
+  .kpi-foot { font-size: 11px; color: var(--color-text-placeholder); }
 }
 
 .charts-row, .bottom-row { margin-bottom: 14px; }
@@ -388,53 +409,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
 .chart-area {
   width: 100%;
-  height: 180px;
-}
-
-.line-chart {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.bar-chart {
-  max-height: 200px;
-  overflow-y: auto;
-
-  .bar-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 0;
-  }
-
-  .bar-label {
-    width: 80px;
-    font-size: 12px;
-    color: #475569;
-  }
-
-  .bar-track {
-    flex: 1;
-    height: 14px;
-    background: #f1f5f9;
-    border-radius: 7px;
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: 7px;
-    transition: width 0.6s;
-  }
-
-  .bar-value {
-    width: 60px;
-    text-align: right;
-    font-size: 12px;
-    color: #64748b;
-    font-variant-numeric: tabular-nums;
-  }
+  height: 200px;
 }
 
 .quick-grid {
@@ -445,49 +420,49 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
 .quick-item {
   padding: 10px;
-  border-radius: 8px;
-  background: #f8fafc;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
   cursor: pointer;
   transition: all 0.2s;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 
   &:hover {
-    background: #fff;
-    border-color: #3b82f6;
+    background: var(--color-bg);
+    border-color: var(--color-primary);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    box-shadow: var(--shadow-md);
   }
 
   .quick-tag {
     display: inline-block;
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-size: 11px;
     font-weight: 600;
     color: #fff;
     margin-bottom: 6px;
 
-    &.m01, &.m07 { background: #3b82f6; }
-    &.m02, &.m06 { background: #10b981; }
-    &.m03, &.m08 { background: #f59e0b; }
+    &.m01, &.m07 { background: var(--color-info); }
+    &.m02, &.m06 { background: var(--color-success); }
+    &.m03, &.m08 { background: var(--color-warning); }
     &.m04 { background: #8b5cf6; }
     &.m05 { background: #ec4899; }
     &.m09 { background: #06b6d4; }
     &.m10 { background: #84cc16; }
     &.ai { background: #6366f1; }
-    &.mon { background: #ef4444; }
+    &.mon { background: var(--color-danger); }
   }
 
   .quick-name {
     font-size: 13px;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--color-text-primary);
     margin-bottom: 2px;
   }
 
   .quick-desc {
     font-size: 11px;
-    color: #94a3b8;
+    color: var(--color-text-placeholder);
   }
 }
 
@@ -512,7 +487,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
     .llm-name {
       font-size: 16px;
       font-weight: 600;
-      color: #1e293b;
+      color: var(--color-text-primary);
     }
   }
 
@@ -521,7 +496,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
     align-items: center;
     gap: 20px;
     font-size: 13px;
-    color: #64748b;
+    color: var(--color-text-secondary);
 
     span {
       display: flex;
@@ -530,7 +505,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
     }
 
     .llm-time {
-      color: #94a3b8;
+      color: var(--color-text-placeholder);
       font-size: 12px;
     }
   }
@@ -547,7 +522,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  &.dot-success { background: #10b981; }
-  &.dot-danger { background: #ef4444; }
+  &.dot-success { background: var(--color-success); }
+  &.dot-danger { background: var(--color-danger); }
 }
 </style>

@@ -203,26 +203,42 @@
           <el-tag type="info" size="small">点击查看详情</el-tag>
         </div>
       </template>
-      <el-row :gutter="20">
-        <el-col :span="6" v-for="card in detailCards" :key="card.key">
-          <div class="detail-card card-hover" :class="card.class" @click="openDetail(card)">
-            <div class="detail-card-header">
-              <div class="detail-card-icon" :style="{ background: card.gradient }">
-                <el-icon :size="22"><component :is="card.icon" /></el-icon>
-              </div>
-              <el-tag size="small" :type="card.tagType" effect="plain">{{ card.status }}</el-tag>
+      <div class="detail-cards-grid">
+        <div class="detail-card card-hover" :class="card.class" @click="openDetail(card)" v-for="card in detailCards.slice(0, 4)" :key="card.key">
+          <div class="detail-card-header">
+            <div class="detail-card-icon" :style="{ background: card.gradient }">
+              <el-icon :size="22"><component :is="card.icon" /></el-icon>
             </div>
-            <div class="detail-card-body">
-              <span class="detail-card-title">{{ card.title }}</span>
-              <span class="detail-card-desc">{{ card.desc }}</span>
-            </div>
-            <div class="detail-card-footer">
-              <span class="detail-card-meta">{{ card.meta }}</span>
-              <el-icon class="detail-card-arrow"><Right /></el-icon>
-            </div>
+            <el-tag size="small" :type="card.tagType" effect="plain">{{ card.status }}</el-tag>
           </div>
-        </el-col>
-      </el-row>
+          <div class="detail-card-body">
+            <span class="detail-card-title">{{ card.title }}</span>
+            <span class="detail-card-desc">{{ card.desc }}</span>
+          </div>
+          <div class="detail-card-footer">
+            <span class="detail-card-meta">{{ card.meta }}</span>
+            <el-icon class="detail-card-arrow"><Right /></el-icon>
+          </div>
+        </div>
+      </div>
+      <div class="detail-cards-grid" style="margin-top: 20px;">
+        <div class="detail-card card-hover" :class="card.class" @click="openDetail(card)" v-for="card in detailCards.slice(4, 8)" :key="card.key">
+          <div class="detail-card-header">
+            <div class="detail-card-icon" :style="{ background: card.gradient }">
+              <el-icon :size="22"><component :is="card.icon" /></el-icon>
+            </div>
+            <el-tag size="small" :type="card.tagType" effect="plain">{{ card.status }}</el-tag>
+          </div>
+          <div class="detail-card-body">
+            <span class="detail-card-title">{{ card.title }}</span>
+            <span class="detail-card-desc">{{ card.desc }}</span>
+          </div>
+          <div class="detail-card-footer">
+            <span class="detail-card-meta">{{ card.meta }}</span>
+            <el-icon class="detail-card-arrow"><Right /></el-icon>
+          </div>
+        </div>
+      </div>
     </el-card>
 
     <el-card class="usage-memory-card" style="margin-top: 24px">
@@ -890,12 +906,12 @@ const loadMore = () => {
       margin: 0 0 8px 0;
       font-size: 26px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--color-text-primary);
     }
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }
@@ -909,14 +925,14 @@ const loadMore = () => {
       align-items: center;
       gap: 8px;
       padding: 8px 16px;
-      background: #fff;
+      background: var(--color-bg);
       border-radius: 20px;
       font-size: 13px;
-      color: #6b7280;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      color: var(--color-text-secondary);
+      box-shadow: var(--shadow-sm);
 
       .el-icon {
-        color: #667eea;
+        color: var(--color-primary);
       }
 
       &.success {
@@ -937,20 +953,20 @@ const loadMore = () => {
 
 .stat-card {
   border: none;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s;
   overflow: hidden;
   cursor: pointer;
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
 
     .stat-arrow {
       opacity: 1;
       transform: translateX(0);
-      color: #667eea;
+      color: var(--color-primary);
     }
   }
 
@@ -983,13 +999,13 @@ const loadMore = () => {
     .stat-value {
       font-size: 28px;
       font-weight: 700;
-      color: #1f2937;
+      color: var(--color-text-primary);
       line-height: 1.2;
     }
 
     .stat-label {
       font-size: 13px;
-      color: #9ca3af;
+      color: var(--color-text-placeholder);
       margin-top: 2px;
     }
 
@@ -1001,17 +1017,17 @@ const loadMore = () => {
       margin-top: 4px;
 
       &.up {
-        color: #10b981;
+        color: var(--color-success);
       }
 
       &.down {
-        color: #ef4444;
+        color: var(--color-danger);
       }
     }
   }
 
   .stat-arrow {
-    color: #d1d5db;
+    color: var(--color-border-dark);
     opacity: 0;
     transform: translateX(-6px);
     transition: all 0.3s;
@@ -1020,12 +1036,12 @@ const loadMore = () => {
 
 .detail-cards-row {
   border: none;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   :deep(.el-card__body) {
@@ -1033,9 +1049,9 @@ const loadMore = () => {
   }
 
   .detail-card {
-    background: #fff;
-    border: 1px solid #f3f4f6;
-    border-radius: 14px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
     padding: 18px;
     margin-bottom: 16px;
     cursor: pointer;
@@ -1053,14 +1069,14 @@ const loadMore = () => {
       left: 0;
       width: 4px;
       height: 100%;
-      background: linear-gradient(180deg, #667eea, #764ba2);
+      background: linear-gradient(180deg, var(--color-primary), var(--color-primary-dark));
       opacity: 0;
       transition: opacity 0.3s;
     }
 
     &:hover {
       transform: translateY(-3px);
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-lg);
       border-color: rgba(102, 126, 234, 0.3);
 
       &::before {
@@ -1068,7 +1084,7 @@ const loadMore = () => {
       }
 
       .detail-card-arrow {
-        color: #667eea;
+        color: var(--color-primary);
         transform: translateX(0);
       }
     }
@@ -1097,12 +1113,12 @@ const loadMore = () => {
       .detail-card-title {
         font-size: 15px;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       .detail-card-desc {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--color-text-placeholder);
       }
     }
 
@@ -1111,6 +1127,117 @@ const loadMore = () => {
       justify-content: space-between;
       align-items: center;
       padding-top: 10px;
+      border-top: 1px dashed var(--color-border-light);
+
+      .detail-card-meta {
+        font-size: 12px;
+        color: var(--color-text-secondary);
+      }
+
+      .detail-card-arrow {
+        color: var(--color-border-dark);
+        transform: translateX(-4px);
+        transition: all 0.3s;
+      }
+    }
+  }
+}
+
+  :deep(.el-card__body) {
+    padding: 20px 24px 24px;
+  }
+
+  .detail-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+  }
+
+  .detail-card {
+    background: #fff;
+    border: 1px solid #f3f4f6;
+    border-radius: 14px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, #667eea, #764ba2);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    &:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+      border-color: rgba(102, 126, 234, 0.3);
+
+      &::before {
+        opacity: 1;
+      }
+
+      .detail-card-arrow {
+        color: #667eea;
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .detail-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .detail-card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      transition: transform 0.3s;
+    }
+
+    &:hover .detail-card-icon {
+      transform: scale(1.05);
+    }
+
+    .detail-card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+
+      .detail-card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1f2937;
+      }
+
+      .detail-card-desc {
+        font-size: 13px;
+        color: #9ca3af;
+      }
+    }
+
+    .detail-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
       border-top: 1px dashed #f3f4f6;
 
       .detail-card-meta {
@@ -1121,6 +1248,7 @@ const loadMore = () => {
       .detail-card-arrow {
         color: #d1d5db;
         transform: translateX(-4px);
+        opacity: 0;
         transition: all 0.3s;
       }
     }
@@ -1131,14 +1259,14 @@ const loadMore = () => {
   padding: 0 8px 24px;
 
   .drawer-banner {
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
     color: #fff;
     padding: 24px;
     display: flex;
     align-items: center;
     gap: 16px;
     margin-bottom: 24px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
 
     h3 {
       margin: 0 0 4px 0;
@@ -1160,7 +1288,7 @@ const loadMore = () => {
       margin: 0 0 12px 0;
       font-size: 14px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--color-text-primary);
       display: flex;
       align-items: center;
       gap: 6px;
@@ -1169,14 +1297,14 @@ const loadMore = () => {
         content: '';
         width: 3px;
         height: 14px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
         border-radius: 2px;
       }
     }
 
     .metric-card {
-      background: #f9fafb;
-      border-radius: 10px;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-md);
       padding: 14px 12px;
       display: flex;
       flex-direction: column;
@@ -1187,29 +1315,29 @@ const loadMore = () => {
       .metric-value {
         font-size: 20px;
         font-weight: 700;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       .metric-label {
         font-size: 12px;
-        color: #6b7280;
+        color: var(--color-text-secondary);
       }
     }
 
     .event-card {
-      background: #f9fafb;
+      background: var(--color-bg-secondary);
       padding: 10px 14px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
 
       strong {
         font-size: 13px;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       p {
         margin: 4px 0 0 0;
         font-size: 12px;
-        color: #6b7280;
+        color: var(--color-text-secondary);
       }
     }
   }
@@ -1232,10 +1360,10 @@ const loadMore = () => {
     gap: 10px;
     font-size: 16px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
 
     .el-icon {
-      color: #667eea;
+      color: var(--color-primary);
       font-size: 20px;
     }
   }
@@ -1243,12 +1371,12 @@ const loadMore = () => {
 
 .quick-access {
   border: none;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   :deep(.el-card__body) {
@@ -1260,8 +1388,8 @@ const loadMore = () => {
     align-items: center;
     gap: 14px;
     padding: 16px;
-    background: #f9fafb;
-    border-radius: 14px;
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-lg);
     cursor: pointer;
     transition: all 0.3s;
     margin-bottom: 12px;
@@ -1299,18 +1427,18 @@ const loadMore = () => {
       .quick-title {
         font-size: 15px;
         font-weight: 500;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       .quick-desc {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--color-text-placeholder);
         margin-top: 2px;
       }
     }
 
     .quick-arrow {
-      color: #9ca3af;
+      color: var(--color-text-placeholder);
       opacity: 0;
       transform: translateX(-10px);
       transition: all 0.3s;
@@ -1320,12 +1448,12 @@ const loadMore = () => {
 
 .recent-activity {
   border: none;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   :deep(.el-card__body) {
@@ -1338,7 +1466,7 @@ const loadMore = () => {
       align-items: center;
       gap: 14px;
       padding: 14px 0;
-      border-bottom: 1px solid #f5f5f5;
+      border-bottom: 1px solid var(--color-border-light);
       transition: all 0.3s;
 
       &:last-child {
@@ -1360,7 +1488,7 @@ const loadMore = () => {
 
       .el-icon {
         font-size: 18px;
-        color: #667eea;
+        color: var(--color-primary);
       }
     }
 
@@ -1372,31 +1500,31 @@ const loadMore = () => {
       .activity-title {
         font-size: 14px;
         font-weight: 500;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       .activity-desc {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--color-text-placeholder);
         margin-top: 2px;
       }
     }
 
     .activity-time {
       font-size: 12px;
-      color: #9ca3af;
+      color: var(--color-text-placeholder);
     }
   }
 }
 
 .hot-topics {
   border: none;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   :deep(.el-card__body) {
@@ -1419,8 +1547,8 @@ const loadMore = () => {
       width: 24px;
       height: 24px;
       border-radius: 6px;
-      background: #f3f4f6;
-      color: #6b7280;
+      background: var(--color-border-light);
+      color: var(--color-text-secondary);
       font-size: 12px;
       font-weight: 600;
       display: flex;
@@ -1428,7 +1556,7 @@ const loadMore = () => {
       justify-content: center;
 
       &.top {
-        background: linear-gradient(135deg, #ff4d4f, #ff7a45);
+        background: linear-gradient(135deg, var(--color-danger), #ff7a45);
         color: #fff;
       }
     }
@@ -1441,19 +1569,19 @@ const loadMore = () => {
 
       .topic-title {
         font-size: 14px;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       :deep(.el-progress) {
         .el-progress-bar__outer {
-          background: #f3f4f6;
+          background: var(--color-border-light);
         }
       }
     }
 
     .topic-count {
       font-size: 12px;
-      color: #9ca3af;
+      color: var(--color-text-placeholder);
       min-width: 50px;
       text-align: right;
     }
@@ -1462,12 +1590,12 @@ const loadMore = () => {
 
 .tips-card {
   border: none;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   :deep(.el-card__body) {
@@ -1508,12 +1636,12 @@ const loadMore = () => {
       .tip-title {
         font-size: 14px;
         font-weight: 500;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       .tip-desc {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--color-text-placeholder);
         margin-top: 2px;
         line-height: 1.5;
       }
@@ -1523,9 +1651,9 @@ const loadMore = () => {
 
 .ai-status-card {
   border: none;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
 
   :deep(.el-card__body) {
     padding: 20px;
@@ -1594,11 +1722,11 @@ const loadMore = () => {
         animation: pulse 2s infinite;
       }
 
-      .light-green { color: #10b981; }
-      .light-green .light-dot { background: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3); }
+      .light-green { color: var(--color-success); }
+      .light-green .light-dot { background: var(--color-success); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3); }
 
-      .light-red { color: #ef4444; }
-      .light-red .light-dot { background: #ef4444; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3); animation: none; }
+      .light-red { color: var(--color-danger); }
+      .light-red .light-dot { background: var(--color-danger); box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3); animation: none; }
 
       @keyframes pulse {
         0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
@@ -1609,7 +1737,7 @@ const loadMore = () => {
       :deep(.el-tag) {
         background: rgba(16, 185, 129, 0.2);
         border-color: transparent;
-        color: #10b981;
+        color: var(--color-success);
       }
     }
 
@@ -1659,11 +1787,11 @@ const loadMore = () => {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #10b981;
+    color: var(--color-success);
     font-size: 14px;
     padding: 12px;
     background: rgba(16, 185, 129, 0.1);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
   }
 
   .empty-memory {
@@ -1672,18 +1800,18 @@ const loadMore = () => {
     align-items: center;
     gap: 8px;
     padding: 32px;
-    color: #9ca3af;
+    color: var(--color-text-placeholder);
     font-size: 14px;
 
     .el-icon {
       font-size: 32px;
-      color: #d1d5db;
+      color: var(--color-border-dark);
     }
 
     p {
       margin: 0;
       font-size: 12px;
-      color: #9ca3af;
+      color: var(--color-text-placeholder);
     }
   }
 
@@ -1702,7 +1830,7 @@ const loadMore = () => {
 
   .memory-date {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     margin-bottom: 8px;
     padding-left: 4px;
   }
@@ -1712,12 +1840,12 @@ const loadMore = () => {
     align-items: center;
     gap: 12px;
     padding: 10px 8px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     transition: background 0.2s;
 
     &:hover {
-      background: #f9fafb;
+      background: var(--color-bg-secondary);
     }
   }
 
@@ -1746,7 +1874,7 @@ const loadMore = () => {
   .memory-item-title {
     font-size: 13px;
     font-weight: 500;
-    color: #1f2937;
+    color: var(--color-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1754,7 +1882,7 @@ const loadMore = () => {
 
   .memory-item-desc {
     font-size: 11px;
-    color: #9ca3af;
+    color: var(--color-text-placeholder);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1762,7 +1890,7 @@ const loadMore = () => {
 
   .memory-item-time {
     font-size: 11px;
-    color: #9ca3af;
+    color: var(--color-text-placeholder);
     flex-shrink: 0;
   }
 }

@@ -189,7 +189,7 @@ onMounted(load)
 
   .header-content p {
     margin: 0;
-    color: #64748b;
+    color: var(--color-text-secondary);
     font-size: 13px;
   }
 

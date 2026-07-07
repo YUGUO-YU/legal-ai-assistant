@@ -274,24 +274,24 @@ onMounted(() => {
   margin-bottom: 16px;
 
   .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-  .header-content p { margin: 0; color: #64748b; font-size: 13px; }
+  .header-content p { margin: 0; color: var(--color-text-secondary); font-size: 13px; }
 }
 
 .kpi-row { margin-bottom: 14px; }
 
 .kpi-card {
-  border-left: 4px solid #cbd5e1;
+  border-left: 4px solid var(--color-border-dark);
   transition: transform 0.2s;
 
   &:hover { transform: translateY(-2px); }
 
-  &.helpful { border-left-color: #10b981; }
-  &.unhelpful { border-left-color: #ef4444; }
-  &.rate { border-left-color: #3b82f6; }
+  &.helpful { border-left-color: var(--color-success); }
+  &.unhelpful { border-left-color: var(--color-danger); }
+  &.rate { border-left-color: var(--color-info); }
 
-  .kpi-label { font-size: 12px; color: #64748b; }
-  .kpi-value { font-size: 24px; font-weight: 700; color: #1e293b; margin: 4px 0; }
-  .kpi-foot { font-size: 11px; color: #94a3b8; }
+  .kpi-label { font-size: 12px; color: var(--color-text-secondary); }
+  .kpi-value { font-size: 24px; font-weight: 700; color: var(--color-text-primary); margin: 4px 0; }
+  .kpi-foot { font-size: 11px; color: var(--color-text-placeholder); }
 }
 
 .chart-row { margin-bottom: 14px; }

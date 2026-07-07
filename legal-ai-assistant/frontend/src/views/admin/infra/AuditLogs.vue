@@ -160,14 +160,14 @@ onMounted(load)
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-content p { margin: 0; color: var(--color-text-secondary); font-size: 13px; }
 .filter-card { margin-bottom: 16px; }
 .pager { margin-top: 16px; justify-content: flex-end; display: flex; }
 .json-pre {
   margin: 0;
   padding: 8px;
-  background: #f8fafc;
-  border-radius: 4px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
   font-size: 12px;
   max-height: 200px;
   overflow: auto;

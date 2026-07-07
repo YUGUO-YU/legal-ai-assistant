@@ -104,15 +104,7 @@
             </div>
           </template>
 
-          <div v-if="loading" class="loading-container">
-            <div class="loading-animation">
-              <div class="loading-circle"></div>
-              <div class="loading-icon">
-                <el-icon class="is-loading"><Loading /></el-icon>
-              </div>
-            </div>
-            <p>正在分析合同风险...</p>
-          </div>
+          <loading v-if="loading" text="正在分析合同风险..." type="spin" />
 
           <div v-else-if="reviewResult" class="review-result fade-in-up">
             <div class="score-panel">
@@ -319,6 +311,7 @@ import {
   View
 } from '@element-plus/icons-vue'
 import api from '../api'
+import Loading from '../components/Loading.vue'
 import { useUsageMemory } from '@/composables/useUsageMemory'
 
 const router = useRouter()
