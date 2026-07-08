@@ -83,7 +83,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { request } from '@/api'
+import api from '@/api'
 
 const chunks = ref([])
 const stats = ref({})
@@ -99,7 +99,7 @@ const currentChunk = ref(null)
 
 const loadStats = async () => {
   try {
-    const res = await request.get('/admin/ai/kb-chunks/stats')
+    const res = await api.get('/admin/ai/kb-chunks/stats')
     if (res.data.code === 0 || res.data.code === 200) {
       stats.value = res.data.data || {}
     }
@@ -110,7 +110,7 @@ const loadStats = async () => {
 
 const loadKbList = async () => {
   try {
-    const res = await request.get('/admin/biz/mod09-kb')
+    const res = await api.get('/admin/biz/mod09-kb')
     if (res.data.code === 0 || res.data.code === 200) {
       kbList.value = res.data.data?.list || []
     }
@@ -125,7 +125,7 @@ const loadChunks = async () => {
     const params = { page: page.value, pageSize: pageSize.value }
     if (filterKbId.value) params.kbId = filterKbId.value
     if (filterFileName.value) params.fileName = filterFileName.value
-    const res = await request.get('/admin/ai/kb-chunks', { params })
+    const res = await api.get('/admin/ai/kb-chunks', { params })
     if (res.data.code === 0 || res.data.code === 200) {
       chunks.value = res.data.data?.list || []
       total.value = res.data.data?.total || 0

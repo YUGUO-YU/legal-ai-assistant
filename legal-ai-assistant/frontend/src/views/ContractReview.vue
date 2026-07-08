@@ -573,8 +573,20 @@ const generateReportHtml = (result) => {
   `
 }
 
-const saveDraft = () => {
-  ElMessage.success('草稿已保存')
+const saveDraft = async () => {
+  try {
+    const data = {
+      fileName: fileName.value,
+      reviewType: reviewType.value,
+      riskLevel: riskLevel.value,
+      riskDetails: JSON.stringify(risks.value),
+      summary: summary.value
+    }
+    await api.post('/admin/biz/contract-reviews/draft', data)
+    ElMessage.success('草稿已保存')
+  } catch (e) {
+    ElMessage.error('保存失败')
+  }
 }
 </script>
 

@@ -14,9 +14,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * 后台管理统一 API 入口。
@@ -39,6 +46,9 @@ public class AdminController {
 
     @Autowired(required = false)
     private CacheService cacheService;
+
+    @Autowired
+    private com.legalai.admin.service.ConfigRefreshService configRefreshService;
 
     // ============================================================
     // 通用：列表 / 详情 / 统计
@@ -409,13 +419,75 @@ public class AdminController {
         return ApiResponse.success(adminDataService.lawFavoriteStats());
     }
 
-    @GetMapping(value = "/infra/audit-logs/export", produces = "text/csv")
-    public String exportAuditLogs(
+    @GetMapping("/infra/audit-logs/export")
+    public void exportAuditLogs(
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String operation,
-            @RequestParam(required = false) String module) {
+            @RequestParam(required = false) String module,
+            HttpServletResponse response) throws IOException {
         recordAudit("EXPORT", "audit_log", null);
-        return adminDataService.exportAuditLogsCsv(userId, operation, module);
+
+        response.setContentType("text/csv");
+        response.setHeader("Content-Disposition", "attachment; filename=audit-logs.csv");
+
+        OutputStream os = response.getOutputStream();
+        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8));
+
+        writer.write("ID,用户名,操作,模块,对象类型,对象ID,请求URL,请求方法,IP,耗时,状态,时间");
+        writer.newLine();
+
+        int page = 1;
+        int pageSize = 1000;
+        int totalWritten = 0;
+        int maxExport = 10000;
+
+        while (totalWritten < maxExport) {
+            Map<String, Object> result = adminDataService.audit(userId, operation, module, page, pageSize, null, null);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> rows = (List<Map<String, Object>>) result.get("rows");
+
+            if (rows == null || rows.isEmpty()) {
+                break;
+            }
+
+            for (Map<String, Object> row : rows) {
+                writer.write(String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+                        row.get("id"),
+                        escapeCsv(row.get("username")),
+                        escapeCsv(row.get("operation")),
+                        escapeCsv(row.get("biz_module")),
+                        escapeCsv(row.get("biz_type")),
+                        escapeCsv(row.get("biz_id")),
+                        escapeCsv(row.get("request_url")),
+                        row.get("request_method"),
+                        escapeCsv(row.get("ip")),
+                        row.get("duration_ms"),
+                        row.get("status"),
+                        row.get("created_at")
+                ));
+                writer.newLine();
+                totalWritten++;
+            }
+
+            page++;
+
+            if (rows.size() < pageSize) {
+                break;
+            }
+        }
+
+        writer.flush();
+    }
+
+    private String escapeCsv(Object value) {
+        if (value == null) {
+            return "";
+        }
+        String str = value.toString();
+        if (str.contains(",") || str.contains("\"") || str.contains("\n")) {
+            return "\"" + str.replace("\"", "\"\"") + "\"";
+        }
+        return str;
     }
 
     @GetMapping(value = "/monitor/alert-rules/export", produces = "text/csv")
@@ -702,6 +774,11 @@ public class AdminController {
         return ApiResponse.success(adminDataService.getContractReview(id));
     }
 
+    @PostMapping("/biz/contract-reviews/draft")
+    public ApiResponse<Map<String, Object>> saveContractDraft(@RequestBody Map<String, Object> data) {
+        return ApiResponse.success(adminDataService.saveContractDraft(data));
+    }
+
     @GetMapping("/biz/mod09/kb-bases")
     public ApiResponse<Map<String, Object>> mod09KbBases() {
         return ApiResponse.success(adminDataService.list("kb_knowledge_base", "MOD-09", 1, 100, null));
@@ -932,6 +1009,22 @@ public class AdminController {
                 result.put("ok", true);
                 result.put("message", "缓存服务不可用（Redis未配置）");
             }
+            configRefreshService.notifyAll();
+            result.put("configRefreshed", true);
+        } catch (Exception e) {
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return ApiResponse.success(result);
+    }
+
+    @PostMapping("/sys/configs/refresh")
+    public ApiResponse<Map<String, Object>> refreshSysConfigs() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            configRefreshService.notifyChange("sys_config");
+            result.put("ok", true);
+            result.put("message", "配置已热更新");
         } catch (Exception e) {
             result.put("ok", false);
             result.put("error", e.getMessage());

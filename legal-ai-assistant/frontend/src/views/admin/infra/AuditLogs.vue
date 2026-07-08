@@ -132,15 +132,11 @@ function reset() {
 async function exportData() {
   exporting.value = true
   try {
-    const params = new URLSearchParams()
-    if (filter.userId) params.append('userId', filter.userId)
-    if (filter.operation) params.append('operation', filter.operation)
-    if (filter.module) params.append('module', filter.module)
-    const res = await fetch('/api/admin/infra/audit-logs/export?' + params.toString(), {
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    const res = await api.get('/admin/infra/audit-logs/export', {
+      params: { userId: filter.userId || undefined, operation: filter.operation || undefined, module: filter.module || undefined },
+      responseType: 'blob'
     })
-    const text = await res.text()
-    const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' })
+    const blob = new Blob(['\ufeff' + res.data], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

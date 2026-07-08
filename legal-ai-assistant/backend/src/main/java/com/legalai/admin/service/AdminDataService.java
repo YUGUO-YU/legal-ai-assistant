@@ -894,8 +894,9 @@ public class AdminDataService {
             return result;
         }
         try {
+            String statusField = "alert_rule".equals(safe) ? "enabled" : "status";
             String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
-            String sql = "UPDATE " + safe + " SET status = ? WHERE id IN (" + placeholders + ")";
+            String sql = "UPDATE " + safe + " SET " + statusField + " = ? WHERE id IN (" + placeholders + ")";
             int affected = jdbc.update(sql, status, ids.toArray());
             result.put("ok", true);
             result.put("affected", affected);
@@ -1393,6 +1394,48 @@ public class AdminDataService {
         } catch (Exception e) {
             log.warn("[Admin] getContractReview 失败 id={}: {}", id, e.getMessage());
             result.put("data", null);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> saveContractDraft(Map<String, Object> data) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            String fileName = data.get("fileName") != null ? data.get("fileName").toString() : null;
+            String reviewType = data.get("reviewType") != null ? data.get("reviewType").toString() : null;
+            String riskLevel = data.get("riskLevel") != null ? data.get("riskLevel").toString() : null;
+            String riskDetails = data.get("riskDetails") != null ? data.get("riskDetails").toString() : null;
+            String summary = data.get("summary") != null ? data.get("summary").toString() : null;
+
+            String sql = """
+                INSERT INTO contract_review (review_uuid, user_id, username, file_name, file_size, review_type, risk_level, risk_count, summary, risk_details, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
+            String uuid = java.util.UUID.randomUUID().toString();
+            int riskCount = 0;
+            if (riskDetails != null && riskDetails.contains("\"highRiskItems\"")) {
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(riskDetails);
+                    if (node.has("highRiskItems") && node.get("highRiskItems").isArray()) {
+                        riskCount += node.get("highRiskItems").size();
+                    }
+                    if (node.has("mediumRiskItems") && node.get("mediumRiskItems").isArray()) {
+                        riskCount += node.get("mediumRiskItems").size();
+                    }
+                    if (node.has("lowRiskItems") && node.get("lowRiskItems").isArray()) {
+                        riskCount += node.get("lowRiskItems").size();
+                    }
+                } catch (Exception ignore) {}
+            }
+            jdbc.update(sql, uuid, null, null, fileName, null, reviewType, riskLevel, riskCount, summary, riskDetails, new java.sql.Timestamp(System.currentTimeMillis()));
+            result.put("id", uuid);
+            result.put("ok", true);
+            result.put("message", "草稿已保存");
+        } catch (Exception e) {
+            log.warn("[Admin] saveContractDraft 失败: {}", e.getMessage());
+            result.put("ok", false);
             result.put("error", e.getMessage());
         }
         return result;
