@@ -35,7 +35,17 @@
     </el-card>
 
     <el-card>
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <template v-if="selectedRows.length > 0">
+        <div class="batch-actions">
+          <span>已选择 {{ selectedRows.length }} 项</span>
+          <el-button size="small" type="danger" @click="handleBatchDelete">批量删除</el-button>
+          <el-button size="small" type="success" @click="handleBatchToggle(1)">批量启用</el-button>
+          <el-button size="small" type="warning" @click="handleBatchToggle(0)">批量停用</el-button>
+          <el-button size="small" @click="selectedRows = []">取消选择</el-button>
+        </div>
+      </template>
+      <el-table v-else :data="rows" v-loading="loading" stripe border @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="rule_name" label="规则名称" min-width="180" />
         <el-table-column prop="metric" label="指标" width="140">
@@ -171,6 +181,32 @@ const showDialog = ref(false)
 const form = reactive({ id: null, rule_name: '', metric: 'llm_latency_ms', operator: 'gt', threshold: 500, duration_sec: 60, level: 2, channels: '["feishu"]', receivers: '', silence_sec: 1800, biz_module: '', status: 1 })
 const channels = ref(['feishu'])
 const silenceMin = ref(30)
+const selectedRows = ref([])
+
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection
+}
+
+const handleBatchDelete = async () => {
+  if (!selectedRows.value.length) return
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 ${selectedRows.value.length} 项？`, '批量删除', { type: 'warning' })
+    const ids = selectedRows.value.map(r => r.id)
+    await api.post('/admin/alert_rule/batch-delete', { ids })
+    ElMessage.success('删除成功')
+    selectedRows.value = []
+    load()
+  } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
+}
+
+const handleBatchToggle = async (status) => {
+  if (!selectedRows.value.length) return
+  const ids = selectedRows.value.map(r => r.id)
+  await api.post('/admin/alert_rule/batch-toggle', { ids, status })
+  ElMessage.success('操作成功')
+  selectedRows.value = []
+  load()
+}
 
 function operLabel(o) { return ({ gt: '>', gte: '>=', lt: '<', lte: '<=', eq: '==' }[o] || o) }
 function levelLabel(l) { return ({ 1: 'P0 紧急', 2: 'P1 严重', 3: 'P2 提示' }[l] || l) }
@@ -272,4 +308,19 @@ onMounted(load)
 .header-actions { display:flex; gap:8px; align-items:center; }
 .filter-card { margin-bottom: 16px; }
 .mono { font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 12px; color: #475569; }
+
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--color-primary-light);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+
+  span {
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+}
 </style>

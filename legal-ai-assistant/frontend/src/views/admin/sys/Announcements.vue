@@ -24,7 +24,17 @@
     </el-card>
 
     <el-card>
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <template v-if="selectedRows.length > 0">
+        <div class="batch-actions">
+          <span>已选择 {{ selectedRows.length }} 项</span>
+          <el-button size="small" type="danger" @click="handleBatchDelete">批量删除</el-button>
+          <el-button size="small" type="success" @click="handleBatchToggle(1)">批量发布</el-button>
+          <el-button size="small" type="warning" @click="handleBatchToggle(0)">批量撤回</el-button>
+          <el-button size="small" @click="selectedRows = []">取消选择</el-button>
+        </div>
+      </template>
+      <el-table v-else :data="rows" v-loading="loading" stripe border @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
         <el-table-column label="类型" width="110">
@@ -137,6 +147,32 @@ const pageSize = ref(20)
 const filter = reactive({ keyword: '' })
 const showDialog = ref(false)
 const form = reactive({ id: null, title: '', content: '', type: 1, priority: 0, status: 1, published_at: '', expired_at: '', created_by: 'admin' })
+const selectedRows = ref([])
+
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection
+}
+
+const handleBatchDelete = async () => {
+  if (!selectedRows.value.length) return
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 ${selectedRows.value.length} 项？`, '批量删除', { type: 'warning' })
+    const ids = selectedRows.value.map(r => r.id)
+    await api.post('/admin/announcement/batch-delete', { ids })
+    ElMessage.success('删除成功')
+    selectedRows.value = []
+    load()
+  } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
+}
+
+const handleBatchToggle = async (status) => {
+  if (!selectedRows.value.length) return
+  const ids = selectedRows.value.map(r => r.id)
+  await api.post('/admin/announcement/batch-toggle', { ids, status })
+  ElMessage.success('操作成功')
+  selectedRows.value = []
+  load()
+}
 
 const rules = reactive({
   title: [
@@ -220,4 +256,18 @@ onMounted(load)
 .header-actions { display:flex; gap:8px; align-items:center; }
 .filter-card { margin-bottom: 16px; }
 
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--color-primary-light);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+
+  span {
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+}
 </style>

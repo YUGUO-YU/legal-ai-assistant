@@ -1,5 +1,6 @@
 package com.legalai.admin.controller;
 
+import com.legalai.admin.enums.DataScope;
 import com.legalai.admin.service.AdminDataService;
 import com.legalai.admin.service.AlertMonitorService;
 import com.legalai.admin.service.LawCategoryService;
@@ -7,6 +8,7 @@ import com.legalai.dto.ApiResponse;
 import com.legalai.model.LawCategory;
 import com.legalai.model.LawCategoryType;
 import com.legalai.service.CacheService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,21 @@ public class AdminController {
     @GetMapping("/stats")
     public ApiResponse<Map<String, Object>> stats() {
         return ApiResponse.success(adminDataService.stats());
+    }
+
+    @GetMapping("/stats/user-activity")
+    public ApiResponse<Map<String, Object>> userActivityStats(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return ApiResponse.success(adminDataService.userActivityStats(startDate, endDate));
+    }
+
+    @GetMapping("/stats/law-usage")
+    public ApiResponse<Map<String, Object>> lawUsageStats(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "10") int topN) {
+        return ApiResponse.success(adminDataService.lawUsageStats(startDate, endDate, topN));
     }
 
     @GetMapping("/db/health")
@@ -123,6 +140,23 @@ public class AdminController {
         Map<String, Object> data = adminDataService.toggle(table, id, column);
         recordAudit("TOGGLE", table, String.valueOf(id));
         return ApiResponse.success(data);
+    }
+
+    @PostMapping("/{table}/batch-delete")
+    public ApiResponse<Map<String, Object>> batchDelete(@PathVariable String table, @RequestBody Map<String, Object> data) {
+        @SuppressWarnings("unchecked")
+        List<Long> ids = ((List<Number>) data.get("ids")).stream().map(Number::longValue).toList();
+        recordAudit("BATCH_DELETE", table, String.join(",", ids.stream().map(String::valueOf).toList()));
+        return ApiResponse.success(adminDataService.batchDelete(table, ids));
+    }
+
+    @PostMapping("/{table}/batch-toggle")
+    public ApiResponse<Map<String, Object>> batchToggle(@PathVariable String table, @RequestBody Map<String, Object> data) {
+        @SuppressWarnings("unchecked")
+        List<Long> ids = ((List<Number>) data.get("ids")).stream().map(Number::longValue).toList();
+        Integer status = ((Number) data.get("status")).intValue();
+        recordAudit("BATCH_TOGGLE", table, String.join(",", ids.stream().map(String::valueOf).toList()) + " -> " + status);
+        return ApiResponse.success(adminDataService.batchToggle(table, ids, status));
     }
 
     // ============================================================
@@ -329,8 +363,12 @@ public class AdminController {
             @RequestParam(required = false) String operation,
             @RequestParam(required = false) String module,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize) {
-        return ApiResponse.success(adminDataService.audit(userId, operation, module, page, pageSize));
+            @RequestParam(defaultValue = "20") int pageSize,
+            HttpServletRequest request) {
+        Map<String, Object> adminInfo = getCurrentAdminUser(request);
+        Long adminUserId = (Long) adminInfo.get("userId");
+        DataScope dataScope = (DataScope) adminInfo.get("dataScope");
+        return ApiResponse.success(adminDataService.audit(userId, operation, module, page, pageSize, dataScope, adminUserId));
     }
 
     @GetMapping("/infra/search-feedback")
@@ -408,8 +446,12 @@ public class AdminController {
     public ApiResponse<Map<String, Object>> listFrontendUsers(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(required = false) String keyword) {
-        return ApiResponse.success(adminDataService.listFrontendUsers(page, pageSize, keyword));
+            @RequestParam(required = false) String keyword,
+            HttpServletRequest request) {
+        Map<String, Object> adminInfo = getCurrentAdminUser(request);
+        Long adminUserId = (Long) adminInfo.get("userId");
+        DataScope dataScope = (DataScope) adminInfo.get("dataScope");
+        return ApiResponse.success(adminDataService.listFrontendUsers(adminUserId, dataScope, page, pageSize, keyword));
     }
 
     @PostMapping("/infra/frontend-users")
@@ -779,8 +821,12 @@ public class AdminController {
     @GetMapping("/ops/user-feedback")
     public ApiResponse<Map<String, Object>> userFeedback(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize) {
-        return ApiResponse.success(adminDataService.list("user_feedback", null, page, pageSize, null));
+            @RequestParam(defaultValue = "20") int pageSize,
+            HttpServletRequest request) {
+        Map<String, Object> adminInfo = getCurrentAdminUser(request);
+        Long adminUserId = (Long) adminInfo.get("userId");
+        DataScope dataScope = (DataScope) adminInfo.get("dataScope");
+        return ApiResponse.success(adminDataService.listUserFeedback(adminUserId, dataScope, page, pageSize));
     }
 
     @PostMapping("/ops/user-feedback/{id}/update")
@@ -792,8 +838,14 @@ public class AdminController {
     }
 
     @GetMapping("/ops/search-logs")
-    public ApiResponse<Map<String, Object>> searchLogs() {
-        return ApiResponse.success(adminDataService.list("search_log", null, 1, 50, null));
+    public ApiResponse<Map<String, Object>> searchLogs(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "50") int pageSize,
+            HttpServletRequest request) {
+        Map<String, Object> adminInfo = getCurrentAdminUser(request);
+        Long adminUserId = (Long) adminInfo.get("userId");
+        DataScope dataScope = (DataScope) adminInfo.get("dataScope");
+        return ApiResponse.success(adminDataService.listSearchLogs(adminUserId, dataScope, page, pageSize));
     }
 
     // ============================================================
@@ -1099,6 +1151,30 @@ public class AdminController {
     // ============================================================
     // helpers
     // ============================================================
+
+    private Map<String, Object> getCurrentAdminUser(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return adminDataService.getCurrentAdminInfo(null);
+        }
+        String token = authHeader.substring(7);
+        if (token.isEmpty()) {
+            return adminDataService.getCurrentAdminInfo(null);
+        }
+        try {
+            var rows = adminDataService.jdbc().queryForList(
+                "SELECT user_id FROM auth_tokens WHERE token = ? AND expire_at > NOW()",
+                token);
+            if (rows.isEmpty()) {
+                return adminDataService.getCurrentAdminInfo(null);
+            }
+            Long userId = Long.valueOf(rows.get(0).get("user_id").toString());
+            return adminDataService.getCurrentAdminInfo(userId);
+        } catch (Exception e) {
+            log.warn("[Admin] getCurrentAdminUser 失败: {}", e.getMessage());
+            return adminDataService.getCurrentAdminInfo(null);
+        }
+    }
 
     private void recordAudit(String operation, String bizType, String bizId) {
         try {

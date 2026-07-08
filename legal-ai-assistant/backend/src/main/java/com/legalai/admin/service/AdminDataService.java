@@ -1,5 +1,6 @@
 package com.legalai.admin.service;
 
+import com.legalai.admin.enums.DataScope;
 import com.legalai.llm.LLMClient;
 import com.legalai.service.MilvusService;
 import org.slf4j.Logger;
@@ -9,6 +10,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,81 @@ public class AdminDataService {
 
     public JdbcTemplate jdbc() {
         return jdbc;
+    }
+
+    public Map<String, Object> getCurrentAdminInfo(Long userId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (userId == null) {
+            result.put("userId", null);
+            result.put("username", null);
+            result.put("roleId", null);
+            result.put("dataScope", DataScope.ALL);
+            result.put("deptId", null);
+            result.put("teamId", null);
+            return result;
+        }
+        try {
+            var rows = jdbc.queryForList(
+                "SELECT au.id, au.username, au.dept_id, au.team_id, " +
+                "aur.role_id, ar.data_scope " +
+                "FROM admin_user au " +
+                "LEFT JOIN admin_user_role aur ON au.id = aur.user_id " +
+                "LEFT JOIN admin_role ar ON aur.role_id = ar.id " +
+                "WHERE au.id = ? LIMIT 1",
+                userId);
+            if (rows.isEmpty()) {
+                result.put("userId", userId);
+                result.put("dataScope", DataScope.ALL);
+                return result;
+            }
+            var row = rows.get(0);
+            Integer dataScopeValue = row.get("data_scope") != null ? ((Number) row.get("data_scope")).intValue() : 4;
+            result.put("userId", userId);
+            result.put("username", row.get("username"));
+            result.put("roleId", row.get("role_id"));
+            result.put("dataScope", DataScope.fromValue(dataScopeValue));
+            result.put("deptId", row.get("dept_id"));
+            result.put("teamId", row.get("team_id"));
+        } catch (Exception e) {
+            log.warn("[Admin] getCurrentAdminInfo 失败 userId={}: {}", userId, e.getMessage());
+            result.put("userId", userId);
+            result.put("dataScope", DataScope.ALL);
+        }
+        return result;
+    }
+
+    public String buildDataScopeCondition(DataScope scope, Long userId, String userField, List<Object> args) {
+        if (scope == null || scope == DataScope.ALL) {
+            return "";
+        }
+        if (userId == null) {
+            return " AND " + userField + " = -1";
+        }
+        switch (scope) {
+            case SELF:
+                return " AND " + userField + " = ?";
+            case DEPT:
+                return " AND dept_id = (SELECT dept_id FROM admin_user WHERE id = ?)";
+            case TEAM:
+                return " AND team_id = (SELECT team_id FROM admin_user WHERE id = ?)";
+            default:
+                return "";
+        }
+    }
+
+    public void applyDataScopeArgs(DataScope scope, Long userId, List<Object> args) {
+        if (scope == null || scope == DataScope.ALL || userId == null) {
+            return;
+        }
+        switch (scope) {
+            case SELF:
+            case DEPT:
+            case TEAM:
+                args.add(userId);
+                break;
+            default:
+                break;
+        }
     }
 
     public Map<String, Object> list(String table, String module, int page, int pageSize, String keyword) {
@@ -379,7 +456,7 @@ public class AdminDataService {
         return result;
     }
 
-    public Map<String, Object> audit(String userId, String operation, String module, int page, int pageSize) {
+    public Map<String, Object> audit(String userId, String operation, String module, int page, int pageSize, DataScope dataScope, Long adminUserId) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
@@ -397,6 +474,22 @@ public class AdminDataService {
             }
             if (operation != null && !operation.isEmpty()) { where.append(" AND operation = ? "); args.add(operation); }
             if (module != null && !module.isEmpty()) { where.append(" AND biz_module = ? "); args.add(module); }
+            if (dataScope != null && dataScope != DataScope.ALL && adminUserId != null) {
+                switch (dataScope) {
+                    case SELF:
+                        where.append(" AND user_id = ?");
+                        args.add(adminUserId);
+                        break;
+                    case DEPT:
+                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE dept_id = (SELECT dept_id FROM admin_user WHERE id = ?))");
+                        args.add(adminUserId);
+                        break;
+                    case TEAM:
+                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE team_id = (SELECT team_id FROM admin_user WHERE id = ?))");
+                        args.add(adminUserId);
+                        break;
+                }
+            }
             Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM admin_audit_log" + where, Integer.class, args.toArray());
             int offset = Math.max(0, (page - 1) * pageSize);
             args.add(pageSize); args.add(offset);
@@ -754,6 +847,68 @@ public class AdminDataService {
         return result;
     }
 
+    private static final Set<String> BATCH_WHITELIST = Set.of(
+        "frontend_user", "admin_user", "announcement", "alert_rule", "law_document", "tb_case"
+    );
+
+    public Map<String, Object> batchDelete(String table, List<Long> ids) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        String safe = sanitize(table);
+        if (!BATCH_WHITELIST.contains(safe)) {
+            result.put("ok", false);
+            result.put("error", "该表不支持批量删除: " + table);
+            return result;
+        }
+        if (ids == null || ids.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "ID列表为空");
+            return result;
+        }
+        try {
+            String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+            String sql = "DELETE FROM " + safe + " WHERE id IN (" + placeholders + ")";
+            int affected = jdbc.update(sql, ids.toArray());
+            result.put("ok", true);
+            result.put("affected", affected);
+            result.put("total", ids.size());
+            log.info("[Admin] 批量删除 table={} ids={} affected={}", table, ids, affected);
+        } catch (Exception e) {
+            log.warn("[Admin] 批量删除失败 table={}: {}", table, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> batchToggle(String table, List<Long> ids, int status) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        String safe = sanitize(table);
+        if (!BATCH_WHITELIST.contains(safe)) {
+            result.put("ok", false);
+            result.put("error", "该表不支持批量状态切换: " + table);
+            return result;
+        }
+        if (ids == null || ids.isEmpty()) {
+            result.put("ok", false);
+            result.put("error", "ID列表为空");
+            return result;
+        }
+        try {
+            String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+            String sql = "UPDATE " + safe + " SET status = ? WHERE id IN (" + placeholders + ")";
+            int affected = jdbc.update(sql, status, ids.toArray());
+            result.put("ok", true);
+            result.put("affected", affected);
+            result.put("total", ids.size());
+            log.info("[Admin] 批量状态切换 table={} ids={} status={} affected={}", table, ids, status, affected);
+        } catch (Exception e) {
+            log.warn("[Admin] 批量状态切换失败 table={}: {}", table, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
     // ============================================================
     // 告警工作流：ack / resolve
     // ============================================================
@@ -1026,6 +1181,146 @@ public class AdminDataService {
     // ============================================================
     // LLM 健康探测（模拟）
     // ============================================================
+
+    // ============================================================
+    // 用户活跃度统计
+    // ============================================================
+
+    public Map<String, Object> userActivityStats(String startDate, String endDate) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            String dateFilter = "";
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (startDate != null && !startDate.isEmpty()) {
+                dateFilter += " AND created_at >= ? ";
+                args.add(startDate);
+            }
+            if (endDate != null && !endDate.isEmpty()) {
+                dateFilter += " AND created_at < DATE_ADD(?, INTERVAL 1 DAY) ";
+                args.add(endDate);
+            }
+
+            String dailyActiveSql = """
+                SELECT COUNT(DISTINCT user_id) FROM (
+                    SELECT user_id FROM frontend_user WHERE DATE(last_login_at) = CURDATE()
+                    UNION
+                    SELECT user_id FROM search_log WHERE DATE(created_at) = CURDATE()
+                    UNION
+                    SELECT user_id FROM user_login_history WHERE DATE(login_at) = CURDATE()
+                ) t
+                """;
+            Integer dailyActive = jdbc.queryForObject(dailyActiveSql, Integer.class);
+
+            String weeklyActiveSql = """
+                SELECT COUNT(DISTINCT user_id) FROM (
+                    SELECT user_id FROM frontend_user WHERE last_login_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                    UNION
+                    SELECT user_id FROM search_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                    UNION
+                    SELECT user_id FROM user_login_history WHERE login_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                ) t
+                """;
+            Integer weeklyActive = jdbc.queryForObject(weeklyActiveSql, Integer.class);
+
+            String monthlyActiveSql = """
+                SELECT COUNT(DISTINCT user_id) FROM (
+                    SELECT user_id FROM frontend_user WHERE last_login_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                    UNION
+                    SELECT user_id FROM search_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                    UNION
+                    SELECT user_id FROM user_login_history WHERE login_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                ) t
+                """;
+            Integer monthlyActive = jdbc.queryForObject(monthlyActiveSql, Integer.class);
+
+            String trendSql = """
+                SELECT DATE(created_at) AS date, COUNT(DISTINCT user_id) AS count
+                FROM (
+                    SELECT user_id, created_at FROM search_log WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+                    UNION ALL
+                    SELECT user_id, created_at FROM user_login_history WHERE login_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+                ) t
+                GROUP BY DATE(created_at)
+                ORDER BY date
+                """;
+            List<Map<String, Object>> activeTrend = jdbc.queryForList(trendSql);
+
+            String topUsersSql = """
+                SELECT username, COUNT(*) AS count
+                FROM (
+                    SELECT username, created_at FROM search_log
+                    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                    UNION ALL
+                    SELECT username, created_at FROM user_login_history
+                    WHERE login_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                ) t
+                WHERE username IS NOT NULL AND username != ''
+                GROUP BY username
+                ORDER BY count DESC
+                LIMIT 10
+                """;
+            List<Map<String, Object>> topUsers = jdbc.queryForList(topUsersSql);
+
+            result.put("dailyActive", dailyActive == null ? 0 : dailyActive);
+            result.put("weeklyActive", weeklyActive == null ? 0 : weeklyActive);
+            result.put("monthlyActive", monthlyActive == null ? 0 : monthlyActive);
+            result.put("activeTrend", activeTrend);
+            result.put("topUsers", topUsers);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] userActivityStats 失败: {}", e.getMessage());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> lawUsageStats(String startDate, String endDate, int topN) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            String dateFilter = "";
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (startDate != null && !startDate.isEmpty()) {
+                dateFilter += " AND sl.created_at >= ? ";
+                args.add(startDate);
+            }
+            if (endDate != null && !endDate.isEmpty()) {
+                dateFilter += " AND sl.created_at < DATE_ADD(?, INTERVAL 1 DAY) ";
+                args.add(endDate);
+            }
+
+            String topLawsSearchSql = """
+                SELECT la.title, COUNT(*) AS count
+                FROM search_log sl
+                JOIN law_article la ON sl.article_id = la.id
+                WHERE sl.article_id IS NOT NULL
+                AND sl.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                GROUP BY la.id, la.title
+                ORDER BY count DESC
+                LIMIT ?
+                """;
+            java.util.List<Object> searchArgs = new java.util.ArrayList<>(args);
+            searchArgs.add(topN);
+            List<Map<String, Object>> topLawsSearch = jdbc.queryForList(topLawsSearchSql, searchArgs.toArray());
+
+            String topLawsFavoriteSql = """
+                SELECT la.title, COUNT(*) AS count
+                FROM law_favorite lf
+                JOIN law_article la ON lf.article_id = la.id
+                GROUP BY la.id, la.title
+                ORDER BY count DESC
+                LIMIT ?
+                """;
+            List<Map<String, Object>> topLawsFavorite = jdbc.queryForList(topLawsFavoriteSql, topN);
+
+            result.put("topLawsSearch", topLawsSearch);
+            result.put("topLawsFavorite", topLawsFavorite);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] lawUsageStats 失败: {}", e.getMessage());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
 
     // ============================================================
     // 合同审查记录查询
@@ -1506,11 +1801,11 @@ public class AdminDataService {
         return result;
     }
 
-    public Map<String, Object> listFrontendUsers(int page, int pageSize, String keyword) {
+    public Map<String, Object> listFrontendUsers(Long adminUserId, DataScope dataScope, int page, int pageSize, String keyword) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (keyword != null && !keyword.isEmpty()) {
                 where.append(" AND (id LIKE ? OR username LIKE ? OR real_name LIKE ? OR email LIKE ? OR phone LIKE ?)");
                 String like = "%" + keyword + "%";
@@ -1519,6 +1814,26 @@ public class AdminDataService {
                 args.add(like);
                 args.add(like);
                 args.add(like);
+            }
+            if (dataScope != null && dataScope != DataScope.ALL) {
+                if (adminUserId == null) {
+                    where.append(" AND 1=0");
+                } else {
+                    switch (dataScope) {
+                        case SELF:
+                            where.append(" AND created_by = ?");
+                            args.add(adminUserId);
+                            break;
+                        case DEPT:
+                            where.append(" AND dept_id = (SELECT dept_id FROM admin_user WHERE id = ?)");
+                            args.add(adminUserId);
+                            break;
+                        case TEAM:
+                            where.append(" AND team_id = (SELECT team_id FROM admin_user WHERE id = ?)");
+                            args.add(adminUserId);
+                            break;
+                    }
+                }
             }
             Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM frontend_user" + where, Integer.class, args.toArray());
             int offset = Math.max(0, (page - 1) * pageSize);
@@ -2656,6 +2971,92 @@ public class AdminDataService {
         } catch (Exception e) {
             log.warn("[Admin] getResearchTask 失败 id={}: {}", id, e.getMessage());
             result.put("data", null);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> listSearchLogs(Long adminUserId, DataScope dataScope, int page, int pageSize) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+            List<Object> args = new ArrayList<>();
+            if (dataScope != null && dataScope != DataScope.ALL && adminUserId != null) {
+                switch (dataScope) {
+                    case SELF:
+                        where.append(" AND user_id = ?");
+                        args.add(adminUserId);
+                        break;
+                    case DEPT:
+                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE dept_id = (SELECT dept_id FROM admin_user WHERE id = ?))");
+                        args.add(adminUserId);
+                        break;
+                    case TEAM:
+                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE team_id = (SELECT team_id FROM admin_user WHERE id = ?))");
+                        args.add(adminUserId);
+                        break;
+                }
+            }
+            Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM search_log" + where, Integer.class, args.toArray());
+            int offset = Math.max(0, (page - 1) * pageSize);
+            String sql = "SELECT * FROM search_log" + where + " ORDER BY id DESC LIMIT ? OFFSET ?";
+            args.add(pageSize);
+            args.add(offset);
+            List<Map<String, Object>> rows = jdbc.queryForList(sql, args.toArray());
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 搜索日志列表查询失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> listUserFeedback(Long adminUserId, DataScope dataScope, int page, int pageSize) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+            List<Object> args = new ArrayList<>();
+            if (dataScope != null && dataScope != DataScope.ALL && adminUserId != null) {
+                switch (dataScope) {
+                    case SELF:
+                        where.append(" AND user_id = ?");
+                        args.add(adminUserId);
+                        break;
+                    case DEPT:
+                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE dept_id = (SELECT dept_id FROM admin_user WHERE id = ?))");
+                        args.add(adminUserId);
+                        break;
+                    case TEAM:
+                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE team_id = (SELECT team_id FROM admin_user WHERE id = ?))");
+                        args.add(adminUserId);
+                        break;
+                }
+            }
+            Integer total = jdbc.queryForObject("SELECT COUNT(*) FROM user_feedback" + where, Integer.class, args.toArray());
+            int offset = Math.max(0, (page - 1) * pageSize);
+            String sql = "SELECT * FROM user_feedback" + where + " ORDER BY id DESC LIMIT ? OFFSET ?";
+            args.add(pageSize);
+            args.add(offset);
+            List<Map<String, Object>> rows = jdbc.queryForList(sql, args.toArray());
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", rows);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] 用户反馈列表查询失败: {}", e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
             result.put("error", e.getMessage());
         }
         return result;

@@ -34,7 +34,17 @@
       <template v-if="rows.length === 0 && !loading">
         <table-empty-state :text="loadError || '暂无数据'" />
       </template>
-      <el-table v-else :data="rows" v-loading="loading" stripe border>
+      <template v-if="selectedRows.length > 0">
+        <div class="batch-actions">
+          <span>已选择 {{ selectedRows.length }} 项</span>
+          <el-button size="small" type="danger" @click="handleBatchDelete">批量删除</el-button>
+          <el-button size="small" type="success" @click="handleBatchToggle(1)">批量启用</el-button>
+          <el-button size="small" type="warning" @click="handleBatchToggle(0)">批量停用</el-button>
+          <el-button size="small" @click="selectedRows = []">取消选择</el-button>
+        </div>
+      </template>
+      <el-table v-else :data="rows" v-loading="loading" stripe border @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="username" label="用户名" min-width="130" />
         <el-table-column prop="real_name" label="姓名" width="120" />
@@ -63,7 +73,7 @@
             <el-button link type="warning" size="small" @click="openAssignRoles(row)">分配角色</el-button>
             <el-button link :type="row.status === 1 ? 'warning' : 'success'" size="small" @click="toggleUser(row)">{{ row.status === 1 ? '停用' : '启用' }}</el-button>
             <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
-          </el-table-column>
+          </template>
         </el-table-column>
       </el-table>
     </el-card>
@@ -154,6 +164,32 @@ const showRoleDialog = ref(false)
 const form = reactive({ id: null, username: '', password: '', real_name: '', mobile: '', email: '', user_type: 1, feishu_union_id: '', status: 1 })
 const roleForm = reactive({ userId: null, username: '', realName: '', selectedRoles: [] })
 const allRoles = ref([])
+const selectedRows = ref([])
+
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection
+}
+
+const handleBatchDelete = async () => {
+  if (!selectedRows.value.length) return
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 ${selectedRows.value.length} 项？`, '批量删除', { type: 'warning' })
+    const ids = selectedRows.value.map(r => r.id)
+    await api.post('/admin/admin_user/batch-delete', { ids })
+    ElMessage.success('删除成功')
+    selectedRows.value = []
+    load()
+  } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
+}
+
+const handleBatchToggle = async (status) => {
+  if (!selectedRows.value.length) return
+  const ids = selectedRows.value.map(r => r.id)
+  await api.post('/admin/admin_user/batch-toggle', { ids, status })
+  ElMessage.success('操作成功')
+  selectedRows.value = []
+  load()
+}
 
 function statusLabel(s) { return ({ 1: '启用', 0: '停用', 2: '锁定' }[s] || s) }
 function statusTag(s) { return ({ 1: 'success', 0: 'info', 2: 'danger' }[s] || '') }
@@ -272,4 +308,19 @@ onMounted(load)
 .header-actions { display:flex; gap:8px; align-items:center; }
 .filter-card { margin-bottom: 16px; }
 .login-ip { font-size:11px; color:var(--color-text-placeholder); margin-top:2px; }
+
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--color-primary-light);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+
+  span {
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+}
 </style>

@@ -265,5 +265,9 @@ export default {
     headers: { 'Content-Type': 'multipart/form-data' }
   })),
   importConfirm: (data) => withRetry(() => api.post('/admin/law-import/confirm', data)),
-  lawImportHistory: () => withRetry(() => api.get('/admin/law-import/history'))
+  lawImportHistory: () => withRetry(() => api.get('/admin/law-import/history')),
+  stats: {
+    userActivity: (params) => withRetry(() => api.get('/admin/stats/user-activity', { params })),
+    lawUsage: (params) => withRetry(() => api.get('/admin/stats/law-usage', { params }))
+  }
 }

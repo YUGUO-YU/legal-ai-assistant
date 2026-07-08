@@ -1,5 +1,6 @@
 package com.legalai.admin.service;
 
+import com.legalai.service.MilvusService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,21 +13,36 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class AlertMonitorService {
     private static final Logger log = LoggerFactory.getLogger(AlertMonitorService.class);
 
+    private static final int FAILURE_THRESHOLD = 3;
+
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired(required = false)
+    private AdminDataService adminDataService;
+
+    @Autowired(required = false)
+    private MilvusService milvusService;
+
     private final Random random = new Random();
+
+    private final AtomicInteger mysqlFailureCount = new AtomicInteger(0);
+    private final AtomicInteger redisFailureCount = new AtomicInteger(0);
+    private final AtomicInteger esFailureCount = new AtomicInteger(0);
+    private final AtomicInteger milvusFailureCount = new AtomicInteger(0);
 
     @Scheduled(fixedRate = 60000)
     public void scheduledAlertCheck() {
         log.debug("[AlertMonitor] 执行定时告警检测");
         try {
             checkAlerts();
+            checkInfraHealth();
         } catch (Exception e) {
             log.error("[AlertMonitor] 定时告警检测异常: {}", e.getMessage());
         }
@@ -178,5 +194,166 @@ public class AlertMonitorService {
 
     private String buildAlertMessage(String ruleName, String metric, BigDecimal value, String operator, BigDecimal threshold) {
         return String.format("%s: %s = %s (阈值: %s %s)", ruleName, metric, value, operator, threshold);
+    }
+
+    // ============================================================
+    // 基础设施健康检查
+    // ============================================================
+
+    public void checkInfraHealth() {
+        checkMysqlHealth();
+        checkRedisHealth();
+        checkEsHealth();
+        checkMilvusHealth();
+    }
+
+    private void checkMysqlHealth() {
+        try {
+            long start = System.currentTimeMillis();
+            Integer result = jdbc.queryForObject("SELECT 1", Integer.class);
+            boolean healthy = result != null && result == 1;
+            long latencyMs = System.currentTimeMillis() - start;
+
+            if (healthy) {
+                mysqlFailureCount.set(0);
+                log.debug("[AlertMonitor] MySQL 健康检查通过, latency={}ms", latencyMs);
+            } else {
+                handleFailure("mysql", "MySQL 连接失败", "mysql.health", 1, 0, "critical");
+            }
+        } catch (Exception e) {
+            handleFailure("mysql", "MySQL 连接异常: " + e.getMessage(), "mysql.health", 1, 0, "critical");
+        }
+    }
+
+    private void checkRedisHealth() {
+        try {
+            long start = System.currentTimeMillis();
+            boolean healthy = false;
+            try {
+                var rows = jdbc.queryForList("SELECT 1");
+                healthy = !rows.isEmpty();
+            } catch (Exception ignored) {
+            }
+            long latencyMs = System.currentTimeMillis() - start;
+
+            if (healthy) {
+                redisFailureCount.set(0);
+                log.debug("[AlertMonitor] Redis 健康检查通过, latency={}ms", latencyMs);
+            } else {
+                handleFailure("redis", "Redis 连接失败", "redis.health", 1, 0, "critical");
+            }
+        } catch (Exception e) {
+            handleFailure("redis", "Redis 连接异常: " + e.getMessage(), "redis.health", 1, 0, "critical");
+        }
+    }
+
+    private void checkEsHealth() {
+        try {
+            if (adminDataService == null) {
+                log.warn("[AlertMonitor] AdminDataService 不可用, 跳过 ES 健康检查");
+                return;
+            }
+            var result = adminDataService.esHealth();
+            boolean healthy = "green".equals(result.get("status")) || "yellow".equals(result.get("status"));
+
+            if (healthy) {
+                esFailureCount.set(0);
+                log.debug("[AlertMonitor] ES 健康检查通过, status={}", result.get("status"));
+            } else {
+                handleFailure("elasticsearch", "Elasticsearch 状态异常: " + result.get("message"), "es.health", 1, 0, "critical");
+            }
+        } catch (Exception e) {
+            handleFailure("elasticsearch", "Elasticsearch 健康检查异常: " + e.getMessage(), "es.health", 1, 0, "critical");
+        }
+    }
+
+    private void checkMilvusHealth() {
+        try {
+            boolean healthy = milvusService != null && milvusService.isAvailable();
+
+            if (healthy) {
+                milvusFailureCount.set(0);
+                log.debug("[AlertMonitor] Milvus 健康检查通过");
+            } else {
+                handleFailure("milvus", "Milvus 向量库连接失败", "milvus.health", 1, 0, "critical");
+            }
+        } catch (Exception e) {
+            handleFailure("milvus", "Milvus 健康检查异常: " + e.getMessage(), "milvus.health", 1, 0, "critical");
+        }
+    }
+
+    private void handleFailure(String service, String message, String metric, int threshold, int currentValue, String severity) {
+        AtomicInteger counter = getFailureCounter(service);
+        int count = counter.incrementAndGet();
+
+        if (count >= FAILURE_THRESHOLD) {
+            if (!hasInfraFiringAlert(metric)) {
+                insertInfraAlert(service, metric, threshold, currentValue, severity, message);
+                log.warn("[AlertMonitor] 触发基础设施告警 service={}, metric={}, failures={}", service, metric, count);
+            } else {
+                log.debug("[AlertMonitor] 跳过已存在的 firing 告警 metric={}", metric);
+            }
+        } else {
+            log.debug("[AlertMonitor] {} 健康检查失败 {}/{}次", service, count, FAILURE_THRESHOLD);
+        }
+    }
+
+    private AtomicInteger getFailureCounter(String service) {
+        return switch (service) {
+            case "mysql" -> mysqlFailureCount;
+            case "redis" -> redisFailureCount;
+            case "elasticsearch" -> esFailureCount;
+            case "milvus" -> milvusFailureCount;
+            default -> throw new IllegalArgumentException("未知服务: " + service);
+        };
+    }
+
+    private boolean hasInfraFiringAlert(String metric) {
+        try {
+            Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM alert_history WHERE rule_id = 0 AND metric = ? AND resolved_at IS NULL",
+                Integer.class, metric
+            );
+            return count != null && count > 0;
+        } catch (Exception e) {
+            log.warn("[AlertMonitor] 检查 firing 状态失败 metric={}: {}", metric, e.getMessage());
+            return false;
+        }
+    }
+
+    private void insertInfraAlert(String ruleName, String metric, int threshold, int currentValue, String severity, String message) {
+        try {
+            jdbc.update(
+                "INSERT INTO alert_history (rule_id, rule_name, metric, threshold, metric_value, level, message, notify_status, triggered_at) VALUES (0, ?, ?, ?, ?, ?, ?, 0, NOW())",
+                ruleName + "连接告警", metric, threshold, currentValue, "critical".equals(severity) ? 1 : 2, message
+            );
+        } catch (Exception e) {
+            log.error("[AlertMonitor] 写入基础设施告警失败 metric={}: {}", metric, e.getMessage());
+        }
+    }
+
+    public Map<String, Object> getInfraHealthStatus() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("mysql", Map.of(
+            "status", mysqlFailureCount.get() >= FAILURE_THRESHOLD ? "down" : "up",
+            "failureCount", mysqlFailureCount.get(),
+            "threshold", FAILURE_THRESHOLD
+        ));
+        result.put("redis", Map.of(
+            "status", redisFailureCount.get() >= FAILURE_THRESHOLD ? "down" : "up",
+            "failureCount", redisFailureCount.get(),
+            "threshold", FAILURE_THRESHOLD
+        ));
+        result.put("elasticsearch", Map.of(
+            "status", esFailureCount.get() >= FAILURE_THRESHOLD ? "down" : "up",
+            "failureCount", esFailureCount.get(),
+            "threshold", FAILURE_THRESHOLD
+        ));
+        result.put("milvus", Map.of(
+            "status", milvusFailureCount.get() >= FAILURE_THRESHOLD ? "down" : "up",
+            "failureCount", milvusFailureCount.get(),
+            "threshold", FAILURE_THRESHOLD
+        ));
+        return result;
     }
 }

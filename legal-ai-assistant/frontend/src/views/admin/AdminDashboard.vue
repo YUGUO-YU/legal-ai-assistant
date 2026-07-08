@@ -35,6 +35,74 @@
       </el-col>
     </el-row>
 
+    <el-row :gutter="14" class="activity-row">
+      <el-col :xs="24" :md="8">
+        <el-card>
+          <template #header>
+            <div class="card-header">
+              <span>用户活跃度</span>
+            </div>
+          </template>
+          <div class="activity-kpis">
+            <div class="activity-kpi">
+              <div class="activity-kpi-label">今日活跃</div>
+              <div class="activity-kpi-value">{{ userActivity.dailyActive ?? '-' }}</div>
+            </div>
+            <div class="activity-kpi">
+              <div class="activity-kpi-label">本周活跃</div>
+              <div class="activity-kpi-value">{{ userActivity.weeklyActive ?? '-' }}</div>
+            </div>
+            <div class="activity-kpi">
+              <div class="activity-kpi-label">本月活跃</div>
+              <div class="activity-kpi-value">{{ userActivity.monthlyActive ?? '-' }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :md="16">
+        <el-card>
+          <template #header>
+            <div class="card-header">
+              <span>用户活跃度趋势（近7天）</span>
+            </div>
+          </template>
+          <div class="chart-area">
+            <v-chart :option="activeTrendOption" autoresize />
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="14" class="activity-row">
+      <el-col :xs="24" :md="12">
+        <el-card>
+          <template #header>
+            <div class="card-header">
+              <span>TOP 10 活跃用户（近30天）</span>
+            </div>
+          </template>
+          <div class="chart-area">
+            <v-chart :option="topUsersOption" autoresize />
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :md="12">
+        <el-card>
+          <template #header>
+            <div class="card-header">
+              <span>TOP 10 法规（搜索热度）</span>
+            </div>
+          </template>
+          <el-table :data="topLawsSearch" stripe size="small" :max-height="240">
+            <el-table-column prop="title" label="法规名称" show-overflow-tooltip />
+            <el-table-column prop="count" label="搜索次数" width="100" />
+          </el-table>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <el-row :gutter="14" class="llm-row">
       <el-col :span="24">
         <el-card class="llm-status-card" :body-style="{ padding: '16px' }">
@@ -159,6 +227,8 @@ const recentAlerts = ref([])
 const loading = ref(false)
 const aiStatus = ref({ status: 'checking', model: '', baseUrl: '', message: '', time: '' })
 const dbStatus = ref({ connected: false, message: '' })
+const userActivity = ref({})
+const lawUsage = ref({})
 let timer = null
 
 const kpis = computed(() => [
@@ -266,6 +336,71 @@ const moduleTokenOption = computed(() => {
 const totalTokensFmt = computed(() => formatNum(overview.value.weeklyTokens))
 const totalCostFmt = computed(() => Number(overview.value.weeklyCost || 0).toFixed(2))
 
+const topLawsSearch = computed(() => lawUsage.value.topLawsSearch || [])
+
+const activeTrendOption = computed(() => {
+  const trend = userActivity.value.activeTrend || []
+  const palette = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4']
+  return {
+    tooltip: { trigger: 'axis', formatter: (params) => `${params[0].name}<br/>活跃用户: ${params[0].value}` },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: trend.map(x => String(x.date).slice(5)),
+      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisLabel: { color: '#64748b', fontSize: 11 }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10 }
+    },
+    series: [{
+      type: 'line',
+      data: trend.map(x => Number(x.count) || 0),
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: { color: palette[0], width: 2 },
+      itemStyle: { color: palette[0] },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: `${palette[0]}40` },
+            { offset: 1, color: `${palette[0]}05` }
+          ]
+        }
+      }
+    }]
+  }
+})
+
+const topUsersOption = computed(() => {
+  const users = userActivity.value.topUsers || []
+  const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1']
+  const data = users.map((x, i) => ({
+    name: x.username || '未知',
+    value: Number(x.count) || 0,
+    itemStyle: { color: palette[i % palette.length] }
+  }))
+  return {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (params) => `${params[0].name}<br/>活跃次数: ${params[0].value}` },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '3%', containLabel: true },
+    xAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }, axisLabel: { color: '#94a3b8', fontSize: 10 } },
+    yAxis: { type: 'category', data: users.map(x => x.username || '未知'), axisLine: { lineStyle: { color: '#e2e8f0' } }, axisLabel: { color: '#475569', fontSize: 11 } },
+    series: [{
+      type: 'bar',
+      data,
+      barWidth: 14,
+      itemStyle: { borderRadius: [0, 6, 6, 0] },
+      label: { show: true, position: 'right', formatter: (p) => formatNum(p.value), fontSize: 10, color: '#64748b' }
+    }]
+  }
+})
+
 const quickModules = [
   { code: 'M01', name: '法规主数据', desc: '法规/爬虫/版本', path: '/admin/biz/mod01', tag: 'm01' },
   { code: 'M02', name: '案件主数据', desc: '案件/要素/标签', path: '/admin/biz/mod02', tag: 'm02' },
@@ -312,9 +447,27 @@ async function loadOverview() {
   }
 }
 
+async function loadUserActivity() {
+  try {
+    const res = await api.stats.userActivity()
+    userActivity.value = res.data || {}
+  } catch (e) {
+    userActivity.value = {}
+  }
+}
+
+async function loadLawUsage() {
+  try {
+    const res = await api.stats.lawUsage({ topN: 10 })
+    lawUsage.value = res.data || {}
+  } catch (e) {
+    lawUsage.value = {}
+  }
+}
+
 async function loadAll() {
   loading.value = true
-  await Promise.all([checkDbStatus(), loadStats(), loadOverview(), loadAiStatus()])
+  await Promise.all([checkDbStatus(), loadStats(), loadOverview(), loadAiStatus(), loadUserActivity(), loadLawUsage()])
   loading.value = false
 }
 
@@ -399,7 +552,28 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
   .kpi-foot { font-size: 11px; color: var(--color-text-placeholder); }
 }
 
-.charts-row, .bottom-row { margin-bottom: 14px; }
+.activity-kpis {
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 0;
+}
+
+.activity-kpi {
+  text-align: center;
+}
+
+.activity-kpi-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.activity-kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.charts-row, .bottom-row, .activity-row { margin-bottom: 14px; }
 
 .card-header {
   display: flex;
