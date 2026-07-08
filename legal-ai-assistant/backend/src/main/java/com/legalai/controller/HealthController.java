@@ -1,6 +1,9 @@
 package com.legalai.controller;
 
 import com.legalai.llm.LLMClient;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1")
 @CrossOrigin
+@Tag(name = "系统健康", description = "系统健康检查、AI服务状态、公告查询等公共接口")
 public class HealthController {
     private static final Logger log = LoggerFactory.getLogger(HealthController.class);
 
@@ -34,6 +38,7 @@ public class HealthController {
     @Autowired
     private DataSource dataSource;
 
+    @Operation(summary = "服务健康检查", description = "检查后端服务是否正常运行")
     @GetMapping("/health")
     public Map<String, Object> health() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -44,6 +49,7 @@ public class HealthController {
         return result;
     }
 
+    @Operation(summary = "AI服务状态", description = "检查AI服务是否可用，返回online/offline状态")
     @GetMapping("/ai-status")
     public Map<String, Object> aiStatus() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -75,10 +81,11 @@ public class HealthController {
         return result;
     }
 
+    @Operation(summary = "查询公告列表", description = "分页查询当前有效的系统公告")
     @GetMapping("/announcements")
     public Map<String, Object> publicAnnouncements(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "5") int pageSize) {
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "5") int pageSize) {
         Map<String, Object> result = new LinkedHashMap<>();
         try (Connection conn = dataSource.getConnection()) {
             int offset = Math.max(0, (page - 1) * pageSize);

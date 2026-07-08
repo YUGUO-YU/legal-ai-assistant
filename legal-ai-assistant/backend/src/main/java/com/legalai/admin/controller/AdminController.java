@@ -1,5 +1,6 @@
 package com.legalai.admin.controller;
 
+import com.legalai.admin.annotation.RateLimit;
 import com.legalai.admin.enums.DataScope;
 import com.legalai.admin.service.AdminDataService;
 import com.legalai.admin.service.AlertMonitorService;
@@ -8,6 +9,9 @@ import com.legalai.dto.ApiResponse;
 import com.legalai.model.LawCategory;
 import com.legalai.model.LawCategoryType;
 import com.legalai.service.CacheService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,10 +19,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +38,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @RestController
 @RequestMapping("/api/v1/admin")
 @CrossOrigin
+@Tag(name = "管理后台", description = "后台管理统一API入口，包含基础设施、数据资产、AI能力、运营分析、监控告警、系统配置等模块")
 public class AdminController {
     private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
@@ -50,30 +57,37 @@ public class AdminController {
     @Autowired
     private com.legalai.admin.service.ConfigRefreshService configRefreshService;
 
+    @Autowired
+    private com.legalai.admin.service.AppLogService appLogService;
+
     // ============================================================
     // 通用：列表 / 详情 / 统计
     // ============================================================
 
+    @Operation(summary = "获取统计概览", description = "获取系统关键统计数据")
     @GetMapping("/stats")
     public ApiResponse<Map<String, Object>> stats() {
         return ApiResponse.success(adminDataService.stats());
     }
 
+    @Operation(summary = "用户活动统计", description = "按时间段统计用户活动情况")
     @GetMapping("/stats/user-activity")
     public ApiResponse<Map<String, Object>> userActivityStats(
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
+            @Parameter(description = "开始日期") @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期") @RequestParam(required = false) String endDate) {
         return ApiResponse.success(adminDataService.userActivityStats(startDate, endDate));
     }
 
+    @Operation(summary = "法规使用统计", description = "统计法规的查询和使用频次")
     @GetMapping("/stats/law-usage")
     public ApiResponse<Map<String, Object>> lawUsageStats(
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate,
-            @RequestParam(defaultValue = "10") int topN) {
+            @Parameter(description = "开始日期") @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期") @RequestParam(required = false) String endDate,
+            @Parameter(description = "返回前N条") @RequestParam(defaultValue = "10") int topN) {
         return ApiResponse.success(adminDataService.lawUsageStats(startDate, endDate, topN));
     }
 
+    @Operation(summary = "数据库健康检查", description = "检查MySQL数据库连接状态")
     @GetMapping("/db/health")
     public ApiResponse<Map<String, Object>> dbHealth() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -90,6 +104,7 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "查询数据库表", description = "获取MySQL数据库所有表列表")
     @GetMapping("/db/tables")
     public ApiResponse<Map<String, Object>> dbTables() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -105,63 +120,89 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "通用列表查询", description = "分页查询指定表的数据列表")
+    @RateLimit(qps = 100, key = "admin_list")
     @GetMapping("/{table}/list")
     public ApiResponse<Map<String, Object>> list(
-            @PathVariable String table,
-            @RequestParam(required = false) String module,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(required = false) String keyword) {
+            @Parameter(description = "表名") @PathVariable String table,
+            @Parameter(description = "模块标识") @RequestParam(required = false) String module,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "20") int pageSize,
+            @Parameter(description = "关键词搜索") @RequestParam(required = false) String keyword) {
         Map<String, Object> data = adminDataService.list(table, module, page, pageSize, keyword);
         recordAudit("LIST", table, module);
         return ApiResponse.success(data);
     }
 
+    @Operation(summary = "通用详情查询", description = "根据ID获取指定表的单条数据详情")
     @GetMapping("/{table}/{id}")
-    public ApiResponse<Map<String, Object>> detail(@PathVariable String table, @PathVariable Long id) {
+    public ApiResponse<Map<String, Object>> detail(
+            @Parameter(description = "表名") @PathVariable String table,
+            @Parameter(description = "数据ID") @PathVariable Long id) {
         Map<String, Object> data = adminDataService.detail(table, id);
         recordAudit("DETAIL", table, String.valueOf(id));
         return ApiResponse.success(data);
     }
 
+    @Operation(summary = "通用数据创建", description = "向指定表插入一条新数据")
+    @RateLimit(qps = 20, key = "admin_write")
     @PostMapping("/{table}/create")
-    public ApiResponse<Map<String, Object>> create(@PathVariable String table, @RequestBody Map<String, Object> payload) {
+    public ApiResponse<Map<String, Object>> create(
+            @Parameter(description = "表名") @PathVariable String table,
+            @RequestBody Map<String, Object> payload) {
         Map<String, Object> data = adminDataService.create(table, payload);
         recordAudit("CREATE", table, String.valueOf(data.get("id")));
         return ApiResponse.success(data);
     }
 
+    @Operation(summary = "通用数据更新", description = "更新指定表的单条数据")
     @PostMapping("/{table}/{id}/update")
-    public ApiResponse<Map<String, Object>> update(@PathVariable String table, @PathVariable Long id, @RequestBody Map<String, Object> payload) {
+    public ApiResponse<Map<String, Object>> update(
+            @Parameter(description = "表名") @PathVariable String table,
+            @Parameter(description = "数据ID") @PathVariable Long id,
+            @RequestBody Map<String, Object> payload) {
         Map<String, Object> data = adminDataService.update(table, id, payload);
         recordAudit("UPDATE", table, String.valueOf(id));
         return ApiResponse.success(data);
     }
 
+    @Operation(summary = "通用数据删除", description = "删除指定表的单条数据")
     @PostMapping("/{table}/{id}/delete")
-    public ApiResponse<Map<String, Object>> delete(@PathVariable String table, @PathVariable Long id) {
+    public ApiResponse<Map<String, Object>> delete(
+            @Parameter(description = "表名") @PathVariable String table,
+            @Parameter(description = "数据ID") @PathVariable Long id) {
         Map<String, Object> data = adminDataService.delete(table, id);
         recordAudit("DELETE", table, String.valueOf(id));
         return ApiResponse.success(data);
     }
 
+    @Operation(summary = "通用状态切换", description = "切换指定记录的某个布尔字段状态")
     @PostMapping("/{table}/{id}/toggle")
-    public ApiResponse<Map<String, Object>> toggle(@PathVariable String table, @PathVariable Long id, @RequestParam String column) {
+    public ApiResponse<Map<String, Object>> toggle(
+            @Parameter(description = "表名") @PathVariable String table,
+            @Parameter(description = "数据ID") @PathVariable Long id,
+            @Parameter(description = "字段名") @RequestParam String column) {
         Map<String, Object> data = adminDataService.toggle(table, id, column);
         recordAudit("TOGGLE", table, String.valueOf(id));
         return ApiResponse.success(data);
     }
 
+    @Operation(summary = "批量删除", description = "批量删除指定表的多条数据")
     @PostMapping("/{table}/batch-delete")
-    public ApiResponse<Map<String, Object>> batchDelete(@PathVariable String table, @RequestBody Map<String, Object> data) {
+    public ApiResponse<Map<String, Object>> batchDelete(
+            @Parameter(description = "表名") @PathVariable String table,
+            @RequestBody Map<String, Object> data) {
         @SuppressWarnings("unchecked")
         List<Long> ids = ((List<Number>) data.get("ids")).stream().map(Number::longValue).toList();
         recordAudit("BATCH_DELETE", table, String.join(",", ids.stream().map(String::valueOf).toList()));
         return ApiResponse.success(adminDataService.batchDelete(table, ids));
     }
 
+    @Operation(summary = "批量状态切换", description = "批量切换多条记录的启用状态")
     @PostMapping("/{table}/batch-toggle")
-    public ApiResponse<Map<String, Object>> batchToggle(@PathVariable String table, @RequestBody Map<String, Object> data) {
+    public ApiResponse<Map<String, Object>> batchToggle(
+            @Parameter(description = "表名") @PathVariable String table,
+            @RequestBody Map<String, Object> data) {
         @SuppressWarnings("unchecked")
         List<Long> ids = ((List<Number>) data.get("ids")).stream().map(Number::longValue).toList();
         Integer status = ((Number) data.get("status")).intValue();
@@ -173,41 +214,64 @@ public class AdminController {
     // 工作流：审核/告警/Prompt
     // ============================================================
 
+    @Operation(summary = "法规审核", description = "对法规文档进行审核操作")
     @PostMapping("/biz/mod01/laws/{id}/audit")
-    public ApiResponse<Map<String, Object>> auditLaw(@PathVariable Long id, @RequestParam int action, @RequestParam(required = false) Long auditorId) {
+    public ApiResponse<Map<String, Object>> auditLaw(
+            @Parameter(description = "法规ID") @PathVariable Long id,
+            @Parameter(description = "操作：1通过 2拒绝") @RequestParam int action,
+            @Parameter(description = "审核人ID") @RequestParam(required = false) Long auditorId) {
         return ApiResponse.success(adminDataService.auditLaw(id, action, auditorId));
     }
 
+    @Operation(summary = "文档审核", description = "对文档草稿进行审核操作")
     @PostMapping("/biz/mod03/drafts/{id}/review")
-    public ApiResponse<Map<String, Object>> reviewDraft(@PathVariable Long id, @RequestParam int action, @RequestParam(required = false) Long reviewerId, @RequestBody(required = false) Map<String, Object> body) {
+    public ApiResponse<Map<String, Object>> reviewDraft(
+            @Parameter(description = "草稿ID") @PathVariable Long id,
+            @Parameter(description = "操作：1通过 2拒绝") @RequestParam int action,
+            @Parameter(description = "审核人ID") @RequestParam(required = false) Long reviewerId,
+            @RequestBody(required = false) Map<String, Object> body) {
         String note = body == null ? null : String.valueOf(body.getOrDefault("note", null));
         return ApiResponse.success(adminDataService.reviewDraft(id, action, reviewerId, note));
     }
 
+    @Operation(summary = "告警确认", description = "确认处理指定告警")
     @PostMapping("/monitor/alert-history/{id}/ack")
-    public ApiResponse<Map<String, Object>> ackAlert(@PathVariable Long id, @RequestParam(required = false) Long handlerId) {
+    public ApiResponse<Map<String, Object>> ackAlert(
+            @Parameter(description = "告警ID") @PathVariable Long id,
+            @Parameter(description = "处理人ID") @RequestParam(required = false) Long handlerId) {
         return ApiResponse.success(adminDataService.ackAlert(id, handlerId));
     }
 
+    @Operation(summary = "告警解决", description = "标记指定告警为已解决")
     @PostMapping("/monitor/alert-history/{id}/resolve")
-    public ApiResponse<Map<String, Object>> resolveAlert(@PathVariable Long id) {
+    public ApiResponse<Map<String, Object>> resolveAlert(
+            @Parameter(description = "告警ID") @PathVariable Long id) {
         return ApiResponse.success(adminDataService.resolveAlert(id));
     }
 
+    @Operation(summary = "发布Prompt模板", description = "将Prompt模板发布为正式版本")
     @PostMapping("/ai/prompts/{id}/publish")
-    public ApiResponse<Map<String, Object>> publishPrompt(@PathVariable Long id) {
+    public ApiResponse<Map<String, Object>> publishPrompt(
+            @Parameter(description = "Prompt模板ID") @PathVariable Long id) {
         recordAudit("PUBLISH", "prompt_template", String.valueOf(id));
         return ApiResponse.success(adminDataService.publishPrompt(id));
     }
 
+    @Operation(summary = "灰度发布Prompt", description = "以灰度方式发布Prompt模板")
     @PostMapping("/ai/prompts/{id}/gray")
-    public ApiResponse<Map<String, Object>> grayPrompt(@PathVariable Long id, @RequestParam int ratio, @RequestParam(required = false) String teams) {
+    public ApiResponse<Map<String, Object>> grayPrompt(
+            @Parameter(description = "Prompt模板ID") @PathVariable Long id,
+            @Parameter(description = "灰度比例(0-100)") @RequestParam int ratio,
+            @Parameter(description = "指定团队ID列表，逗号分隔") @RequestParam(required = false) String teams) {
         recordAudit("GRAY", "prompt_template", String.valueOf(id));
         return ApiResponse.success(adminDataService.grayPrompt(id, ratio, teams));
     }
 
+    @Operation(summary = "回滚Prompt", description = "将Prompt模板回滚到上一版本")
     @PostMapping("/ai/prompts/{id}/rollback")
-    public ApiResponse<Map<String, Object>> rollbackPrompt(@PathVariable Long id, @RequestParam(required = false) String reason) {
+    public ApiResponse<Map<String, Object>> rollbackPrompt(
+            @Parameter(description = "Prompt模板ID") @PathVariable Long id,
+            @Parameter(description = "回滚原因") @RequestParam(required = false) String reason) {
         recordAudit("ROLLBACK", "prompt_template", String.valueOf(id));
         return ApiResponse.success(adminDataService.rollbackPrompt(id, reason));
     }
@@ -216,34 +280,43 @@ public class AdminController {
     // PROMPT_TEMPLATE CRUD (alias endpoints for frontend compatibility)
     // ============================================================
 
+    @Operation(summary = "查询Prompt模板列表", description = "分页查询Prompt模板")
     @GetMapping("/prompt_template/list")
     public ApiResponse<Map<String, Object>> listPromptTemplates(
-            @RequestParam(required = false) String module,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "50") int pageSize,
-            @RequestParam(required = false) String keyword) {
+            @Parameter(description = "模块标识") @RequestParam(required = false) String module,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "50") int pageSize,
+            @Parameter(description = "关键词搜索") @RequestParam(required = false) String keyword) {
         return ApiResponse.success(adminDataService.list("prompt_template", module, page, pageSize, keyword));
     }
 
+    @Operation(summary = "Prompt模板详情", description = "获取指定Prompt模板的详细信息")
     @GetMapping("/prompt_template/{id}")
-    public ApiResponse<Map<String, Object>> promptTemplateDetail(@PathVariable Long id) {
+    public ApiResponse<Map<String, Object>> promptTemplateDetail(
+            @Parameter(description = "模板ID") @PathVariable Long id) {
         return ApiResponse.success(adminDataService.detail("prompt_template", id));
     }
 
+    @Operation(summary = "创建Prompt模板", description = "创建新的Prompt模板")
     @PostMapping("/prompt_template/create")
     public ApiResponse<Map<String, Object>> createPromptTemplate(@RequestBody Map<String, Object> data) {
         recordAudit("create", "prompt_template", null);
         return ApiResponse.success(adminDataService.createPromptTemplate(data));
     }
 
+    @Operation(summary = "更新Prompt模板", description = "更新指定Prompt模板")
     @PostMapping("/prompt_template/{id}/update")
-    public ApiResponse<Map<String, Object>> updatePromptTemplate(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+    public ApiResponse<Map<String, Object>> updatePromptTemplate(
+            @Parameter(description = "模板ID") @PathVariable Long id,
+            @RequestBody Map<String, Object> data) {
         recordAudit("update", "prompt_template", String.valueOf(id));
         return ApiResponse.success(adminDataService.updatePromptTemplate(id, data));
     }
 
+    @Operation(summary = "删除Prompt模板", description = "删除指定Prompt模板")
     @PostMapping("/prompt_template/{id}/delete")
-    public ApiResponse<Map<String, Object>> deletePromptTemplate(@PathVariable Long id) {
+    public ApiResponse<Map<String, Object>> deletePromptTemplate(
+            @Parameter(description = "模板ID") @PathVariable Long id) {
         recordAudit("delete", "prompt_template", String.valueOf(id));
         return ApiResponse.success(adminDataService.deletePromptTemplate(id));
     }
@@ -252,16 +325,19 @@ public class AdminController {
     // 监控概览 + LLM 健康 + Milvus 状态
     // ============================================================
 
+    @Operation(summary = "监控概览", description = "获取系统监控各项指标概览")
     @GetMapping("/monitor/overview")
     public ApiResponse<Map<String, Object>> monitorOverview() {
         return ApiResponse.success(adminDataService.monitorOverview());
     }
 
+    @Operation(summary = "LLM健康检查", description = "检查所有LLM模型的健康状态")
     @PostMapping("/ai/llm-models/health-check")
     public ApiResponse<Map<String, Object>> llmHealthCheck() {
         return ApiResponse.success(adminDataService.llmHealthCheck());
     }
 
+    @Operation(summary = "Milvus集合列表", description = "获取Milvus向量数据库中的所有集合")
     @GetMapping("/ai/milvus/collections")
     public ApiResponse<Map<String, Object>> milvusCollections() {
         return ApiResponse.success(adminDataService.milvusCollections());
@@ -271,28 +347,33 @@ public class AdminController {
     // 域 01 基础设施：用户/角色/菜单/审计
     // ============================================================
 
+    @Operation(summary = "查询管理员用户", description = "分页查询后台管理员用户列表")
     @GetMapping("/infra/users")
     public ApiResponse<Map<String, Object>> listUsers(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(required = false) String keyword) {
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "20") int pageSize,
+            @Parameter(description = "关键词搜索") @RequestParam(required = false) String keyword) {
         return ApiResponse.success(adminDataService.list("admin_user", null, page, pageSize, keyword));
     }
 
+    @Operation(summary = "查询角色列表", description = "分页查询系统角色")
     @GetMapping("/infra/roles")
     public ApiResponse<Map<String, Object>> listRoles(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize) {
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "20") int pageSize) {
         return ApiResponse.success(adminDataService.list("admin_role", null, page, pageSize, null));
     }
 
+    @Operation(summary = "查询菜单列表", description = "获取系统所有菜单树")
     @GetMapping("/infra/menus")
     public ApiResponse<Map<String, Object>> listMenus() {
         return ApiResponse.success(adminDataService.list("admin_menu", null, 1, 200, null));
     }
 
+    @Operation(summary = "获取角色菜单", description = "获取指定角色关联的菜单ID列表")
     @GetMapping("/infra/roles/{roleId}/menus")
-    public ApiResponse<Map<String, Object>> getRoleMenus(@PathVariable Long roleId) {
+    public ApiResponse<Map<String, Object>> getRoleMenus(
+            @Parameter(description = "角色ID") @PathVariable Long roleId) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             var rows = adminDataService.jdbc().queryForList(
@@ -306,9 +387,10 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "保存角色菜单", description = "为指定角色分配菜单权限")
     @PostMapping("/infra/roles/{roleId}/menus")
     public ApiResponse<Map<String, Object>> saveRoleMenus(
-            @PathVariable Long roleId,
+            @Parameter(description = "角色ID") @PathVariable Long roleId,
             @RequestBody Map<String, Object> payload) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
@@ -329,9 +411,10 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "设置用户角色", description = "为指定用户分配角色")
     @PostMapping("/infra/users/{userId}/roles")
     public ApiResponse<Map<String, Object>> setUserRoles(
-            @PathVariable Long userId,
+            @Parameter(description = "用户ID") @PathVariable Long userId,
             @RequestBody Map<String, Object> payload) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
@@ -352,8 +435,10 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "获取用户角色", description = "获取指定用户拥有的角色ID列表")
     @GetMapping("/infra/users/{userId}/roles")
-    public ApiResponse<Map<String, Object>> getUserRoles(@PathVariable Long userId) {
+    public ApiResponse<Map<String, Object>> getUserRoles(
+            @Parameter(description = "用户ID") @PathVariable Long userId) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             var rows = adminDataService.jdbc().queryForList(
@@ -367,13 +452,14 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "查询审计日志", description = "分页查询系统审计日志")
     @GetMapping("/infra/audit-logs")
     public ApiResponse<Map<String, Object>> listAuditLogs(
-            @RequestParam(required = false) String userId,
-            @RequestParam(required = false) String operation,
-            @RequestParam(required = false) String module,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize,
+            @Parameter(description = "用户ID") @RequestParam(required = false) String userId,
+            @Parameter(description = "操作类型") @RequestParam(required = false) String operation,
+            @Parameter(description = "模块") @RequestParam(required = false) String module,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "20") int pageSize,
             HttpServletRequest request) {
         Map<String, Object> adminInfo = getCurrentAdminUser(request);
         Long adminUserId = (Long) adminInfo.get("userId");
@@ -381,36 +467,41 @@ public class AdminController {
         return ApiResponse.success(adminDataService.audit(userId, operation, module, page, pageSize, dataScope, adminUserId));
     }
 
+    @Operation(summary = "查询检索反馈", description = "分页查询用户对检索结果的评分反馈")
     @GetMapping("/infra/search-feedback")
     public ApiResponse<Map<String, Object>> listSearchFeedback(
-            @RequestParam(required = false) Long articleId,
-            @RequestParam(required = false) Integer isHelpful,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize) {
+            @Parameter(description = "法规ID") @RequestParam(required = false) Long articleId,
+            @Parameter(description = "是否有帮助") @RequestParam(required = false) Integer isHelpful,
+            @Parameter(description = "开始日期") @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期") @RequestParam(required = false) String endDate,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "20") int pageSize) {
         return ApiResponse.success(adminDataService.listSearchFeedback(articleId, isHelpful, startDate, endDate, page, pageSize));
     }
 
+    @Operation(summary = "检索反馈统计", description = "统计检索反馈的整体情况")
     @GetMapping("/infra/search-feedback/stats")
     public ApiResponse<Map<String, Object>> searchFeedbackStats(
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
+            @Parameter(description = "开始日期") @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期") @RequestParam(required = false) String endDate) {
         return ApiResponse.success(adminDataService.searchFeedbackStats(startDate, endDate));
     }
 
+    @Operation(summary = "查询法律收藏", description = "分页查询用户的法规收藏记录")
     @GetMapping("/infra/law-favorites")
     public ApiResponse<Map<String, Object>> listLawFavorites(
-            @RequestParam(required = false) Long userId,
-            @RequestParam(required = false) String username,
-            @RequestParam(required = false) Long articleId,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize) {
+            @Parameter(description = "用户ID") @RequestParam(required = false) Long userId,
+            @Parameter(description = "用户名") @RequestParam(required = false) String username,
+            @Parameter(description = "法规ID") @RequestParam(required = false) Long articleId,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "20") int pageSize) {
         return ApiResponse.success(adminDataService.listLawFavorites(userId, username, articleId, page, pageSize));
     }
 
+    @Operation(summary = "删除法律收藏", description = "删除指定的法律收藏记录")
     @DeleteMapping("/infra/law-favorites/{id}")
-    public ApiResponse<Map<String, Object>> deleteLawFavorite(@PathVariable Long id) {
+    public ApiResponse<Map<String, Object>> deleteLawFavorite(
+            @Parameter(description = "收藏ID") @PathVariable Long id) {
         return ApiResponse.success(adminDataService.deleteLawFavorite(id));
     }
 
@@ -419,11 +510,13 @@ public class AdminController {
         return ApiResponse.success(adminDataService.lawFavoriteStats());
     }
 
+    @Operation(summary = "导出审计日志", description = "将审计日志导出为CSV文件")
+    @RateLimit(qps = 10, key = "admin_export")
     @GetMapping("/infra/audit-logs/export")
     public void exportAuditLogs(
-            @RequestParam(required = false) String userId,
-            @RequestParam(required = false) String operation,
-            @RequestParam(required = false) String module,
+            @Parameter(description = "用户ID") @RequestParam(required = false) String userId,
+            @Parameter(description = "操作类型") @RequestParam(required = false) String operation,
+            @Parameter(description = "模块") @RequestParam(required = false) String module,
             HttpServletResponse response) throws IOException {
         recordAudit("EXPORT", "audit_log", null);
 
@@ -490,35 +583,40 @@ public class AdminController {
         return str;
     }
 
+    @Operation(summary = "导出告警规则", description = "将告警规则导出为CSV文件")
     @GetMapping(value = "/monitor/alert-rules/export", produces = "text/csv")
     public String exportAlertRules() {
         recordAudit("EXPORT", "alert_rule", null);
         return adminDataService.exportAlertRulesCsv();
     }
 
+    @Operation(summary = "导出告警历史", description = "将告警历史导出为CSV文件")
     @GetMapping(value = "/monitor/alert-history/export", produces = "text/csv")
     public String exportAlertHistory() {
         recordAudit("EXPORT", "alert_history", null);
         return adminDataService.exportAlertHistoryCsv();
     }
 
+    @Operation(summary = "导出搜索日志", description = "将搜索日志导出为CSV文件")
     @GetMapping(value = "/ops/search-logs/export", produces = "text/csv")
     public String exportSearchLogs() {
         recordAudit("EXPORT", "search_log", null);
         return adminDataService.exportSearchLogsCsv();
     }
 
+    @Operation(summary = "导出用户反馈", description = "将用户反馈导出为CSV文件")
     @GetMapping(value = "/ops/user-feedback/export", produces = "text/csv")
     public String exportUserFeedback() {
         recordAudit("EXPORT", "user_feedback", null);
         return adminDataService.exportUserFeedbackCsv();
     }
 
+    @Operation(summary = "查询前端用户", description = "分页查询注册的前端用户")
     @GetMapping("/infra/frontend-users")
     public ApiResponse<Map<String, Object>> listFrontendUsers(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(required = false) String keyword,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "20") int pageSize,
+            @Parameter(description = "关键词搜索") @RequestParam(required = false) String keyword,
             HttpServletRequest request) {
         Map<String, Object> adminInfo = getCurrentAdminUser(request);
         Long adminUserId = (Long) adminInfo.get("userId");
@@ -573,11 +671,12 @@ public class AdminController {
         return ApiResponse.success(data);
     }
 
+    @Operation(summary = "查询公告列表", description = "分页查询系统公告")
     @GetMapping("/infra/announcements")
     public ApiResponse<Map<String, Object>> listAnnouncements(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(required = false) String keyword) {
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "20") int pageSize,
+            @Parameter(description = "关键词搜索") @RequestParam(required = false) String keyword) {
         return ApiResponse.success(adminDataService.listAnnouncements(page, pageSize, keyword));
     }
 
@@ -607,8 +706,10 @@ public class AdminController {
         return ApiResponse.success(adminDataService.listActiveAnnouncements());
     }
 
+    @Operation(summary = "查询字典列表", description = "根据类型查询系统字典")
     @GetMapping("/infra/dicts/list")
-    public ApiResponse<Map<String, Object>> listDicts(@RequestParam(required = false) String dict_type) {
+    public ApiResponse<Map<String, Object>> listDicts(
+            @Parameter(description = "字典类型") @RequestParam(required = false) String dict_type) {
         return ApiResponse.success(adminDataService.listDicts(dict_type));
     }
 
@@ -1036,6 +1137,7 @@ public class AdminController {
     // 健康检查
     // ============================================================
 
+    @Operation(summary = "MySQL健康检查", description = "检查MySQL数据库连接状态")
     @GetMapping("/infra/mysql-health")
     public ApiResponse<Map<String, Object>> mysqlHealth() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -1054,6 +1156,7 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "Redis健康检查", description = "检查Redis缓存服务连接状态")
     @GetMapping("/infra/redis-health")
     public ApiResponse<Map<String, Object>> redisHealth() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -1076,11 +1179,13 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "Elasticsearch健康检查", description = "检查Elasticsearch服务状态")
     @GetMapping("/infra/es-health")
     public ApiResponse<Map<String, Object>> esHealth() {
         return ApiResponse.success(adminDataService.esHealth());
     }
 
+    @Operation(summary = "管理后台健康检查", description = "检查管理后台服务状态")
     @GetMapping("/health")
     public ApiResponse<Map<String, Object>> health() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -1104,69 +1209,93 @@ public class AdminController {
     // 分类管理：类型 / 类别 / 文档分类关联
     // ============================================================
 
+    @Operation(summary = "查询分类类型列表", description = "获取所有法规分类类型")
     @GetMapping("/law/category-types")
     public ApiResponse<List<Map<String, Object>>> listCategoryTypes() {
         return ApiResponse.success(lawCategoryService.listTypes());
     }
 
+    @Operation(summary = "获取分类类型详情", description = "获取指定分类类型的详细信息")
     @GetMapping("/law/category-types/{id}")
-    public ApiResponse<LawCategoryType> getCategoryType(@PathVariable Long id) {
+    public ApiResponse<LawCategoryType> getCategoryType(
+            @Parameter(description = "类型ID") @PathVariable Long id) {
         return ApiResponse.<LawCategoryType>success(lawCategoryService.getType(id));
     }
 
+    @Operation(summary = "创建分类类型", description = "创建新的法规分类类型")
     @PostMapping("/law/category-types")
     public ApiResponse<Void> createCategoryType(@RequestBody LawCategoryType type) {
         lawCategoryService.createType(type);
         return ApiResponse.success(null);
     }
 
+    @Operation(summary = "更新分类类型", description = "更新指定分类类型")
     @PutMapping("/law/category-types/{id}")
-    public ApiResponse<Void> updateCategoryType(@PathVariable Long id, @RequestBody LawCategoryType type) {
+    public ApiResponse<Void> updateCategoryType(
+            @Parameter(description = "类型ID") @PathVariable Long id,
+            @RequestBody LawCategoryType type) {
         lawCategoryService.updateType(id, type);
         return ApiResponse.success(null);
     }
 
+    @Operation(summary = "删除分类类型", description = "删除指定的分类类型")
     @DeleteMapping("/law/category-types/{id}")
-    public ApiResponse<Void> deleteCategoryType(@PathVariable Long id) {
+    public ApiResponse<Void> deleteCategoryType(
+            @Parameter(description = "类型ID") @PathVariable Long id) {
         lawCategoryService.deleteType(id);
         return ApiResponse.success(null);
     }
 
+    @Operation(summary = "查询分类列表", description = "获取指定类型的法规分类列表")
     @GetMapping("/law/categories")
-    public ApiResponse<List<Map<String, Object>>> listCategories(@RequestParam(required = false) Long typeId) {
+    public ApiResponse<List<Map<String, Object>>> listCategories(
+            @Parameter(description = "类型ID") @RequestParam(required = false) Long typeId) {
         return ApiResponse.success(lawCategoryService.listCategories(typeId));
     }
 
+    @Operation(summary = "获取分类详情", description = "获取指定分类的详细信息")
     @GetMapping("/law/categories/{id}")
-    public ApiResponse<Map<String, Object>> getCategory(@PathVariable Long id) {
+    public ApiResponse<Map<String, Object>> getCategory(
+            @Parameter(description = "分类ID") @PathVariable Long id) {
         return ApiResponse.<Map<String, Object>>success(lawCategoryService.getCategory(id));
     }
 
+    @Operation(summary = "创建分类", description = "创建新的法规分类")
     @PostMapping("/law/categories")
     public ApiResponse<Void> createCategory(@RequestBody LawCategory category) {
         lawCategoryService.createCategory(category);
         return ApiResponse.success(null);
     }
 
+    @Operation(summary = "更新分类", description = "更新指定分类")
     @PutMapping("/law/categories/{id}")
-    public ApiResponse<Void> updateCategory(@PathVariable Long id, @RequestBody LawCategory category) {
+    public ApiResponse<Void> updateCategory(
+            @Parameter(description = "分类ID") @PathVariable Long id,
+            @RequestBody LawCategory category) {
         lawCategoryService.updateCategory(id, category);
         return ApiResponse.success(null);
     }
 
+    @Operation(summary = "删除分类", description = "删除指定的分类")
     @DeleteMapping("/law/categories/{id}")
-    public ApiResponse<Void> deleteCategory(@PathVariable Long id) {
+    public ApiResponse<Void> deleteCategory(
+            @Parameter(description = "分类ID") @PathVariable Long id) {
         lawCategoryService.deleteCategory(id);
         return ApiResponse.success(null);
     }
 
+    @Operation(summary = "获取文档分类", description = "获取指定法规文档关联的分类")
     @GetMapping("/law/document-categories/{lawId}")
-    public ApiResponse<List<Map<String, Object>>> getDocumentCategories(@PathVariable Long lawId) {
+    public ApiResponse<List<Map<String, Object>>> getDocumentCategories(
+            @Parameter(description = "法规文档ID") @PathVariable Long lawId) {
         return ApiResponse.success(lawCategoryService.getDocumentCategories(lawId));
     }
 
+    @Operation(summary = "设置文档分类", description = "为法规文档设置分类关联")
     @PostMapping("/law/document-categories/{lawId}")
-    public ApiResponse<Void> setDocumentCategories(@PathVariable Long lawId, @RequestBody Map<String, List<Long>> body) {
+    public ApiResponse<Void> setDocumentCategories(
+            @Parameter(description = "法规文档ID") @PathVariable Long lawId,
+            @RequestBody Map<String, List<Long>> body) {
         lawCategoryService.setDocumentCategories(lawId, body.get("categoryIds"));
         return ApiResponse.success(null);
     }
@@ -1175,9 +1304,10 @@ public class AdminController {
     // DOC_TEMPLATE (Mod03) CRUD
     // ============================================================
 
+    @Operation(summary = "查询文档模板", description = "查询文档模板列表")
     @GetMapping("/doc_template/list")
     public ApiResponse<Map<String, Object>> listDocTemplates(
-            @RequestParam(required = false) String category) {
+            @Parameter(description = "分类") @RequestParam(required = false) String category) {
         return ApiResponse.success(adminDataService.listDocTemplates(category));
     }
 
@@ -1213,6 +1343,7 @@ public class AdminController {
     // DOC_REVIEW_RULE CRUD
     // ============================================================
 
+    @Operation(summary = "创建文档审查规则", description = "创建新的文档审查规则")
     @PostMapping("/doc_review_rule/create")
     public ApiResponse<Void> createDocReviewRule(@RequestBody Map<String, Object> data) {
         adminDataService.createDocReviewRule(data);
@@ -1220,25 +1351,57 @@ public class AdminController {
         return ApiResponse.success(null);
     }
 
+    @Operation(summary = "更新文档审查规则", description = "更新指定的文档审查规则")
     @PostMapping("/doc_review_rule/{id}/update")
-    public ApiResponse<Void> updateDocReviewRule(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+    public ApiResponse<Void> updateDocReviewRule(
+            @Parameter(description = "规则ID") @PathVariable Long id,
+            @RequestBody Map<String, Object> data) {
         adminDataService.updateDocReviewRule(id, data);
         recordAudit("update", "doc_review_rule", String.valueOf(id));
         return ApiResponse.success(null);
     }
 
+    @Operation(summary = "删除文档审查规则", description = "删除指定的文档审查规则")
     @PostMapping("/doc_review_rule/{id}/delete")
-    public ApiResponse<Void> deleteDocReviewRule(@PathVariable Long id) {
+    public ApiResponse<Void> deleteDocReviewRule(
+            @Parameter(description = "规则ID") @PathVariable Long id) {
         adminDataService.deleteDocReviewRule(id);
         recordAudit("delete", "doc_review_rule", String.valueOf(id));
         return ApiResponse.success(null);
     }
 
+    @Operation(summary = "切换文档审查规则状态", description = "启用或禁用指定的文档审查规则")
     @PostMapping("/doc_review_rule/{id}/toggle")
-    public ApiResponse<Void> toggleDocReviewRule(@PathVariable Long id, @RequestBody Map<String, Integer> data) {
+    public ApiResponse<Void> toggleDocReviewRule(
+            @Parameter(description = "规则ID") @PathVariable Long id,
+            @RequestBody Map<String, Integer> data) {
         adminDataService.toggleDocReviewRule(id, data.get("status"));
         recordAudit("toggle", "doc_review_rule", String.valueOf(id));
         return ApiResponse.success(null);
+    }
+
+    // ============================================================
+    // 应用日志
+    // ============================================================
+
+    @Operation(summary = "查询应用日志", description = "分页查询应用系统日志")
+    @GetMapping("/ops/app-logs")
+    public ApiResponse<Map<String, Object>> getAppLogs(
+            @Parameter(description = "日志级别") @RequestParam(defaultValue = "INFO") String level,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "100") int pageSize) {
+        return ApiResponse.success(appLogService.getLogs(level, page, pageSize));
+    }
+
+    @Operation(summary = "下载应用日志", description = "下载应用日志文件")
+    @GetMapping("/ops/app-logs/download")
+    public void downloadAppLogs(HttpServletResponse response) throws IOException {
+        File logFile = new File("/var/log/legal-ai-assistant/app.log");
+        if (logFile.exists()) {
+            response.setContentType("text/plain");
+            response.setHeader("Content-Disposition", "attachment; filename=app.log");
+            Files.copy(logFile.toPath(), response.getOutputStream());
+        }
     }
 
     // ============================================================

@@ -232,6 +232,7 @@ import {
   TrendCharts,
   MagicStick
 } from '@element-plus/icons-vue'
+import { useKeyboardShortcuts, isInputFocused } from './composables/useKeyboardShortcuts'
 
 const route = useRoute()
 const router = useRouter()
@@ -349,6 +350,26 @@ onMounted(() => {
     router.push('/')
   }
 })
+
+useKeyboardShortcuts([
+  {
+    match: (e) => e.key === '/' && !isInputFocused(),
+    handler: () => {
+      const searchInput = document.querySelector('.search-input-wrapper input')
+      if (searchInput) searchInput.focus()
+    }
+  },
+  {
+    match: (e) => e.key === 'Escape',
+    handler: () => {
+      const dialog = document.querySelector('.el-dialog__wrapper:not(.is-hidden)')
+      if (dialog) {
+        const closeBtn = dialog.querySelector('.el-dialog__headerbtn')
+        if (closeBtn) closeBtn.click()
+      }
+    }
+  }
+])
 </script>
 
 <style lang="scss" scoped>

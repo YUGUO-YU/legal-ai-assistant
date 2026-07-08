@@ -1,6 +1,7 @@
 package com.legalai.service;
 
 import com.legalai.dto.LegalSearchResponse;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -130,5 +131,100 @@ public class CacheService {
 
     private String hashQuery(String query) {
         return String.valueOf(query.hashCode());
+    }
+
+    public void cacheCaseResults(String query, Object response) {
+        if (!redisEnabled || redisTemplate == null) {
+            return;
+        }
+        try {
+            String key = generateKey("case_search", query);
+            redisTemplate.opsForValue().set(key, response, 5, TimeUnit.MINUTES);
+            log.debug("案例搜索结果已缓存: query={}", query);
+        } catch (Exception e) {
+            log.warn("[Cache] cacheCaseResults failed: {}", e.getMessage());
+        }
+    }
+
+    public Object getCachedCaseResults(String query) {
+        if (!redisEnabled || redisTemplate == null) {
+            return null;
+        }
+        try {
+            String key = generateKey("case_search", query);
+            Object cached = redisTemplate.opsForValue().get(key);
+            if (cached != null) {
+                log.debug("命中案例搜索缓存: query={}", query);
+                return cached;
+            }
+        } catch (Exception e) {
+            log.warn("[Cache] getCachedCaseResults failed: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    public void cacheCompanyInfo(String companyName, Object response) {
+        if (!redisEnabled || redisTemplate == null) {
+            return;
+        }
+        try {
+            String key = generateKey("company", companyName);
+            redisTemplate.opsForValue().set(key, response, 10, TimeUnit.MINUTES);
+            log.debug("企业查询结果已缓存: companyName={}", companyName);
+        } catch (Exception e) {
+            log.warn("[Cache] cacheCompanyInfo failed: {}", e.getMessage());
+        }
+    }
+
+    public Object getCachedCompanyInfo(String companyName) {
+        if (!redisEnabled || redisTemplate == null) {
+            return null;
+        }
+        try {
+            String key = generateKey("company", companyName);
+            Object cached = redisTemplate.opsForValue().get(key);
+            if (cached != null) {
+                log.debug("命中企业查询缓存: companyName={}", companyName);
+                return cached;
+            }
+        } catch (Exception e) {
+            log.warn("[Cache] getCachedCompanyInfo failed: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    public void cacheLlmResponse(String promptHash, Object response) {
+        if (!redisEnabled || redisTemplate == null) {
+            return;
+        }
+        try {
+            String key = "llm_response:" + promptHash;
+            redisTemplate.opsForValue().set(key, response, 1, TimeUnit.HOURS);
+            log.debug("LLM响应已缓存: promptHash={}", promptHash);
+        } catch (Exception e) {
+            log.warn("[Cache] cacheLlmResponse failed: {}", e.getMessage());
+        }
+    }
+
+    public Object getCachedLlmResponse(String promptHash) {
+        if (!redisEnabled || redisTemplate == null) {
+            return null;
+        }
+        try {
+            String key = "llm_response:" + promptHash;
+            Object cached = redisTemplate.opsForValue().get(key);
+            if (cached != null) {
+                log.debug("命中LLM响应缓存: promptHash={}", promptHash);
+                return cached;
+            }
+        } catch (Exception e) {
+            log.warn("[Cache] getCachedLlmResponse failed: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private String generateKey(String prefix, String... parts) {
+        String combined = String.join(":", parts);
+        return prefix + ":" + DigestUtils.md5Hex(combined);
     }
 }

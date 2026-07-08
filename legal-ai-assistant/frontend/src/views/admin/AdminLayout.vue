@@ -79,6 +79,7 @@
           </template>
           <el-menu-item index="/admin/ops/feedback">用户反馈</el-menu-item>
           <el-menu-item index="/admin/ops/search-logs">搜索日志</el-menu-item>
+          <el-menu-item index="/admin/ops/app-logs">应用日志</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="monitor">
@@ -193,6 +194,7 @@ const pageNameMap = {
   'kb-chunks': '分块管理',
   'feedback': '用户反馈',
   'search-logs': '搜索日志',
+  'app-logs': '应用日志',
   'rules': '告警规则',
   'history': '告警历史',
   'configs': '系统参数',

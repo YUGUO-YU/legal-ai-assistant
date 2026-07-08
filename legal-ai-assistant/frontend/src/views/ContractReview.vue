@@ -38,7 +38,7 @@
               v-model="contractText"
               type="textarea"
               :rows="12"
-              placeholder="请粘贴合同文本内容，系统将自动分析合同风险..."
+              placeholder="请粘贴合同文本内容，系统将自动分析合同风险... (按 / 聚焦, Ctrl+Enter 审查)"
             />
           </div>
 
@@ -313,6 +313,7 @@ import {
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import { useUsageMemory } from '@/composables/useUsageMemory'
+import { useKeyboardShortcuts, matchShortcut, isInputFocused } from '@/composables/useKeyboardShortcuts'
 
 const router = useRouter()
 const { addRecord } = useUsageMemory()
@@ -588,6 +589,20 @@ const saveDraft = async () => {
     ElMessage.error('保存失败')
   }
 }
+
+useKeyboardShortcuts([
+  {
+    match: (e) => matchShortcut(e, { ctrl: true, key: 'enter' }) && !loading.value && contractText.value.trim(),
+    handler: () => handleReview()
+  },
+  {
+    match: (e) => e.key === '/' && !isInputFocused(),
+    handler: () => {
+      const textarea = document.querySelector('.textarea-wrapper textarea')
+      if (textarea) textarea.focus()
+    }
+  }
+])
 </script>
 
 <style lang="scss" scoped>

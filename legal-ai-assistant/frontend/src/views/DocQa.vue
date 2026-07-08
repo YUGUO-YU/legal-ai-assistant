@@ -123,9 +123,8 @@
             <div class="input-wrapper">
               <el-input
                 v-model="question"
-                placeholder="输入问题，按Enter发送"
+                placeholder="输入问题 (按 / 聚焦, Ctrl+Enter 发送)"
                 :disabled="loading"
-                @keyup.enter="handleAsk"
               />
               <el-button
                 type="primary"
@@ -263,6 +262,7 @@ import {
   VideoPlay
 } from '@element-plus/icons-vue'
 import api from '../api'
+import { useKeyboardShortcuts, matchShortcut, isInputFocused } from '@/composables/useKeyboardShortcuts'
 
 const router = useRouter()
 const route = useRoute()
@@ -548,6 +548,20 @@ onMounted(() => {
   }
   loadSessions()
 })
+
+useKeyboardShortcuts([
+  {
+    match: (e) => matchShortcut(e, { ctrl: true, key: 'enter' }) && !loading.value,
+    handler: () => handleAsk()
+  },
+  {
+    match: (e) => e.key === '/' && !isInputFocused(),
+    handler: () => {
+      const input = document.querySelector('.chat-input input')
+      if (input) input.focus()
+    }
+  }
+])
 </script>
 
 <style lang="scss" scoped>

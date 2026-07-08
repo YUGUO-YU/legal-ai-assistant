@@ -1,6 +1,7 @@
 package com.legalai.controller;
 
 import com.legalai.dto.*;
+import com.legalai.service.CacheService;
 import com.legalai.service.CaseAnalysisService;
 import com.legalai.service.CaseSearchService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,18 +24,26 @@ public class CaseSearchController {
 
     private final CaseSearchService caseSearchService;
     private final CaseAnalysisService caseAnalysisService;
+    private final CacheService cacheService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public CaseSearchController(CaseSearchService caseSearchService, CaseAnalysisService caseAnalysisService) {
+    public CaseSearchController(CaseSearchService caseSearchService, CaseAnalysisService caseAnalysisService, CacheService cacheService) {
         this.caseSearchService = caseSearchService;
         this.caseAnalysisService = caseAnalysisService;
+        this.cacheService = cacheService;
     }
 
     @PostMapping("/search")
     @Operation(summary = "案例多条件查询", description = "支持按案件类型、法院层级、审理程序等多维度过滤")
     @ApiResponse(responseCode = "200", description = "查询成功")
     public com.legalai.dto.ApiResponse<CaseSearchResponse> search(@RequestBody CaseSearchRequest request) {
+        String queryKey = request.toString();
+        Object cached = cacheService.getCachedCaseResults(queryKey);
+        if (cached != null) {
+            return com.legalai.dto.ApiResponse.success((CaseSearchResponse) cached);
+        }
         CaseSearchResponse response = caseSearchService.searchCases(request);
+        cacheService.cacheCaseResults(queryKey, response);
         return com.legalai.dto.ApiResponse.success(response);
     }
 

@@ -84,3 +84,23 @@ spring.data.redis:
 
 # Enable Redis for usage records
 redis.enabled: true
+
+# App Log Configuration
+app:
+  log:
+    path: /var/log/legal-ai-assistant/app.log
+
+# Rate Limiting Configuration
+rate-limit:
+  api:
+    search:
+      qps: 30
+    draft:
+      qps: 10
+  admin:
+    list:
+      qps: 100
+    write:
+      qps: 20
+    export:
+      qps: 10

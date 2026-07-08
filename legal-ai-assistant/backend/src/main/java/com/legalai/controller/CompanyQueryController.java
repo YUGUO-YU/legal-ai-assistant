@@ -1,6 +1,7 @@
 package com.legalai.controller;
 
 import com.legalai.dto.*;
+import com.legalai.service.CacheService;
 import com.legalai.service.CompanyService;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,14 +13,22 @@ import java.util.List;
 public class CompanyQueryController {
 
     private final CompanyService companyService;
+    private final CacheService cacheService;
 
-    public CompanyQueryController(CompanyService companyService) {
+    public CompanyQueryController(CompanyService companyService, CacheService cacheService) {
         this.companyService = companyService;
+        this.cacheService = cacheService;
     }
 
     @PostMapping("/query")
     public ApiResponse<CompanyQueryResponse> query(@RequestBody CompanyQueryRequest request) {
+        String companyName = request.getCompanyName();
+        Object cached = cacheService.getCachedCompanyInfo(companyName);
+        if (cached != null) {
+            return ApiResponse.success((CompanyQueryResponse) cached);
+        }
         CompanyQueryResponse response = companyService.queryCompany(request);
+        cacheService.cacheCompanyInfo(companyName, response);
         return ApiResponse.success(response);
     }
 

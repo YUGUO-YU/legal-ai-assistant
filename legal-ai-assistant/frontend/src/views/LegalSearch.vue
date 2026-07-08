@@ -13,10 +13,10 @@
           <el-icon class="search-icon"><Search /></el-icon>
           <el-input
             v-model="query"
-            placeholder="请输入法律问题，如：合同欺诈如何认定？"
+            placeholder="请输入法律问题，如：合同欺诈如何认定？(按 / 聚焦, Ctrl+Enter 搜索)"
             size="large"
             clearable
-            @keyup.enter="handleSearch"
+            class="search-input"
           />
           <el-button type="primary" class="search-btn" :loading="loading" @click="handleSearch">
             <template v-if="!loading">
@@ -199,6 +199,7 @@ import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 import PptProgressDialog from '../components/PptProgressDialog.vue'
 import { useUsageMemory } from '@/composables/useUsageMemory'
+import { useKeyboardShortcuts, matchShortcut, isInputFocused } from '@/composables/useKeyboardShortcuts'
 
 const router = useRouter()
 const { addRecord } = useUsageMemory()
@@ -325,6 +326,20 @@ const viewCase = (c) => {
     ElMessage.warning('该案例缺少详情信息')
   }
 }
+
+useKeyboardShortcuts([
+  {
+    match: (e) => matchShortcut(e, { ctrl: true, key: 'enter' }) && !loading.value,
+    handler: () => handleSearch()
+  },
+  {
+    match: (e) => e.key === '/' && !isInputFocused(),
+    handler: () => {
+      const input = document.querySelector('.search-input-wrapper input')
+      if (input) input.focus()
+    }
+  }
+])
 </script>
 
 <style lang="scss" scoped>

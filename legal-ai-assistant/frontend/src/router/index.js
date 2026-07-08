@@ -173,6 +173,7 @@ const routes = [
 
       { path: 'ops/feedback', component: () => import('../views/admin/ops/UserFeedback.vue') },
       { path: 'ops/search-logs', component: () => import('../views/admin/ops/SearchLogs.vue') },
+      { path: 'ops/app-logs', component: () => import('../views/admin/ops/AppLogs.vue') },
 
       { path: 'monitor/rules', component: () => import('../views/admin/monitor/AlertRules.vue') },
       { path: 'monitor/history', component: () => import('../views/admin/monitor/AlertHistory.vue') },

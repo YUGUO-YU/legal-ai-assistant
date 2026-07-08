@@ -1,5 +1,6 @@
 package com.legalai.controller;
 
+import com.legalai.admin.annotation.RateLimit;
 import com.legalai.dto.*;
 import com.legalai.service.LegalSearchService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,6 +23,7 @@ public class LegalSearchController {
         this.legalSearchService = legalSearchService;
     }
 
+    @RateLimit(qps = 30, key = "search")
     @PostMapping("/search")
     @Operation(summary = "法规混合检索", description = "支持ES全文检索和Milvus向量检索的混合检索")
     @ApiResponse(responseCode = "200", description = "检索成功")
