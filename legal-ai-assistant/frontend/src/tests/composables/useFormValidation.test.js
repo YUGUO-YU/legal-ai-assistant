@@ -120,16 +120,15 @@ describe('useFormValidation', () => {
 
   describe('getError', () => {
     it('should return error only after touch', () => {
-      const { validate, getError } = useFormValidation({
+      const instance = useFormValidation({
         name: { required: true, message: '姓名不能为空' }
       })
       
-      validate('name', '')
-      expect(getError('name')).toBeNull()
+      instance.validate('name', '')
+      expect(instance.getError('name')).toBeNull()
       
-      const { touch } = useFormValidation({ name: { required: true } })
-      touch('name')
-      expect(getError('name')).not.toBeNull()
+      instance.touch('name')
+      expect(instance.getError('name')).not.toBeNull()
     })
   })
 })

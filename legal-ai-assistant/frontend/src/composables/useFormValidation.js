@@ -65,8 +65,9 @@ export function useFormValidation(rules) {
     }
   }
 
-  const touch = (field) => {
+  const touch = (field, value = '') => {
     touched[field] = true
+    validate(field, value)
   }
 
   const getError = (field) => {
@@ -74,7 +75,7 @@ export function useFormValidation(rules) {
   }
 
   const hasError = (field) => {
-    return touched[field] && !!errors[field]
+    return touched[field] === true && !!errors[field]
   }
 
   return {

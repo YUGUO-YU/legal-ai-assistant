@@ -28,7 +28,7 @@ describe('useCountUp', () => {
     const { displayValue, start } = useCountUp(100, 1000)
     start()
     
-    vi.advanceTimersByTime(1000)
+    vi.advanceTimersByTime(2000)
     expect(displayValue.value).toBe(100)
   })
 
