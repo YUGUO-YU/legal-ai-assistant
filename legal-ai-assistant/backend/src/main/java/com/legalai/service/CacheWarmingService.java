@@ -43,7 +43,7 @@ public class CacheWarmingService {
     public void init() {
         if (redisEnabled) {
             log.info("缓存预热服务已启动");
-            schedule WarmingTask();
+            scheduleWarmingTask();
         }
     }
 
