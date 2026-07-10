@@ -44,7 +44,6 @@ public class AdminDataService {
             result.put("username", null);
             result.put("roleId", null);
             result.put("dataScope", DataScope.ALL);
-            result.put("deptId", null);
             result.put("teamId", null);
             return result;
         }
