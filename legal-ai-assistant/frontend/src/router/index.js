@@ -137,6 +137,7 @@ const routes = [
       { path: 'law/categories', component: () => import('../views/admin/biz/LawCategories.vue') },
       { path: 'law/relations', component: () => import('../views/admin/biz/LawRelations.vue') },
       { path: 'law/import', component: () => import('../views/admin/biz/LawImport.vue') },
+      { path: 'law/data-quality', component: () => import('../views/admin/biz/DataQuality.vue') },
 
       { path: 'infra/users', component: () => import('../views/admin/infra/Users.vue') },
       { path: 'infra/frontend-users', component: () => import('../views/admin/infra/FrontendUsers.vue') },

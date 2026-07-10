@@ -336,7 +336,7 @@ import {
   View
 } from '@element-plus/icons-vue'
 import api from '../api'
-import Loading from '../components/Loading.vue'
+import LocalLoading from '../components/Loading.vue'
 import { useUsageMemory } from '@/composables/useUsageMemory'
 import { useKeyboardShortcuts, matchShortcut, isInputFocused } from '@/composables/useKeyboardShortcuts'
 import VChart from 'vue-echarts'

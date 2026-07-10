@@ -11,18 +11,29 @@
             drag
             :auto-upload="false"
             :limit="1"
-            accept=".doc,.docx"
+            accept=".pdf,.doc,.docx"
             :on-change="handleFileChange"
           >
             <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-            <div class="el-upload__text">拖拽 Word 文件到此处，或 <em>点击上传</em></div>
+            <div class="el-upload__text">拖拽法规文件到此处，或 <em>点击上传</em></div>
             <template #tip>
-              <div class="el-upload__tip">支持 .doc, .docx 格式</div>
+              <div class="el-upload__tip">支持 .pdf, .doc, .docx 格式</div>
             </template>
           </el-upload>
+          <div class="file-type-tabs">
+            <el-radio-group v-model="selectedFileType" size="small">
+              <el-radio-button value="pdf">PDF 格式</el-radio-button>
+              <el-radio-button value="doc">Word 格式</el-radio-button>
+            </el-radio-group>
+          </div>
           <el-button type="primary" :disabled="!uploadFile" style="margin-top: 16px; width: 100%;" @click="handlePreview">
-            上传并预览
+            <el-icon v-if="uploading"><Loading class="is-loading" /></el-icon>
+            {{ uploading ? '解析中...' : '上传并预览' }}
           </el-button>
+          <div class="upload-hint">
+            <el-icon><InfoFilled /></el-icon>
+            <span>PDF文件将自动提取文本并智能分析章节结构</span>
+          </div>
         </div>
         <div class="right-preview">
           <el-card v-if="previewData" shadow="never">
@@ -58,6 +69,18 @@
           <el-empty v-else description="上传文件后可预览" />
         </div>
       </div>
+
+      <el-card v-if="showPdfPreview && pdfPreviewUrl" style="margin-top: 16px;">
+        <template #header>
+          <div class="preview-header">
+            <span>PDF 预览</span>
+            <el-button text @click="showPdfPreview = false; pdfPreviewUrl = null">关闭预览</el-button>
+          </div>
+        </template>
+        <div class="pdf-preview-container">
+          <vue-pdf-embed :url="pdfPreviewUrl" />
+        </div>
+      </el-card>
     </el-card>
 
     <el-card style="margin-top: 16px;">
@@ -100,27 +123,42 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { UploadFilled, Loading } from '@element-plus/icons-vue'
-import api from '@/api'
+  import { ref, computed, onMounted, onUnmounted } from 'vue'
+  import { ElMessage } from 'element-plus'
+  import { UploadFilled, Loading, InfoFilled } from '@element-plus/icons-vue'
+  import VuePdfEmbed from 'vue-pdf-embed'
+  import api from '@/api'
 
-const uploadRef = ref(null)
-const uploadFile = ref(null)
-const previewData = ref(null)
-const previewForm = ref({})
-const selectedCategoryIds = ref([])
-const categoryList = ref([])
-const historyData = ref([])
-const pollTimers = ref({})
+  const uploadRef = ref(null)
+  const uploadFile = ref(null)
+  const previewData = ref(null)
+  const previewForm = ref({})
+  const selectedCategoryIds = ref([])
+  const categoryList = ref([])
+  const historyData = ref([])
+  const pollTimers = ref({})
+  const uploading = ref(false)
+  const selectedFileType = ref('pdf')
+  const pdfPreviewUrl = ref(null)
+  const showPdfPreview = ref(false)
 
 const chapterTree = computed(() => {
   if (!previewData.value?.chapterTree) return []
   return previewData.value.chapterTree.map(ch => ({ title: ch.title, children: ch.children || [] }))
 })
 
-const handleFileChange = (file) => {
+  const handleFileChange = (file) => {
   uploadFile.value = file.raw
+  if (file.raw) {
+    const isPdf = file.raw.name?.toLowerCase().endsWith('.pdf')
+    if (isPdf) {
+      pdfPreviewUrl.value = URL.createObjectURL(file.raw)
+      showPdfPreview.value = true
+    } else {
+      showPdfPreview.value = false
+      pdfPreviewUrl.value = null
+    }
+  }
 }
 
 const loadCategories = async () => {
@@ -138,8 +176,9 @@ const loadCategories = async () => {
   }
 }
 
-const handlePreview = async () => {
+  const handlePreview = async () => {
   if (!uploadFile.value) return
+  uploading.value = true
   const formData = new FormData()
   formData.append('file', uploadFile.value)
   try {
@@ -155,7 +194,9 @@ const handlePreview = async () => {
     }
     ElMessage.success('预览生成成功')
   } catch (e) {
-    ElMessage.error('预览失败')
+    ElMessage.error('预览失败: ' + (e.message || '未知错误'))
+  } finally {
+    uploading.value = false
   }
 }
 
@@ -243,13 +284,36 @@ onMounted(() => {
 onUnmounted(() => {
   Object.values(pollTimers.value).forEach(timer => clearInterval(timer))
   pollTimers.value = {}
+  if (pdfPreviewUrl.value) {
+    URL.revokeObjectURL(pdfPreviewUrl.value)
+  }
 })
 </script>
 
 <style scoped>
-.page-container { padding: 20px; }
-.import-layout { display: flex; gap: 20px; }
-.left-upload { width: 300px; flex-shrink: 0; }
-.right-preview { flex: 1; }
-.preview-header { display: flex; justify-content: space-between; align-items: center; }
-</style>
+  .page-container { padding: 20px; }
+  .import-layout { display: flex; gap: 20px; }
+  .left-upload { width: 320px; flex-shrink: 0; }
+  .right-preview { flex: 1; }
+  .preview-header { display: flex; justify-content: space-between; align-items: center; }
+  .file-type-tabs {
+    margin-top: 12px;
+    display: flex;
+    justify-content: center;
+  }
+  .upload-hint {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #f4f4f5;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #909399;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pdf-preview-container {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+  </style>

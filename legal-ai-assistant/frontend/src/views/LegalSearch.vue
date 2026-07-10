@@ -199,6 +199,7 @@
                 <el-icon><Right /></el-icon>
               </el-button>
             </div>
+            </div>
           </el-card>
         </el-col>
       </el-row>

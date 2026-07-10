@@ -129,6 +129,13 @@ export const requestWithRetry = (method, url, data, options = {}) => {
 }
 
 export default {
+  v2: {
+    laws: (params) => withRetry(() => api.get('/v2/laws', { params })),
+    law: (id, params) => withRetry(() => api.get(`/v2/laws/${id}`, { params })),
+    lawArticles: (id, params) => withRetry(() => api.get(`/v2/laws/${id}/articles`, { params })),
+    categories: (type) => withRetry(() => api.get('/v2/laws/categories', { params: { type } })),
+    stats: () => withRetry(() => api.get('/v2/laws/stats'))
+  },
   legalSearch: {
     search: (data) => withRetry(() => api.post('/legal-search/search', data)),
     getArticle: (id) => withRetry(() => api.get(`/legal-search/articles/${id}`)),
@@ -266,6 +273,17 @@ export default {
   })),
   importConfirm: (data) => withRetry(() => api.post('/admin/law-import/confirm', data)),
   lawImportHistory: () => withRetry(() => api.get('/admin/law-import/history')),
+  lawDocument: {
+    create: (data) => withRetry(() => api.post('/admin/law-document/create', data)),
+    update: (id, data) => withRetry(() => api.post(`/admin/law-document/${id}/update`, data)),
+    delete: (id) => withRetry(() => api.post(`/admin/law-document/${id}/delete`)),
+    batchDelete: (ids) => withRetry(() => api.post('/admin/law-document/batch-delete', { ids })),
+    addArticle: (lawId, data) => withRetry(() => api.post(`/admin/law-document/${lawId}/articles/add`, data)),
+    updateArticle: (lawId, articleId, data) => withRetry(() => api.post(`/admin/law-document/${lawId}/articles/${articleId}/update`, data)),
+    deleteArticle: (lawId, articleId) => withRetry(() => api.post(`/admin/law-document/${lawId}/articles/${articleId}/delete`)),
+    export: (params) => withRetry(() => api.get('/admin/law-document/export', { params })),
+    dataQuality: () => withRetry(() => api.get('/admin/law-document/data-quality'))
+  },
   stats: {
     userActivity: (params) => withRetry(() => api.get('/admin/stats/user-activity', { params })),
     lawUsage: (params) => withRetry(() => api.get('/admin/stats/law-usage', { params }))

@@ -5,8 +5,12 @@ import com.legalai.config.ElasticsearchConfig;
 import com.legalai.dto.*;
 import com.legalai.model.LawArticle;
 import com.legalai.model.LawDocument;
+import com.legalai.model.LawCategory;
+import com.legalai.model.LawCategoryType;
 import com.legalai.repository.LawArticleMapper;
 import com.legalai.repository.LawDocumentMapper;
+import com.legalai.repository.LawCategoryMapper;
+import com.legalai.repository.LawCategoryTypeMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,23 +43,11 @@ public class LawSearchService {
     @Autowired
     private LawArticleMapper lawArticleMapper;
 
-    private static final List<Map<String, String>> CATEGORIES_L1 = List.of(
-        Map.of("code", "法律", "name", "法律"),
-        Map.of("code", "行政法规", "name", "行政法规"),
-        Map.of("code", "部门规章", "name", "部门规章"),
-        Map.of("code", "地方性法规", "name", "地方性法规"),
-        Map.of("code", "司法解释", "name", "司法解释")
-    );
+    @Autowired
+    private LawCategoryMapper lawCategoryMapper;
 
-    private static final List<Map<String, String>> CATEGORIES_L2 = List.of(
-        Map.of("code", "民法", "name", "民法", "parent", "法律"),
-        Map.of("code", "商法", "name", "商法", "parent", "法律"),
-        Map.of("code", "刑法", "name", "刑法", "parent", "法律"),
-        Map.of("code", "行政法", "name", "行政法", "parent", "法律"),
-        Map.of("code", "劳动法", "name", "劳动法", "parent", "法律"),
-        Map.of("code", "知识产权法", "name", "知识产权法", "parent", "法律"),
-        Map.of("code", "诉讼法", "name", "诉讼法", "parent", "法律")
-    );
+    @Autowired
+    private LawCategoryTypeMapper lawCategoryTypeMapper;
 
     public LawSearchResponse searchLaws(LawSearchRequest request) {
         log.info("法规查询请求: keyword={}, categoryL1={}, status={}",
@@ -593,8 +585,57 @@ public class LawSearchService {
 
     public Map<String, Object> getCategories() {
         Map<String, Object> result = new HashMap<>();
-        result.put("categoryL1", CATEGORIES_L1);
-        result.put("categoryL2", CATEGORIES_L2);
+
+        try {
+            QueryWrapper<LawCategoryType> typeQuery = new QueryWrapper<>();
+            typeQuery.orderByAsc("sort_order");
+            List<LawCategoryType> categoryTypes = lawCategoryTypeMapper.selectList(typeQuery);
+
+            List<Map<String, String>> categoryL1 = categoryTypes.stream()
+                .map(t -> {
+                    Map<String, String> map = new HashMap<>();
+                    map.put("code", t.getTypeCode() != null ? t.getTypeCode() : t.getTypeName());
+                    map.put("name", t.getTypeName());
+                    return map;
+                })
+                .collect(Collectors.toList());
+            result.put("categoryL1", categoryL1);
+
+            QueryWrapper<LawCategory> catQuery = new QueryWrapper<>();
+            catQuery.orderByAsc("sort_order");
+            List<LawCategory> categories = lawCategoryMapper.selectList(catQuery);
+
+            List<Map<String, String>> categoryL2 = categories.stream()
+                .filter(c -> c.getParentId() == null || c.getParentId() == 0)
+                .map(c -> {
+                    Map<String, String> map = new HashMap<>();
+                    map.put("code", c.getCategoryCode() != null ? c.getCategoryCode() : c.getCategoryName());
+                    map.put("name", c.getCategoryName());
+                    return map;
+                })
+                .collect(Collectors.toList());
+            result.put("categoryL2", categoryL2);
+
+        } catch (Exception e) {
+            log.warn("从数据库加载分类失败，使用默认分类: {}", e.getMessage());
+            result.put("categoryL1", List.of(
+                Map.of("code", "法律", "name", "法律"),
+                Map.of("code", "行政法规", "name", "行政法规"),
+                Map.of("code", "部门规章", "name", "部门规章"),
+                Map.of("code", "地方性法规", "name", "地方性法规"),
+                Map.of("code", "司法解释", "name", "司法解释")
+            ));
+            result.put("categoryL2", List.of(
+                Map.of("code", "民法", "name", "民法", "parent", "法律"),
+                Map.of("code", "商法", "name", "商法", "parent", "法律"),
+                Map.of("code", "刑法", "name", "刑法", "parent", "法律"),
+                Map.of("code", "行政法", "name", "行政法", "parent", "法律"),
+                Map.of("code", "劳动法", "name", "劳动法", "parent", "法律"),
+                Map.of("code", "知识产权法", "name", "知识产权法", "parent", "法律"),
+                Map.of("code", "诉讼法", "name", "诉讼法", "parent", "法律")
+            ));
+        }
+
         result.put("statusOptions", List.of(
             Map.of("value", 1, "label", "现行有效"),
             Map.of("value", 2, "label", "已废止"),

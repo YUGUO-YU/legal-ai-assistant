@@ -141,6 +141,9 @@ public class LawImportService {
     @Autowired
     private ProgressNotificationService progressNotificationService;
 
+    @Autowired
+    private DocumentParserService documentParserService;
+
     @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
@@ -316,7 +319,7 @@ public class LawImportService {
     }
 
     public LawImportPreview previewImport(MultipartFile file) {
-        String content = extractTextFromDocx(file);
+        String content = extractTextFromFile(file);
         String lawTitle = extractTitle(content);
         String shortTitle = extractShortTitle(content);
 
@@ -362,13 +365,21 @@ public class LawImportService {
         lawDocumentMapper.insert(doc);
 
         int inserted = 0;
+        int sortOrder = 0;
         for (LawImportPreview.ArticleParse ap : preview.getArticles()) {
+            sortOrder++;
             LawArticle article = new LawArticle();
             article.setLawId(doc.getId());
-            article.setArticleUuid(UUID.randomUUID().toString());
+            article.setArticleUuid(ap.getArticleUuid() != null ? ap.getArticleUuid() : UUID.randomUUID().toString());
             article.setArticleNo(ap.getArticleNo());
             article.setTitle(ap.getTitle());
             article.setContent(ap.getContent());
+            article.setSortOrder(ap.getSortOrder() != null ? ap.getSortOrder() : sortOrder);
+            String contentHash = ap.getContentHash();
+            if (contentHash == null || contentHash.isEmpty()) {
+                contentHash = sha256(ap.getContent() != null ? ap.getContent() : "");
+            }
+            article.setContentHash(contentHash);
             lawArticleMapper.insert(article);
             inserted++;
         }
@@ -388,13 +399,29 @@ public class LawImportService {
         return loadJob(historyId);
     }
 
-    private String extractTextFromDocx(MultipartFile file) {
-        try (XWPFDocument doc = new XWPFDocument(file.getInputStream())) {
-            XWPFWordExtractor extractor = new XWPFWordExtractor(doc);
-            return extractor.getText();
-        } catch (Exception e) {
-            throw new RuntimeException("Word文档解析失败", e);
+    private String extractTextFromFile(MultipartFile file) {
+        String fileName = file.getOriginalFilename();
+        if (fileName == null) {
+            throw new IllegalArgumentException("文件名不能为空");
         }
+        String extension = getFileExtension(fileName).toLowerCase();
+
+        try {
+            return switch (extension) {
+                case "pdf", "docx", "doc", "txt" -> documentParserService.parseDocument(file);
+                default -> throw new IllegalArgumentException("不支持的文件格式: " + extension + "，支持 PDF、Word、TXT");
+            };
+        } catch (Exception e) {
+            throw new RuntimeException("文件解析失败: " + e.getMessage(), e);
+        }
+    }
+
+    private String getFileExtension(String fileName) {
+        int lastDot = fileName.lastIndexOf('.');
+        if (lastDot < 0) {
+            return "";
+        }
+        return fileName.substring(lastDot + 1);
     }
 
     private String extractTitle(String content) {
@@ -475,10 +502,14 @@ public class LawImportService {
         List<LawImportPreview.ArticleParse> articles = new ArrayList<>();
         Pattern p = Pattern.compile("第([一二三四五六七八九十百千万\\d]+)条[^\\n]*\\n([\\s\\S]*?)(?=(?:第[一二三四五六七八九十百千万\\d]+条)|$)");
         Matcher m = p.matcher(content);
+        int sortOrder = 0;
         while (m.find()) {
+            sortOrder++;
             LawImportPreview.ArticleParse a = new LawImportPreview.ArticleParse();
             a.setArticleNo("第" + m.group(1) + "条");
             a.setContent(m.group(2).trim());
+            a.setSortOrder(sortOrder);
+            a.setContentHash(sha256(m.group(2).trim()));
             articles.add(a);
         }
         return articles;

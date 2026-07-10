@@ -207,7 +207,7 @@
     <router-view v-else />
   </div>
   <NotificationToast />
-  <OperationReplay v-if="showReplay && import.meta.env.DEV" />
+  <OperationReplay v-if="showReplay && isDev" />
   <QuickActions ref="quickActionsRef" />
   <CommandPalette ref="commandPaletteRef" />
 </template>
@@ -254,6 +254,7 @@ const router = useRouter()
 
 const isDark = ref(false)
 const showReplay = ref(false)
+const isDev = import.meta.env.DEV
 let themeTimer = null
 const quickActionsRef = ref(null)
 const commandPaletteRef = ref(null)

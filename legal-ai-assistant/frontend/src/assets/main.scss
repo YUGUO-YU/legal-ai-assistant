@@ -340,7 +340,6 @@ body {
     }
   }
 }
-}
 
 // 触摸友好的操作按钮 - 移动端适配
 .action-btn {
@@ -382,17 +381,15 @@ body {
   }
 }
 
-    .el-drawer__close-btn {
-      &:hover {
-        color: var(--color-primary);
-        transform: rotate(90deg);
-        transition: all 0.2s ease;
-      }
-    }
+.el-drawer__close-btn {
+  &:hover {
+    color: var(--color-primary);
+    transform: rotate(90deg);
+    transition: all 0.2s ease;
   }
+}
 
-  .el-drawer__body {
-    padding: 20px;
-    overflow-y: auto;
-  }
+.el-drawer__body {
+  padding: 20px;
+  overflow-y: auto;
 }

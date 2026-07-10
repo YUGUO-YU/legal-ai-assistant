@@ -33,9 +33,12 @@ public class LawImportPreview {
 
     @Data
     public static class ArticleParse {
+        private String articleUuid;
         private String articleNo;
         private String title;
         private String content;
         private String chapterPath;
+        private Integer sortOrder;
+        private String contentHash;
     }
 }

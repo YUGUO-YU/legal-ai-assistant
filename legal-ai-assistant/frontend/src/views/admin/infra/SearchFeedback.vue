@@ -135,7 +135,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import api from '../../api'
+import api from '@/api'
 
 const stats = ref({})
 const list = ref([])
