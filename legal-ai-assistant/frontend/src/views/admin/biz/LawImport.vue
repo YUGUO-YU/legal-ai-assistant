@@ -39,8 +39,13 @@
           <el-card v-if="previewData" shadow="never">
             <template #header>
               <div class="preview-header">
-                <span>预览信息</span>
-                <el-button v-if="previewData" type="success" @click="handleConfirm">确认导入</el-button>
+                <span>法规信息</span>
+                <el-space>
+                  <el-tag type="info" v-if="articleStats.total > 0">
+                    {{ articleStats.total }} 个条款
+                  </el-tag>
+                  <el-button v-if="previewData" type="success" size="small" @click="handleConfirm">确认导入</el-button>
+                </el-space>
               </div>
             </template>
             <el-form :model="previewForm" label-width="110px">
@@ -61,10 +66,39 @@
                   <el-option v-for="c in categoryList" :key="c.id" :label="c.categoryName" :value="c.id" />
                 </el-select>
               </el-form-item>
-              <el-form-item v-if="previewData?.chapterTree?.length" label="章节结构">
-                <el-tree :data="chapterTree" :props="{ label: 'title' }" default-expand-all style="max-height: 300px; overflow-y: auto;" />
-              </el-form-item>
             </el-form>
+
+            <el-divider v-if="previewData?.articles?.length" content-position="left">
+              条款预览
+              <el-button text size="small" @click="showAllArticles = !showAllArticles">
+                {{ showAllArticles ? '收起' : '展开全部' }}
+              </el-button>
+            </el-divider>
+
+            <div v-if="previewData?.articles?.length" class="articles-list">
+              <div v-for="(article, index) in displayArticles" :key="index" class="article-item">
+                <div class="article-header" @click="toggleArticle(index)">
+                  <el-icon class="expand-icon" :class="{ expanded: expandedArticles.has(index) }">
+                    <ArrowRight />
+                  </el-icon>
+                  <span class="article-no">{{ article.articleNo || `第${index + 1}条` }}</span>
+                  <span class="article-title" :title="article.title">{{ article.title || '无标题' }}</span>
+                  <el-tag size="small" type="info" style="margin-left: 8px;">
+                    {{ (article.content || '').length }} 字
+                  </el-tag>
+                </div>
+                <div v-if="expandedArticles.has(index)" class="article-content">
+                  <el-input
+                    v-model="article.content"
+                    type="textarea"
+                    :rows="4"
+                    placeholder="条款内容"
+                    @change="handleArticleChange(index)"
+                  />
+                </div>
+              </div>
+            </div>
+            <el-empty v-else-if="previewData && !previewData.articles?.length" description="暂无法规条款数据" />
           </el-card>
           <el-empty v-else description="上传文件后可预览" />
         </div>
@@ -123,31 +157,58 @@
 </template>
 
 <script setup>
-  import { ref, computed, onMounted, onUnmounted } from 'vue'
-  import { ElMessage } from 'element-plus'
-  import { UploadFilled, Loading, InfoFilled } from '@element-plus/icons-vue'
-  import VuePdfEmbed from 'vue-pdf-embed'
-  import api from '@/api'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { UploadFilled, Loading, InfoFilled, ArrowRight } from '@element-plus/icons-vue'
+import VuePdfEmbed from 'vue-pdf-embed'
+import api from '@/api'
 
-  const uploadRef = ref(null)
-  const uploadFile = ref(null)
-  const previewData = ref(null)
-  const previewForm = ref({})
-  const selectedCategoryIds = ref([])
-  const categoryList = ref([])
-  const historyData = ref([])
-  const pollTimers = ref({})
-  const uploading = ref(false)
-  const selectedFileType = ref('pdf')
-  const pdfPreviewUrl = ref(null)
-  const showPdfPreview = ref(false)
+const uploadRef = ref(null)
+const uploadFile = ref(null)
+const previewData = ref(null)
+const previewForm = ref({})
+const selectedCategoryIds = ref([])
+const categoryList = ref([])
+const historyData = ref([])
+const pollTimers = ref({})
+const uploading = ref(false)
+const selectedFileType = ref('pdf')
+const pdfPreviewUrl = ref(null)
+const showPdfPreview = ref(false)
+const expandedArticles = ref(new Set())
+const showAllArticles = ref(false)
 
-const chapterTree = computed(() => {
-  if (!previewData.value?.chapterTree) return []
-  return previewData.value.chapterTree.map(ch => ({ title: ch.title, children: ch.children || [] }))
+const articleStats = computed(() => {
+  if (!previewData.value?.articles?.length) {
+    return { total: 0 }
+  }
+  const articles = previewData.value.articles
+  return {
+    total: articles.length
+  }
 })
 
-  const handleFileChange = (file) => {
+const displayArticles = computed(() => {
+  if (!previewData.value?.articles) return []
+  if (showAllArticles.value) {
+    return previewData.value.articles
+  }
+  return previewData.value.articles.slice(0, 10)
+})
+
+function toggleArticle(index) {
+  if (expandedArticles.value.has(index)) {
+    expandedArticles.value.delete(index)
+  } else {
+    expandedArticles.value.add(index)
+  }
+}
+
+function handleArticleChange(index) {
+  // Article content updated
+}
+
+const handleFileChange = (file) => {
   uploadFile.value = file.raw
   if (file.raw) {
     const isPdf = file.raw.name?.toLowerCase().endsWith('.pdf')
@@ -176,7 +237,7 @@ const loadCategories = async () => {
   }
 }
 
-  const handlePreview = async () => {
+const handlePreview = async () => {
   if (!uploadFile.value) return
   uploading.value = true
   const formData = new FormData()
@@ -192,6 +253,8 @@ const loadCategories = async () => {
       issueDate: res.data?.issueDate || '',
       effectiveDate: res.data?.effectiveDate || ''
     }
+    expandedArticles.value.clear()
+    showAllArticles.value = false
     ElMessage.success('预览生成成功')
   } catch (e) {
     ElMessage.error('预览失败: ' + (e.message || '未知错误'))
@@ -291,29 +354,75 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-  .page-container { padding: 20px; }
-  .import-layout { display: flex; gap: 20px; }
-  .left-upload { width: 320px; flex-shrink: 0; }
-  .right-preview { flex: 1; }
-  .preview-header { display: flex; justify-content: space-between; align-items: center; }
-  .file-type-tabs {
-    margin-top: 12px;
-    display: flex;
-    justify-content: center;
-  }
-  .upload-hint {
-    margin-top: 12px;
-    padding: 8px 12px;
-    background: #f4f4f5;
-    border-radius: 6px;
-    font-size: 12px;
-    color: #909399;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .pdf-preview-container {
-    max-height: 500px;
-    overflow-y: auto;
-  }
-  </style>
+.page-container { padding: 20px; }
+.import-layout { display: flex; gap: 20px; }
+.left-upload { width: 320px; flex-shrink: 0; }
+.right-preview { flex: 1; }
+.preview-header { display: flex; justify-content: space-between; align-items: center; }
+.file-type-tabs {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+}
+.upload-hint {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f4f4f5;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #909399;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pdf-preview-container {
+  max-height: 500px;
+  overflow-y: auto;
+}
+.articles-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+.article-item {
+  border-bottom: 1px solid #ebeef5;
+}
+.article-item:last-child {
+  border-bottom: none;
+}
+.article-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.article-header:hover {
+  background-color: #f5f7fa;
+}
+.expand-icon {
+  transition: transform 0.2s;
+  margin-right: 8px;
+  color: #909399;
+}
+.expand-icon.expanded {
+  transform: rotate(90deg);
+}
+.article-no {
+  font-weight: 500;
+  color: #409eff;
+  margin-right: 8px;
+  min-width: 60px;
+}
+.article-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #303133;
+}
+.article-content {
+  padding: 0 12px 12px 44px;
+}
+</style>
