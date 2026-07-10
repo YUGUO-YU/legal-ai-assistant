@@ -201,7 +201,7 @@
         </div>
       </template>
       <div class="detail-cards-grid">
-        <div class="detail-card card-hover" :class="card.class" @click="openDetail(card)" v-for="card in detailCards.slice(0, 4)" :key="card.key">
+        <div class="detail-card card-hover" :class="card.class" @click="openDetail(card)" @contextmenu.prevent="handleFeatureContextMenu(card, $event)" v-for="card in detailCards.slice(0, 4)" :key="card.key">
           <div class="detail-card-header">
             <div class="detail-card-icon" :style="{ background: card.gradient }">
               <el-icon :size="22"><component :is="card.icon" /></el-icon>
@@ -219,7 +219,7 @@
         </div>
       </div>
       <div class="detail-cards-grid" style="margin-top: 20px;">
-        <div class="detail-card card-hover" :class="card.class" @click="openDetail(card)" v-for="card in detailCards.slice(4, 8)" :key="card.key">
+        <div class="detail-card card-hover" :class="card.class" @click="openDetail(card)" @contextmenu.prevent="handleFeatureContextMenu(card, $event)" v-for="card in detailCards.slice(4, 8)" :key="card.key">
           <div class="detail-card-header">
             <div class="detail-card-icon" :style="{ background: card.gradient }">
               <el-icon :size="22"><component :is="card.icon" /></el-icon>
@@ -346,6 +346,14 @@
         </div>
       </div>
     </el-drawer>
+
+    <ContextMenu
+      v-model:visible="featureContextMenu.visible"
+      :x="featureContextMenu.x"
+      :y="featureContextMenu.y"
+      :menus="featureContextMenu.menus"
+      @select="featureContextMenu.handleSelect"
+    />
   </div>
 </template>
 
@@ -386,6 +394,8 @@ import {
 } from '@element-plus/icons-vue'
 
 import { useUsageMemory } from '@/composables/useUsageMemory'
+import ContextMenu from '@/components/common/ContextMenu.vue'
+import { useContextMenu } from '@/composables/useContextMenu'
 
 const {
   groupByDate: memoryGroups,
@@ -881,6 +891,47 @@ const onDrawerAction = (action) => {
 
 const loadMore = () => {
   console.log('load more activities')
+}
+
+const openInNewWindow = (card) => {
+  window.open(card.path || '/', '_blank')
+}
+
+const toggleFavorite = (card) => {
+  ElMessage.success(`已收藏：${card.title}`)
+}
+
+const showUsageStats = (card) => {
+  ElMessage.info(`查看使用统计：${card.title}`)
+}
+
+const featureContextMenu = reactive({
+  ...useContextMenu(),
+  menus: [
+    {
+      label: '新窗口打开',
+      icon: 'el-icon-right',
+      action: (card) => openInNewWindow(card)
+    },
+    {
+      label: '收藏',
+      icon: 'el-icon-star',
+      action: (card) => toggleFavorite(card)
+    },
+    {
+      label: '',
+      divided: true
+    },
+    {
+      label: '查看使用统计',
+      icon: 'el-icon-data-analysis',
+      action: (card) => showUsageStats(card)
+    }
+  ]
+})
+
+const handleFeatureContextMenu = (card, event) => {
+  featureContextMenu.show(event, card, featureContextMenu.menus)
 }
 </script>
 

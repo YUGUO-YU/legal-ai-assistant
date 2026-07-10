@@ -69,6 +69,7 @@
           border
           @header-dragend="handleHeaderDragend"
           @row-click="handleRowClick"
+          @row-contextmenu="handleContextMenu"
           ref="tableRef"
           :row-class-name="rowClassName"
           tabindex="0"
@@ -86,7 +87,23 @@
             <el-button link type="primary" @click="handleView(row)">查看</el-button>
           </template>
         </el-table-column>
+        <el-table-column width="50" fixed="right">
+          <template #default>
+            <i class="el-icon-rank drag-handle-icon"></i>
+          </template>
+        </el-table-column>
       </el-table>
+
+      <draggable
+        v-model="rows"
+        item-key="id"
+        tag="tbody"
+        :style="{ display: 'none' }"
+        ghost-class="drag-ghost"
+        chosen-class="drag-chosen"
+        :animation="200"
+        @end="handleRowDragEnd"
+      />
 
       <el-pagination
         v-model:current-page="filter.page"
@@ -108,18 +125,29 @@
       </el-descriptions>
       <el-empty v-else description="无数据" />
     </el-drawer>
+
+    <ContextMenu
+      v-model:visible="contextMenu.visible"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :menus="contextMenu.menus"
+      @select="contextMenu.handleSelect"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { Refresh, Setting } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import draggable from 'vuedraggable'
 import api from '../../api'
 import TableEmptyState from '../components/TableEmptyState.vue'
 import { useTableColumnConfig } from '../../composables/useTableColumnConfig'
 import { useFormValidation } from '../../composables/useFormValidation'
 import FormField from '../../components/common/FormField.vue'
+import ContextMenu from '../../components/common/ContextMenu.vue'
+import { useContextMenu } from '../../composables/useContextMenu'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -146,6 +174,62 @@ const showDetail = ref(false)
 const detail = ref(null)
 const tableRef = ref(null)
 const focusedRowIndex = ref(-1)
+
+const contextMenu = reactive({
+  ...useContextMenu(),
+  menus: [
+    {
+      label: '查看详情',
+      icon: 'el-icon-view',
+      shortcut: 'Enter',
+      action: (row) => handleView(row)
+    },
+    {
+      label: '编辑',
+      icon: 'el-icon-edit',
+      shortcut: 'E',
+      action: (row) => handleEdit(row)
+    },
+    {
+      label: '复制',
+      icon: 'el-icon-document-copy',
+      shortcut: 'Ctrl+C',
+      action: (row) => handleCopy(row)
+    },
+    {
+      label: '',
+      divided: true
+    },
+    {
+      label: '删除',
+      icon: 'el-icon-delete',
+      action: (row) => handleDelete(row)
+    }
+  ]
+})
+
+const handleContextMenu = (row, column, event) => {
+  contextMenu.show(event, row, contextMenu.menus)
+}
+
+const handleEdit = (row) => {
+  ElMessage.info('编辑功能开发中')
+}
+
+const handleCopy = (row) => {
+  navigator.clipboard.writeText(JSON.stringify(row))
+  ElMessage.success('已复制到剪贴板')
+}
+
+const handleDelete = (row) => {
+  ElMessageBox.confirm(`确定要删除这条数据吗？`, '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    ElMessage.success('删除成功')
+  }).catch(() => {})
+}
 
 const filter = reactive({
   page: 1,
@@ -245,6 +329,10 @@ function handleRowClick(row) {
 
 function rowClassName({ rowIndex }) {
   return rowIndex === focusedRowIndex.value ? 'is-focused' : ''
+}
+
+function handleRowDragEnd(evt) {
+  ElMessage.success(`行从 ${evt.oldIndex} 移动到 ${evt.newIndex}`)
 }
 
 function handleTableKeyDown(event) {
@@ -420,4 +508,12 @@ onMounted(() => {
   outline-offset: -2px;
 }
 
+.drag-handle-icon {
+  cursor: move;
+  color: var(--color-text-muted);
+
+  &:hover {
+    color: var(--color-primary);
+  }
+}
 </style>

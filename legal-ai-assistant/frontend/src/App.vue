@@ -207,6 +207,7 @@
     <router-view v-else />
   </div>
   <NotificationToast />
+  <OperationReplay v-if="showReplay && import.meta.env.DEV" />
 </template>
 
 <script setup>
@@ -240,13 +241,25 @@ import {
 import { useKeyboardShortcuts, isInputFocused } from './composables/useKeyboardShortcuts'
 import NotificationToast from '@/components/common/NotificationToast.vue'
 import SRAnnouncer from '@/components/common/SRAnnouncer.vue'
+import OperationReplay from '@/components/common/OperationReplay.vue'
 import { initializeApp } from '@/services/dataService'
+import { wsService } from '@/services/websocketService'
 
 const route = useRoute()
 const router = useRouter()
 
 const isDark = ref(false)
+const showReplay = ref(false)
 let themeTimer = null
+
+if (import.meta.env.DEV) {
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+      e.preventDefault()
+      showReplay.value = !showReplay.value
+    }
+  })
+}
 
 const toggleTheme = () => {
   const newTheme = isDark.value ? 'light' : 'dark'
@@ -292,9 +305,13 @@ onMounted(() => {
   applyTheme(theme)
   isDark.value = theme === 'dark'
   scheduleNextThemeSwitch()
-  
+
   if (isLoggedIn.value) {
     initializeApp()
+  }
+
+  if (!import.meta.env.DEV) {
+    wsService.connect().catch(console.error)
   }
 })
 
