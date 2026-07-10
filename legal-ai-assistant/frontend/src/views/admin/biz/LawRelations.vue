@@ -3,23 +3,99 @@
     <div class="page-header">
       <div class="header-content">
         <h2>法规关联管理</h2>
-        <p>管理法规条款之间的关联关系，支持参照、援引、修改、废止、配套等关联类型</p>
+        <p>管理法规之间的关联关系，支持参照、援引、修改、废止、配套等关联类型</p>
       </div>
       <div class="header-actions">
-        <el-button type="primary" @click="openDialog()">新增关联</el-button>
+        <el-button type="primary" @click="openDialog()">
+          <el-icon><Plus /></el-icon>
+          新增关联
+        </el-button>
       </div>
     </div>
 
+    <el-row :gutter="16" class="stats-row">
+      <el-col :span="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="stat-content">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+              <el-icon :size="20"><Connection /></el-icon>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.total }}</span>
+              <span class="stat-label">总关联数</span>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="stat-content">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)">
+              <el-icon :size="20"><Document /></el-icon>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.referenceCount }}</span>
+              <span class="stat-label">参照</span>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="stat-content">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)">
+              <el-icon :size="20"><Link /></el-icon>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.citeCount }}</span>
+              <span class="stat-label">援引</span>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="stat-content">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)">
+              <el-icon :size="20"><Warning /></el-icon>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.amendCount }}</span>
+              <span class="stat-label">修改/废止</span>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-card class="chart-card">
+      <template #header>
+        <span>关联类型分布</span>
+      </template>
+      <div ref="chartRef" class="chart-container"></div>
+    </el-card>
+
     <el-card class="filter-card">
       <el-form inline :model="filter">
-        <el-form-item label="来源条款ID">
-          <el-input-number v-model="filter.sourceArticleId" placeholder="来源法规ID" clearable :min="1" style="width:150px" />
-        </el-form-item>
-        <el-form-item label="目标条款ID">
-          <el-input-number v-model="filter.targetArticleId" placeholder="目标法规ID" clearable :min="1" style="width:150px" />
+        <el-form-item label="来源法规">
+          <el-select
+            v-model="filter.sourceLawId"
+            placeholder="选择法规"
+            clearable
+            filterable
+            style="width:200px"
+            @change="load"
+          >
+            <el-option
+              v-for="law in lawList"
+              :key="law.id"
+              :label="law.title"
+              :value="law.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="关联类型">
-          <el-select v-model="filter.relationType" placeholder="请选择" clearable style="width:140px">
+          <el-select v-model="filter.relationType" placeholder="请选择" clearable style="width:140px" @change="load">
             <el-option label="参照" value="参照" />
             <el-option label="援引" value="援引" />
             <el-option label="修改" value="修改" />
@@ -37,10 +113,11 @@
     <el-card>
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column label="来源法规" min-width="200">
+        <el-table-column label="来源法规" min-width="250">
           <template #default="{ row }">
-            <span>{{ row.source_article_id }}</span>
-            <el-tag size="small" type="info" style="margin-left:8px" v-if="row.source_article_title">{{ row.source_article_title }}</el-tag>
+            <div class="law-cell">
+              <span class="law-title" :title="row.source_article_title">{{ row.source_article_title || '未知法规' }}</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="relation_type" label="关联类型" width="100">
@@ -48,15 +125,16 @@
             <el-tag size="small" :type="relationTypeTag(row.relation_type)">{{ row.relation_type || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="目标法规" min-width="200">
+        <el-table-column label="目标法规" min-width="250">
           <template #default="{ row }">
-            <span>{{ row.target_article_id }}</span>
-            <el-tag size="small" type="info" style="margin-left:8px" v-if="row.target_article_title">{{ row.target_article_title }}</el-tag>
+            <div class="law-cell">
+              <span class="law-title" :title="row.target_article_title">{{ row.target_article_title || '未知法规' }}</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="weight" label="权重" width="80">
           <template #default="{ row }">
-            {{ row.weight }}
+            {{ row.weight?.toFixed(2) || '1.00' }}
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="170" />
@@ -81,11 +159,35 @@
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
       <el-form :model="form" label-width="100px" :rules="rules" ref="formRef">
-        <el-form-item label="来源条款ID" prop="sourceArticleId">
-          <el-input-number v-model="form.sourceArticleId" :min="1" style="width:100%" />
+        <el-form-item label="来源法规" prop="sourceArticleId">
+          <el-select
+            v-model="form.sourceArticleId"
+            placeholder="选择法规"
+            filterable
+            style="width:100%"
+          >
+            <el-option
+              v-for="law in lawList"
+              :key="law.id"
+              :label="law.title"
+              :value="law.id"
+            />
+          </el-select>
         </el-form-item>
-        <el-form-item label="目标条款ID" prop="targetArticleId">
-          <el-input-number v-model="form.targetArticleId" :min="1" style="width:100%" />
+        <el-form-item label="目标法规" prop="targetArticleId">
+          <el-select
+            v-model="form.targetArticleId"
+            placeholder="选择法规"
+            filterable
+            style="width:100%"
+          >
+            <el-option
+              v-for="law in lawList"
+              :key="law.id"
+              :label="law.title"
+              :value="law.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="关联类型" prop="relationType">
           <el-select v-model="form.relationType" placeholder="请选择关联类型" style="width:100%">
@@ -109,8 +211,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Connection, Document, Link, Warning } from '@element-plus/icons-vue'
+import * as echarts from 'echarts'
 import api from '../../../api'
 
 const rows = ref([])
@@ -121,12 +225,21 @@ const dialogTitle = ref('新增关联')
 const isEdit = ref(false)
 const editingId = ref(null)
 const formRef = ref(null)
+const lawList = ref([])
+const chartRef = ref(null)
+let chartInstance = null
+
+const stats = reactive({
+  total: 0,
+  referenceCount: 0,
+  citeCount: 0,
+  amendCount: 0
+})
 
 const filter = reactive({
   page: 1,
   pageSize: 20,
-  sourceArticleId: null,
-  targetArticleId: null,
+  sourceLawId: null,
   relationType: ''
 })
 
@@ -138,8 +251,9 @@ const form = reactive({
 })
 
 const rules = {
-  sourceArticleId: [{ required: true, message: '请输入来源条款ID', trigger: 'blur' }],
-  targetArticleId: [{ required: true, message: '请输入目标条款ID', trigger: 'blur' }]
+  sourceArticleId: [{ required: true, message: '请选择来源法规', trigger: 'change' }],
+  targetArticleId: [{ required: true, message: '请选择目标法规', trigger: 'change' }],
+  relationType: [{ required: true, message: '请选择关联类型', trigger: 'change' }]
 }
 
 function relationTypeTag(type) {
@@ -153,6 +267,16 @@ function relationTypeTag(type) {
   return map[type] || 'info'
 }
 
+async function loadLaws() {
+  try {
+    const res = await api.lawDocument.export({ includeArticles: false })
+    const laws = res.data?.laws || []
+    lawList.value = laws.map(l => ({ id: l.id, title: l.title }))
+  } catch (e) {
+    lawList.value = []
+  }
+}
+
 async function load() {
   loading.value = true
   try {
@@ -160,13 +284,14 @@ async function load() {
       page: filter.page,
       pageSize: filter.pageSize
     }
-    if (filter.sourceArticleId) params.sourceArticleId = filter.sourceArticleId
-    if (filter.targetArticleId) params.targetArticleId = filter.targetArticleId
+    if (filter.sourceLawId) params.sourceArticleId = filter.sourceLawId
     if (filter.relationType) params.relationType = filter.relationType
 
     const res = await api.get('/admin/biz/mod01/law-relations', { params })
     rows.value = res.data?.list || []
     total.value = res.data?.total || 0
+
+    updateStats()
   } catch (e) {
     rows.value = []
     total.value = 0
@@ -175,10 +300,52 @@ async function load() {
   }
 }
 
+function updateStats() {
+  stats.total = total.value
+  const typeCount = {}
+  rows.value.forEach(r => {
+    const type = r.relation_type || '其他'
+    typeCount[type] = (typeCount[type] || 0) + 1
+  })
+  stats.referenceCount = typeCount['参照'] || 0
+  stats.citeCount = typeCount['援引'] || 0
+  stats.amendCount = (typeCount['修改'] || 0) + (typeCount['废止'] || 0) + (typeCount['配套'] || 0)
+  updateChart(typeCount)
+}
+
+function updateChart(typeCount) {
+  if (!chartRef.value) return
+
+  if (!chartInstance) {
+    chartInstance = echarts.init(chartRef.value)
+  }
+
+  const data = Object.entries(typeCount).map(([name, value]) => ({ name, value }))
+
+  const option = {
+    tooltip: { trigger: 'item' },
+    legend: { bottom: '0%', left: 'center' },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '70%'],
+      avoidLabelOverlap: false,
+      itemStyle: {
+        borderRadius: 10,
+        borderColor: '#fff',
+        borderWidth: 2
+      },
+      label: { show: true, formatter: '{b}: {c} ({d}%)' },
+      data: data.length > 0 ? data : [{ name: '无数据', value: 0 }]
+    }],
+    color: ['#667eea', '#f5576c', '#4facfe', '#43e97b', '#f093fb']
+  }
+
+  chartInstance.setOption(option)
+}
+
 function reset() {
   filter.page = 1
-  filter.sourceArticleId = null
-  filter.targetArticleId = null
+  filter.sourceLawId = null
   filter.relationType = ''
   load()
 }
@@ -188,8 +355,8 @@ function openDialog(row) {
     dialogTitle.value = '编辑关联'
     isEdit.value = true
     editingId.value = row.id
-    form.sourceArticleId = row.source_article_id
-    form.targetArticleId = row.target_article_id
+    form.sourceArticleId = row.source_article_id ? parseInt(row.source_article_id) : null
+    form.targetArticleId = row.target_article_id ? parseInt(row.target_article_id) : null
     form.relationType = row.relation_type || ''
     form.weight = parseFloat(row.weight) || 1.0
   } else {
@@ -212,16 +379,20 @@ async function handleSave() {
   }
 
   if (form.sourceArticleId === form.targetArticleId) {
-    ElMessage.error('来源条款和目标条款不能相同')
+    ElMessage.error('来源法规和目标法规不能相同')
     return
   }
 
   try {
+    const payload = {
+      sourceArticleId: form.sourceArticleId,
+      targetArticleId: form.targetArticleId,
+      relationType: form.relationType,
+      weight: form.weight
+    }
+
     if (isEdit.value) {
-      const res = await api.put(`/admin/biz/mod01/law-relations/${editingId.value}`, {
-        relationType: form.relationType,
-        weight: form.weight
-      })
+      const res = await api.put(`/admin/biz/mod01/law-relations/${editingId.value}`, payload)
       if (res.data?.ok) {
         ElMessage.success('更新成功')
         dialogVisible.value = false
@@ -230,12 +401,7 @@ async function handleSave() {
         ElMessage.error(res.data?.error || '更新失败')
       }
     } else {
-      const res = await api.post('/admin/biz/mod01/law-relations', {
-        sourceArticleId: form.sourceArticleId,
-        targetArticleId: form.targetArticleId,
-        relationType: form.relationType,
-        weight: form.weight
-      })
+      const res = await api.post('/admin/biz/mod01/law-relations', payload)
       if (res.data?.ok) {
         ElMessage.success('创建成功')
         dialogVisible.value = false
@@ -266,7 +432,25 @@ async function handleDelete(row) {
   }
 }
 
-onMounted(load)
+function handleResize() {
+  if (chartInstance) {
+    chartInstance.resize()
+  }
+}
+
+onMounted(() => {
+  loadLaws()
+  load()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  if (chartInstance) {
+    chartInstance.dispose()
+    chartInstance = null
+  }
+})
 </script>
 
 <style lang="scss" scoped>
@@ -275,6 +459,36 @@ onMounted(load)
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap: wrap; gap: 10px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
 .header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-actions { display:flex; gap:8px; flex-wrap: wrap; }
 .filter-card { margin-bottom: 16px; }
 .pager { margin-top: 16px; justify-content: flex-end; display: flex; }
+
+.stats-row { margin-bottom: 16px; }
+.stat-card {
+  .stat-content { display: flex; align-items: center; gap: 12px; }
+  .stat-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+  }
+  .stat-info { display: flex; flex-direction: column; }
+  .stat-value { font-size: 24px; font-weight: 600; line-height: 1.2; }
+  .stat-label { font-size: 12px; color: #64748b; margin-top: 2px; }
+}
+
+.chart-card { margin-bottom: 16px; }
+.chart-container { height: 200px; }
+
+.law-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.law-title {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 </style>
