@@ -19,5 +19,29 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    target: 'es2015',
+    cssTarget: 'chrome80',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'element-plus': ['element-plus'],
+          'vue-core': ['vue', 'vue-router', 'pinia'],
+          'echarts': ['echarts', 'vue-echarts']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1500
+  },
+  optimizeDeps: {
+    include: ['vue', 'vue-router', 'pinia', 'element-plus', 'axios', 'echarts']
   }
 })

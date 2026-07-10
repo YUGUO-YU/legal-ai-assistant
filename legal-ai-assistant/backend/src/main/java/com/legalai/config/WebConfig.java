@@ -2,8 +2,10 @@ package com.legalai.config;
 
 import com.legalai.admin.interceptor.CsrfInterceptor;
 import com.legalai.admin.interceptor.RateLimitInterceptor;
+import com.legalai.admin.interceptor.RequestTracingInterceptor;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -25,8 +27,13 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private CsrfInterceptor csrfInterceptor;
 
+    @Autowired
+    private RequestTracingInterceptor requestTracingInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(requestTracingInterceptor)
+                .addPathPatterns("/api/**");
         registry.addInterceptor(rateLimitInterceptor)
                 .addPathPatterns("/api/**");
         registry.addInterceptor(csrfInterceptor)
@@ -65,6 +72,8 @@ public class WebConfig implements WebMvcConfigurer {
             httpResponse.setHeader("X-Frame-Options", "SAMEORIGIN");
             httpResponse.setHeader("X-XSS-Protection", "1; mode=block");
             httpResponse.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
+            httpResponse.setHeader("X-Request-ID", UUID.randomUUID().toString());
+            httpResponse.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
             chain.doFilter(request, response);
         }
     }

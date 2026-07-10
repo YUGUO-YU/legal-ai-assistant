@@ -1,12 +1,16 @@
 package com.legalai.controller;
 
 import com.legalai.llm.LLMClient;
+import com.legalai.service.CacheService;
+import com.legalai.service.CacheWarmingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +41,15 @@ public class HealthController {
 
     @Autowired
     private DataSource dataSource;
+
+    @Value("${redis.enabled:false}")
+    private boolean redisEnabled;
+
+    @Autowired(required = false)
+    private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired(required = false)
+    private CacheWarmingService cacheWarmingService;
 
     @Operation(summary = "服务健康检查", description = "检查后端服务是否正常运行")
     @GetMapping("/health")
@@ -124,6 +137,61 @@ public class HealthController {
             result.put("list", java.util.Collections.emptyList());
             result.put("total", 0);
         }
+        return result;
+    }
+
+    @Operation(summary = "缓存状态", description = "获取Redis缓存服务状态和缓存指标")
+    @GetMapping("/cache/status")
+    public Map<String, Object> cacheStatus() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("redisEnabled", redisEnabled);
+
+        if (!redisEnabled || redisTemplate == null) {
+            result.put("status", "disabled");
+            return result;
+        }
+
+        try {
+            redisTemplate.opsForValue().get("__cache_check__");
+            result.put("status", "connected");
+
+            if (cacheWarmingService != null) {
+                result.put("metrics", cacheWarmingService.getCacheMetrics());
+            }
+
+            Long dbSize = redisTemplate.getConnectionFactory().getConnection().dbSize();
+            result.put("dbSize", dbSize);
+        } catch (Exception e) {
+            log.warn("Redis状态检查失败: {}", e.getMessage());
+            result.put("status", "error");
+            result.put("message", e.getMessage());
+        }
+
+        return result;
+    }
+
+    @Operation(summary = "触发缓存预热", description = "手动触发缓存预热")
+    @GetMapping("/cache/warm")
+    public Map<String, Object> triggerCacheWarm(
+            @Parameter(description = "管理员密钥") @RequestParam(required = false) String adminKey) {
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        if (cacheWarmingService == null) {
+            result.put("success", false);
+            result.put("message", "缓存预热服务不可用");
+            return result;
+        }
+
+        try {
+            cacheWarmingService.warmCache();
+            result.put("success", true);
+            result.put("message", "缓存预热已触发");
+            result.put("metrics", cacheWarmingService.getCacheMetrics());
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+        }
+
         return result;
     }
 }
