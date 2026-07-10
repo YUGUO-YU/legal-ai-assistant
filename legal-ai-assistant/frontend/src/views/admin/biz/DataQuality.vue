@@ -53,6 +53,25 @@
       </el-col>
     </el-row>
 
+    <el-row :gutter="20" class="chart-row">
+      <el-col :span="12">
+        <el-card class="chart-card" shadow="hover">
+          <template #header>
+            <span>法规状态分布</span>
+          </template>
+          <div ref="statusChartRef" class="chart-container"></div>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card class="chart-card" shadow="hover">
+          <template #header>
+            <span>分类分布 TOP 10</span>
+          </template>
+          <div ref="categoryChartRef" class="chart-container"></div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <el-card class="report-card">
       <template #header>
         <div class="card-header">
@@ -253,9 +272,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Download, Plus, Delete, Search, Document, Collection, Connection } from '@element-plus/icons-vue'
+import * as echarts from 'echarts'
 import api from '@/api'
 
 const loading = ref(false)
@@ -277,6 +297,11 @@ const showCreateDialog = ref(false)
 const showEditDialog = ref(false)
 const showBatchDeleteDialog = ref(false)
 const editingLawId = ref(null)
+
+const statusChartRef = ref(null)
+const categoryChartRef = ref(null)
+let statusChartInstance = null
+let categoryChartInstance = null
 
 const lawForm = ref({
   title: '',
@@ -322,12 +347,99 @@ const loadReport = async () => {
     const res = await api.lawDocument.dataQuality()
     if (res.data) {
       report.value = res.data
+      nextTick(() => {
+        updateStatusChart()
+        updateCategoryChart()
+      })
     }
   } catch (e) {
     ElMessage.error('加载数据质量报告失败')
   } finally {
     loading.value = false
   }
+}
+
+function updateStatusChart() {
+  if (!statusChartRef.value) return
+
+  if (!statusChartInstance) {
+    statusChartInstance = echarts.init(statusChartRef.value)
+  }
+
+  const statusData = [
+    { name: '现行有效', value: laws.value.filter(l => l.status === 1).length },
+    { name: '已废止', value: laws.value.filter(l => l.status === 2).length },
+    { name: '修订中', value: laws.value.filter(l => l.status === 3).length },
+    { name: '尚未生效', value: laws.value.filter(l => l.status === 4).length },
+    { name: '部分失效', value: laws.value.filter(l => l.status === 5).length }
+  ]
+
+  const option = {
+    tooltip: { trigger: 'item' },
+    legend: { bottom: '0%', left: 'center' },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '70%'],
+      avoidLabelOverlap: false,
+      itemStyle: {
+        borderRadius: 10,
+        borderColor: '#fff',
+        borderWidth: 2
+      },
+      label: { show: true, formatter: '{b}: {c}' },
+      data: statusData.length > 0 ? statusData : [{ name: '无数据', value: 0 }]
+    }],
+    color: ['#67c23a', '#f56c6c', '#e6a23c', '#909399', '#f0c060']
+  }
+
+  statusChartInstance.setOption(option)
+}
+
+function updateCategoryChart() {
+  if (!categoryChartRef.value) return
+
+  if (!categoryChartInstance) {
+    categoryChartInstance = echarts.init(categoryChartRef.value)
+  }
+
+  const categoryCount = {}
+  laws.value.forEach(law => {
+    const cat = law.categoryL1 || '未分类'
+    categoryCount[cat] = (categoryCount[cat] || 0) + 1
+  })
+
+  const sortedCategories = Object.entries(categoryCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+
+  const option = {
+    tooltip: { trigger: 'axis' },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: sortedCategories.map(c => c[0]),
+      axisLabel: { rotate: 30, interval: 0 }
+    },
+    yAxis: { type: 'value' },
+    series: [{
+      type: 'bar',
+      data: sortedCategories.map(c => c[1]),
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#667eea' },
+          { offset: 1, color: '#764ba2' }
+        ])
+      },
+      barWidth: '60%'
+    }]
+  }
+
+  categoryChartInstance.setOption(option)
+}
+
+function handleResize() {
+  if (statusChartInstance) statusChartInstance.resize()
+  if (categoryChartInstance) categoryChartInstance.resize()
 }
 
 const loadLaws = async () => {
@@ -493,6 +605,19 @@ const resetForm = () => {
 onMounted(() => {
   loadReport()
   loadLaws()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  if (statusChartInstance) {
+    statusChartInstance.dispose()
+    statusChartInstance = null
+  }
+  if (categoryChartInstance) {
+    categoryChartInstance.dispose()
+    categoryChartInstance = null
+  }
 })
 </script>
 
@@ -523,6 +648,18 @@ onMounted(() => {
 
 .stats-row {
   margin-bottom: 24px;
+}
+
+.chart-row {
+  margin-bottom: 24px;
+}
+
+.chart-card {
+  border-radius: 12px;
+}
+
+.chart-container {
+  height: 280px;
 }
 
 .stat-card {
