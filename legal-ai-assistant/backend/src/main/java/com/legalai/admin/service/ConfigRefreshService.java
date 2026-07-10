@@ -36,7 +36,7 @@ public class ConfigRefreshService {
         }
     }
 
-    public void notifyAll() {
+    public void notifyAllObservers() {
         log.info("触发全部配置变更通知, observer数量={}", observers.size());
         observers.values().forEach(callback -> {
             try {

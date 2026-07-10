@@ -1130,7 +1130,7 @@ public class AdminController {
                 result.put("ok", true);
                 result.put("message", "缓存服务不可用（Redis未配置）");
             }
-            configRefreshService.notifyAll();
+            configRefreshService.notifyAllObservers();
             result.put("configRefreshed", true);
         } catch (Exception e) {
             result.put("ok", false);
