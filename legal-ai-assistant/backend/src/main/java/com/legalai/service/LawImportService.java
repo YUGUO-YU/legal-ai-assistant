@@ -138,6 +138,9 @@ public class LawImportService {
     @Autowired
     private LawDocumentCategoryMapper lawDocumentCategoryMapper;
 
+    @Autowired
+    private ProgressNotificationService progressNotificationService;
+
     @Value("${mock.enabled:false}")
     private boolean mockEnabled;
 
@@ -179,22 +182,28 @@ public class LawImportService {
         String taskUuid = "IMPORT-" + System.currentTimeMillis();
         long historyId = createHistory(taskUuid, lawName, source, operator);
 
+        progressNotificationService.notifyProgress(taskUuid, 5, 100, "开始导入法规: " + lawName, "RUNNING");
+
         ParsedLaw parsed;
         try {
             parsed = loader.get();
             if (parsed == null || parsed.articles == null || parsed.articles.isEmpty()) {
+                progressNotificationService.notifyError(taskUuid, "未拉取到任何条款");
                 finishHistory(historyId, "failed", 0, 0, 0, false, false, false,
                         "未拉取到任何条款", null);
                 return loadJob(historyId);
             }
         } catch (Exception e) {
             log.error("[Import {}] 拉取数据失败: {}", taskUuid, e.getMessage(), e);
+            progressNotificationService.notifyError(taskUuid, "数据拉取失败: " + e.getMessage());
             finishHistory(historyId, "failed", 0, 0, 0, false, false, false,
                     "数据拉取失败: " + e.getMessage(), null);
             return loadJob(historyId);
         }
 
         int total = parsed.articles.size();
+        progressNotificationService.notifyProgress(taskUuid, 20, 100, "解析完成，共 " + total + " 条条款", "RUNNING");
+
         boolean mysqlOk = false;
         boolean esOk = false;
         boolean milvusOk = false;
@@ -207,13 +216,16 @@ public class LawImportService {
             if (existingId != null) {
                 lawId = existingId;
                 updateLaw(lawId, parsed);
+                progressNotificationService.notifyProgress(taskUuid, 30, 100, "更新法规文档", "RUNNING");
             } else {
                 lawId = insertLaw(parsed);
                 inserted++;
+                progressNotificationService.notifyProgress(taskUuid, 30, 100, "创建法规文档", "RUNNING");
             }
             mysqlOk = true;
         } catch (Exception e) {
             log.error("[Import {}] MySQL 写入失败: {}", taskUuid, e.getMessage(), e);
+            progressNotificationService.notifyError(taskUuid, "MySQL 写入失败: " + e.getMessage());
             finishHistory(historyId, "failed", total, 0, 0, false, false, false,
                     "MySQL 写入失败: " + e.getMessage(), null);
             return loadJob(historyId);
@@ -223,25 +235,32 @@ public class LawImportService {
             UpsertResult upsert = upsertArticles(lawId, parsed.articles);
             inserted += upsert.inserted;
             updated += upsert.updated;
+            progressNotificationService.notifyProgress(taskUuid, 50, 100, "条款入库完成: 新增 " + upsert.inserted + " 条, 更新 " + upsert.updated + " 条", "RUNNING");
         } catch (Exception e) {
             log.error("[Import {}] 条款写入失败: {}", taskUuid, e.getMessage(), e);
+            progressNotificationService.notifyProgress(taskUuid, 50, 100, "条款入库部分失败", "RUNNING");
         }
 
         try {
             List<ElasticsearchService.LawArticleDocument> esDocs = buildEsDocs(lawId, parsed);
             int esCount = elasticsearchService.bulkIndexArticles(esDocs);
             esOk = esCount > 0;
+            progressNotificationService.notifyProgress(taskUuid, 75, 100, "ES索引构建完成", "RUNNING");
         } catch (Exception e) {
             log.error("[Import {}] ES 写入失败: {}", taskUuid, e.getMessage(), e);
+            progressNotificationService.notifyProgress(taskUuid, 75, 100, "ES索引构建失败", "RUNNING");
         }
 
         try {
             milvusOk = indexToMilvus(lawId, parsed);
+            progressNotificationService.notifyProgress(taskUuid, 90, 100, "向量索引构建完成", "RUNNING");
         } catch (Exception e) {
             log.error("[Import {}] Milvus 写入失败: {}", taskUuid, e.getMessage(), e);
+            progressNotificationService.notifyProgress(taskUuid, 90, 100, "向量索引构建失败", "RUNNING");
         }
 
         finishHistory(historyId, "success", total, inserted, updated, mysqlOk, esOk, milvusOk, null, null);
+        progressNotificationService.notifySuccess(taskUuid, "法规导入完成");
         return loadJob(historyId);
     }
 

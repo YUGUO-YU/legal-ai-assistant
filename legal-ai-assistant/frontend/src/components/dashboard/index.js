@@ -1,0 +1,6 @@
+export { default as StatsCards } from './StatsCards.vue'
+export { default as QuickAccess } from './QuickAccess.vue'
+export { default as HotTopics } from './HotTopics.vue'
+export { default as UsageMemory } from './UsageMemory.vue'
+export { default as RecentActivity } from './RecentActivity.vue'
+export { default as FeatureDetailCard } from './FeatureDetailCard.vue'
