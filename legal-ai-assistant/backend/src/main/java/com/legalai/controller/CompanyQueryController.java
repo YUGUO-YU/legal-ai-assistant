@@ -3,6 +3,8 @@ package com.legalai.controller;
 import com.legalai.dto.*;
 import com.legalai.service.CacheService;
 import com.legalai.service.CompanyService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -10,6 +12,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/company")
 @CrossOrigin
+@Tag(name = "企业查询", description = "工商信息查询、企业风险评估相关接口")
 public class CompanyQueryController {
 
     private final CompanyService companyService;
@@ -21,6 +24,7 @@ public class CompanyQueryController {
     }
 
     @PostMapping("/query")
+    @Operation(summary = "查询企业信息", description = "根据企业名称查询工商信息，支持缓存")
     public ApiResponse<CompanyQueryResponse> query(@RequestBody CompanyQueryRequest request) {
         String companyName = request.getCompanyName();
         Object cached = cacheService.getCachedCompanyInfo(companyName);
@@ -33,6 +37,7 @@ public class CompanyQueryController {
     }
 
     @GetMapping("/queries/{uuid}")
+    @Operation(summary = "获取查询记录", description = "根据UUID获取企业查询记录详情")
     public ApiResponse<CompanyQueryResponse> getQuery(@PathVariable String uuid) {
         CompanyQueryResponse response = companyService.getQuery(uuid);
         if (response == null) {
@@ -42,11 +47,13 @@ public class CompanyQueryController {
     }
 
     @GetMapping("/queries")
+    @Operation(summary = "查询最近记录", description = "获取当前用户的最近企业查询记录")
     public ApiResponse<List<CompanyQueryResponse>> listRecent(@RequestParam(defaultValue = "20") int limit) {
         return ApiResponse.success(companyService.listRecent(Math.max(1, Math.min(limit, 100))));
     }
 
     @GetMapping("/risk-levels")
+    @Operation(summary = "获取风险等级", description = "获取企业风险等级分类标准")
     public ApiResponse<List<RiskLevelInfo>> getRiskLevels() {
         return ApiResponse.success(List.of(
             createRiskLevel("HIGH", "高风险", "立即通知", "red"),

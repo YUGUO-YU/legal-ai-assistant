@@ -234,25 +234,41 @@ public class ContractService {
             partyCount++;
         }
 
+        int score = 70;
         if (partyCount >= 2) {
-            return 85 + (int)(Math.random() * 10);
+            score = 85;
         }
-        return 60 + (int)(Math.random() * 20);
+        if (text.contains("法定代表人") || text.contains("授权代表")) {
+            score += 5;
+        }
+        if (text.contains("营业执照") || text.contains("统一社会信用代码")) {
+            score += 5;
+        }
+        if (text.contains("无民事行为能力") || text.contains("限制民事行为能力")) {
+            score -= 20;
+        }
+        return Math.min(score, 95);
     }
 
     private int analyzeContractValidity(String text) {
         boolean hasAmount = AMOUNT_PATTERN.matcher(text).find();
         boolean hasDate = DATE_PATTERN.matcher(text).find();
+        boolean hasPurpose = text.contains("为了") || text.contains("鉴于");
+        boolean hasSignature = text.contains("签章") || text.contains("签字") || text.contains("盖章");
 
         int score = 70;
-        if (hasAmount) score += 10;
-        if (hasDate) score += 10;
-
-        return Math.min(score + (int)(Math.random() * 10), 95);
+        if (hasAmount) score += 8;
+        if (hasDate) score += 8;
+        if (hasPurpose) score += 5;
+        if (hasSignature) score += 5;
+        if (text.contains("无效") || text.contains("撤销")) {
+            score -= 25;
+        }
+        return Math.min(score, 95);
     }
 
     private int analyzeRightsObligations(String text) {
-        int score = 65 + (int)(Math.random() * 15);
+        int score = 65;
 
         if (text.contains("权利") && text.contains("义务")) {
             score += 10;
@@ -260,75 +276,127 @@ public class ContractService {
         if (text.contains("甲方") && text.contains("乙方")) {
             score += 5;
         }
-
+        long rightCount = text.chars().filter(c -> "权".equals(String.valueOf((char) c))).count();
+        long obligationCount = text.chars().filter(c -> "义".equals(String.valueOf((char) c))).count();
+        if (rightCount > 2 && obligationCount > 2) {
+            score += 10;
+        }
+        if (text.contains("保密") || text.contains("竞业限制")) {
+            score += 5;
+        }
         return Math.min(score, 90);
     }
 
     private int analyzeBreachResponsibility(String text) {
-        int score = 60 + (int)(Math.random() * 15);
+        int score = 65;
 
         if (text.contains("违约金")) {
             if (text.contains("1倍") || text.contains("2倍") || text.contains("LPR")) {
                 score += 15;
+            } else if (text.contains("3倍") || text.contains("4倍") || text.contains("日万分之")) {
+                score -= 15;
             } else {
-                score -= 10;
+                score += 5;
             }
         }
-
         if (text.contains("损失赔偿")) {
             score += 10;
         }
-
+        if (text.contains("继续履行")) {
+            score += 5;
+        }
+        if (text.contains("定金") && !text.contains("违约金")) {
+            score += 5;
+        }
+        if (text.contains("免责") || text.contains("不承担")) {
+            score -= 10;
+        }
         return Math.min(Math.max(score, 0), 100);
     }
 
     private int analyzeDisputeResolution(String text) {
-        int score = 70 + (int)(Math.random() * 15);
+        int score = 70;
 
         if (text.contains("仲裁")) {
-            score += 10;
+            score += 15;
         } else if (text.contains("起诉") || text.contains("诉讼")) {
-            score += 5;
+            score += 8;
         }
-
         if (text.contains("管辖")) {
+            score += 8;
+        }
+        if (text.contains("仲裁委员会")) {
             score += 5;
         }
-
+        if (text.contains("专属管辖")) {
+            score += 5;
+        }
+        if (text.contains("不可仲裁") || text.contains("排除管辖")) {
+            score -= 15;
+        }
         return Math.min(score, 95);
     }
 
     private int analyzeExemptionClause(String text) {
-        int score = 75 + (int)(Math.random() * 10);
+        int score = 75;
 
         if (text.contains("不可抗力")) {
-            score += 10;
+            score += 12;
         }
-
         if (text.contains("免责")) {
+            score += 8;
+        }
+        if (text.contains("不承担") && !text.contains("责任")) {
+            score -= 10;
+        }
+        if (text.contains("全部免责") || text.contains("完全免责")) {
+            score -= 15;
+        }
+        if (text.contains("部分免责")) {
             score += 5;
         }
-
         return Math.min(score, 95);
     }
 
     private int analyzeIntellectualProperty(String text) {
-        int score = 85 + (int)(Math.random() * 10);
+        int score = 80;
 
         if (text.contains("知识产权") || text.contains("专利") || text.contains("商标")) {
+            score += 10;
+        }
+        if (text.contains("著作权") || text.contains("版权")) {
             score += 5;
         }
-
+        if (text.contains("技术秘密") || text.contains("商业秘密")) {
+            score += 5;
+        }
+        if (text.contains("共有") || text.contains("共享")) {
+            score -= 5;
+        }
+        if (text.contains("转让") && text.contains("知识产权")) {
+            score += 5;
+        }
         return Math.min(score, 98);
     }
 
     private int analyzePersonalInfo(String text) {
-        int score = 80 + (int)(Math.random() * 10);
+        int score = 80;
 
         if (text.contains("个人信息") || text.contains("隐私")) {
             score += 10;
         }
-
+        if (text.contains("GDPR") || text.contains("《个人信息保护法》")) {
+            score += 5;
+        }
+        if (text.contains("收集") && text.contains("同意")) {
+            score += 5;
+        }
+        if (text.contains("泄露") || text.contains("篡改") || text.contains("非法提供")) {
+            score -= 15;
+        }
+        if (text.contains("加密") || text.contains("匿名化")) {
+            score += 5;
+        }
         return Math.min(score, 95);
     }
 

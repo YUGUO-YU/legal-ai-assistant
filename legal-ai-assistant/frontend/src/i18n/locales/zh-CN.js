@@ -1,0 +1,120 @@
+export default {
+  common: {
+    save: '保存',
+    cancel: '取消',
+    delete: '删除',
+    edit: '编辑',
+    add: '添加',
+    search: '搜索',
+    reset: '重置',
+    submit: '提交',
+    confirm: '确认',
+    back: '返回',
+    next: '下一步',
+    previous: '上一步',
+    loading: '加载中...',
+    noData: '暂无数据',
+    success: '操作成功',
+    error: '操作失败',
+    warning: '警告',
+    info: '提示'
+  },
+  menu: {
+    dashboard: '工作台',
+    legalSearch: 'AI搜法',
+    caseSearch: '案例搜索',
+    caseSimilar: '类案匹配',
+    lawSearch: '法规查询',
+    contractReview: '合同审查',
+    legalResearch: '法律研究',
+    docQa: '文档问答',
+    knowledgeBase: '知识库',
+    companyQuery: '企业查询',
+    document: '文书起草',
+    profile: '个人设置'
+  },
+  auth: {
+    login: '登录',
+    register: '注册',
+    logout: '退出登录',
+    username: '用户名',
+    password: '密码',
+    rememberMe: '记住我',
+    forgotPassword: '忘记密码?',
+    noAccount: '没有账号?',
+    hasAccount: '已有账号?',
+    loginSuccess: '登录成功',
+    registerSuccess: '注册成功'
+  },
+  dashboard: {
+    greeting: '欢迎回来',
+    today: '今日',
+    week: '本周',
+    month: '本月',
+    quickAccess: '快捷入口',
+    recentActivity: '最近活动',
+    hotTopics: '热门检索',
+    tips: '使用技巧',
+    viewAll: '查看全部'
+  },
+  search: {
+    placeholder: '输入关键词搜索...',
+    result: '搜索结果',
+    noResult: '未找到相关结果',
+    suggestion: '搜索建议',
+    filter: '筛选',
+    sort: '排序',
+    relevance: '相关性',
+    time: '时间'
+  },
+  laws: {
+    title: '法规标题',
+    articleNo: '条款编号',
+    content: '内容',
+    category: '分类',
+    effectiveDate: '生效日期',
+    favorite: '收藏',
+    share: '分享'
+  },
+  cases: {
+    title: '案例标题',
+    caseNo: '案号',
+    court: '法院',
+    judge: '法官',
+    date: '判决日期',
+    type: '案件类型',
+    similar: '相似案例'
+  },
+  contract: {
+    review: '合同审查',
+    upload: '上传合同',
+    risk: '风险评估',
+    suggestion: '修改建议',
+    dimension: '评估维度',
+    subjectQualification: '主体资格',
+    contractValidity: '合同效力',
+    rightsObligations: '权利义务',
+    breachResponsibility: '违约责任',
+    disputeResolution: '争议解决',
+    exemptionClause: '免责条款',
+    intellectualProperty: '知识产权',
+    personalInfo: '个人信息'
+  },
+  admin: {
+    users: '用户管理',
+    roles: '角色管理',
+    menus: '菜单管理',
+    auditLogs: '审计日志',
+    configs: '系统配置',
+    announcements: '公告管理'
+  },
+  errors: {
+    400: '请求参数错误',
+    401: '未授权，请重新登录',
+    403: '拒绝访问',
+    404: '资源不存在',
+    500: '服务器错误',
+    network: '网络连接失败',
+    timeout: '请求超时'
+  }
+}

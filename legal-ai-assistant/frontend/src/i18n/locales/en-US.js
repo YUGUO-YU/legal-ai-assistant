@@ -1,0 +1,120 @@
+export default {
+  common: {
+    save: 'Save',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    edit: 'Edit',
+    add: 'Add',
+    search: 'Search',
+    reset: 'Reset',
+    submit: 'Submit',
+    confirm: 'Confirm',
+    back: 'Back',
+    next: 'Next',
+    previous: 'Previous',
+    loading: 'Loading...',
+    noData: 'No Data',
+    success: 'Success',
+    error: 'Error',
+    warning: 'Warning',
+    info: 'Info'
+  },
+  menu: {
+    dashboard: 'Dashboard',
+    legalSearch: 'AI Legal Search',
+    caseSearch: 'Case Search',
+    caseSimilar: 'Similar Cases',
+    lawSearch: 'Law Query',
+    contractReview: 'Contract Review',
+    legalResearch: 'Legal Research',
+    docQa: 'Document Q&A',
+    knowledgeBase: 'Knowledge Base',
+    companyQuery: 'Company Query',
+    document: 'Document Drafting',
+    profile: 'Profile'
+  },
+  auth: {
+    login: 'Login',
+    register: 'Register',
+    logout: 'Logout',
+    username: 'Username',
+    password: 'Password',
+    rememberMe: 'Remember me',
+    forgotPassword: 'Forgot password?',
+    noAccount: "Don't have an account?",
+    hasAccount: 'Already have an account?',
+    loginSuccess: 'Login successful',
+    registerSuccess: 'Registration successful'
+  },
+  dashboard: {
+    greeting: 'Welcome back',
+    today: 'Today',
+    week: 'This Week',
+    month: 'This Month',
+    quickAccess: 'Quick Access',
+    recentActivity: 'Recent Activity',
+    hotTopics: 'Hot Topics',
+    tips: 'Tips',
+    viewAll: 'View All'
+  },
+  search: {
+    placeholder: 'Enter keywords to search...',
+    result: 'Search Results',
+    noResult: 'No results found',
+    suggestion: 'Suggestions',
+    filter: 'Filter',
+    sort: 'Sort',
+    relevance: 'Relevance',
+    time: 'Time'
+  },
+  laws: {
+    title: 'Law Title',
+    articleNo: 'Article No.',
+    content: 'Content',
+    category: 'Category',
+    effectiveDate: 'Effective Date',
+    favorite: 'Favorite',
+    share: 'Share'
+  },
+  cases: {
+    title: 'Case Title',
+    caseNo: 'Case No.',
+    court: 'Court',
+    judge: 'Judge',
+    date: 'Judgment Date',
+    type: 'Case Type',
+    similar: 'Similar Cases'
+  },
+  contract: {
+    review: 'Contract Review',
+    upload: 'Upload Contract',
+    risk: 'Risk Assessment',
+    suggestion: 'Suggestions',
+    dimension: 'Dimensions',
+    subjectQualification: 'Subject Qualification',
+    contractValidity: 'Contract Validity',
+    rightsObligations: 'Rights & Obligations',
+    breachResponsibility: 'Breach Responsibility',
+    disputeResolution: 'Dispute Resolution',
+    exemptionClause: 'Exemption Clause',
+    intellectualProperty: 'Intellectual Property',
+    personalInfo: 'Personal Information'
+  },
+  admin: {
+    users: 'User Management',
+    roles: 'Role Management',
+    menus: 'Menu Management',
+    auditLogs: 'Audit Logs',
+    configs: 'System Config',
+    announcements: 'Announcements'
+  },
+  errors: {
+    400: 'Bad Request',
+    401: 'Unauthorized, please login again',
+    403: 'Access Denied',
+    404: 'Resource Not Found',
+    500: 'Server Error',
+    network: 'Network connection failed',
+    timeout: 'Request timeout'
+  }
+}
