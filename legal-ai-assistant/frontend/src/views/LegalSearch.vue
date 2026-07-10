@@ -179,10 +179,17 @@
       <el-row :gutter="16">
         <el-col :span="12" v-for="c in relatedCases" :key="c.caseUuid">
           <el-card class="case-card" @click="viewCase(c)">
-            <div class="case-header">
-              <h4>{{ c.title }}</h4>
-              <el-tag size="small" type="info" effect="plain">{{ c.caseNo }}</el-tag>
-            </div>
+            <div class="case-card-content">
+              <img
+                v-if="c.thumbnail"
+                v-lazyLoad="{ src: c.thumbnail }"
+                class="case-thumbnail"
+                alt=""
+              />
+              <div class="case-header">
+                <h4>{{ c.title }}</h4>
+                <el-tag size="small" type="info" effect="plain">{{ c.caseNo }}</el-tag>
+              </div>
             <div class="case-info">
               <el-icon><OfficeBuilding /></el-icon>
               <span>{{ c.court }}</span>
@@ -212,6 +219,9 @@ import EmptyState from '../components/EmptyState.vue'
 import PptProgressDialog from '../components/PptProgressDialog.vue'
 import { useUsageMemory } from '@/composables/useUsageMemory'
 import { useKeyboardShortcuts, matchShortcut, isInputFocused } from '@/composables/useKeyboardShortcuts'
+import { lazyLoad } from '@/directives/lazyLoad'
+
+const vLazyLoad = lazyLoad
 
 const router = useRouter()
 const { addRecord } = useUsageMemory()
@@ -846,6 +856,20 @@ useKeyboardShortcuts([
 
     :deep(.el-card__body) {
       padding: 20px;
+    }
+
+    .case-card-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .case-thumbnail {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #f3f4f6;
     }
 
     .case-header {

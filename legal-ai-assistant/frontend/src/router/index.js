@@ -189,8 +189,14 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/error/:code',
+    name: 'Error',
+    component: () => import('../views/ErrorPage.vue'),
+    props: true
+  },
+  {
     path: '/:pathMatch(.*)*',
-    component: () => import('../views/NotFound.vue')
+    redirect: '/error/404'
   }
 ]
 

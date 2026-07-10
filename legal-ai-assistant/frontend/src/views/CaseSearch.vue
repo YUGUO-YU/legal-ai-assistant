@@ -100,51 +100,105 @@
       </div>
 
       <div class="result-list">
-        <el-card
-          v-for="item in results"
-          :key="item.caseUuid"
-          class="result-item"
+        <VirtualScroll
+          v-if="results.length > 20"
+          :items="results"
+          :rowHeight="180"
+          :containerHeight="600"
+          rowKey="caseUuid"
         >
-          <div class="case-header">
-            <div class="case-info">
-              <h3>{{ item.title }}</h3>
-              <div class="case-meta">
-                <el-tag size="small" type="info">
-                  <el-icon><OfficeBuilding /></el-icon>
-                  {{ item.court }}
+          <template #default="{ item }">
+            <el-card class="result-item">
+              <div class="case-header">
+                <div class="case-info">
+                  <h3>{{ item.title }}</h3>
+                  <div class="case-meta">
+                    <el-tag size="small" type="info">
+                      <el-icon><OfficeBuilding /></el-icon>
+                      {{ item.court }}
+                    </el-tag>
+                    <el-tag size="small" type="info">
+                      <el-icon><Calendar /></el-icon>
+                      {{ item.judgeDate }}
+                    </el-tag>
+                    <el-tag size="small">{{ item.trialProcedure }}</el-tag>
+                    <span class="case-type">{{ item.caseType }} | {{ item.caseCause }}</span>
+                  </div>
+                </div>
+                <el-tag :type="getResultType(item.judgmentResult)" effect="dark" round>
+                  {{ getResultName(item.judgmentResult) }}
                 </el-tag>
-                <el-tag size="small" type="info">
-                  <el-icon><Calendar /></el-icon>
-                  {{ item.judgeDate }}
-                </el-tag>
-                <el-tag size="small">{{ item.trialProcedure }}</el-tag>
-                <span class="case-type">{{ item.caseType }} | {{ item.caseCause }}</span>
+              </div>
+
+              <p class="case-summary">{{ item.summary }}</p>
+
+              <div class="case-footer">
+                <div class="source">
+                  <el-icon><Link /></el-icon>
+                  <span>来源：{{ item.sourceName }}</span>
+                </div>
+                <div class="case-actions">
+                  <el-button type="primary" link @click="viewDetail(item)">
+                    <el-icon><View /></el-icon>
+                    查看详情
+                  </el-button>
+                  <el-button type="primary" link @click="copyCaseNo(item.caseNo)">
+                    <el-icon><CopyDocument /></el-icon>
+                    复制案号
+                  </el-button>
+                </div>
+              </div>
+            </el-card>
+          </template>
+        </VirtualScroll>
+
+        <template v-else>
+          <el-card
+            v-for="item in results"
+            :key="item.caseUuid"
+            class="result-item"
+          >
+            <div class="case-header">
+              <div class="case-info">
+                <h3>{{ item.title }}</h3>
+                <div class="case-meta">
+                  <el-tag size="small" type="info">
+                    <el-icon><OfficeBuilding /></el-icon>
+                    {{ item.court }}
+                  </el-tag>
+                  <el-tag size="small" type="info">
+                    <el-icon><Calendar /></el-icon>
+                    {{ item.judgeDate }}
+                  </el-tag>
+                  <el-tag size="small">{{ item.trialProcedure }}</el-tag>
+                  <span class="case-type">{{ item.caseType }} | {{ item.caseCause }}</span>
+                </div>
+              </div>
+              <el-tag :type="getResultType(item.judgmentResult)" effect="dark" round>
+                {{ getResultName(item.judgmentResult) }}
+              </el-tag>
+            </div>
+
+            <p class="case-summary">{{ item.summary }}</p>
+
+            <div class="case-footer">
+              <div class="source">
+                <el-icon><Link /></el-icon>
+                <span>来源：{{ item.sourceName }}</span>
+              </div>
+              <div class="case-actions">
+                <el-button type="primary" link @click="viewDetail(item)">
+                  <el-icon><View /></el-icon>
+                  查看详情
+                </el-button>
+                <el-button type="primary" link @click="copyCaseNo(item.caseNo)">
+                  <el-icon><CopyDocument /></el-icon>
+                  复制案号
+                </el-button>
               </div>
             </div>
-            <el-tag :type="getResultType(item.judgmentResult)" effect="dark" round>
-              {{ getResultName(item.judgmentResult) }}
-            </el-tag>
-          </div>
-
-          <p class="case-summary">{{ item.summary }}</p>
-
-          <div class="case-footer">
-            <div class="source">
-              <el-icon><Link /></el-icon>
-              <span>来源：{{ item.sourceName }}</span>
-            </div>
-            <div class="case-actions">
-              <el-button type="primary" link @click="viewDetail(item)">
-                <el-icon><View /></el-icon>
-                查看详情
-              </el-button>
-              <el-button type="primary" link @click="copyCaseNo(item.caseNo)">
-                <el-icon><CopyDocument /></el-icon>
-                复制案号
-              </el-button>
-            </div>
-          </div>
-        </el-card>
+          </el-card>
+        </template>
       </div>
 
       <div class="pagination-wrapper">
@@ -188,6 +242,7 @@ import {
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
+import VirtualScroll from '@/components/common/VirtualScroll.vue'
 
 const router = useRouter()
 const loading = ref(false)
@@ -455,6 +510,14 @@ const copyCaseNo = (caseNo) => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+  :deep(.virtual-scroll) {
+    padding: 0;
+  }
+
+  :deep(.result-item) {
+    margin-bottom: 0;
+  }
 }
 
 .result-item {

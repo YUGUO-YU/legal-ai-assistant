@@ -10,8 +10,11 @@ import { ElMessage } from 'element-plus'
 import router from './router'
 import App from './App.vue'
 import './assets/main.scss'
+import { lazyLoad } from '@/directives/lazyLoad'
 
 const app = createApp(App)
+
+app.directive('lazyLoad', lazyLoad)
 
 app.config.globalProperties.$message = ElMessage
 

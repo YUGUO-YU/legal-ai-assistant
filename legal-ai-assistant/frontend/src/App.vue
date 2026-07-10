@@ -1,5 +1,9 @@
 <template>
   <div id="app" class="app-container">
+    <a href="#main-content" class="skip-link">跳转到主要内容</a>
+
+    <SRAnnouncer />
+
     <el-container v-if="isLoggedIn" class="main-layout">
       <el-aside width="260px" class="sidebar">
         <div class="logo">
@@ -190,7 +194,7 @@
             </div>
           </el-header>
 
-        <el-main class="main-content">
+        <el-main id="main-content" class="main-content">
           <router-view v-slot="{ Component, route }">
             <transition :name="route.meta.transition || 'page-fade'" mode="out-in">
               <component :is="Component" :key="route.path" />
@@ -202,6 +206,7 @@
 
     <router-view v-else />
   </div>
+  <NotificationToast />
 </template>
 
 <script setup>
@@ -233,6 +238,9 @@ import {
   MagicStick
 } from '@element-plus/icons-vue'
 import { useKeyboardShortcuts, isInputFocused } from './composables/useKeyboardShortcuts'
+import NotificationToast from '@/components/common/NotificationToast.vue'
+import SRAnnouncer from '@/components/common/SRAnnouncer.vue'
+import { initializeApp } from '@/services/dataService'
 
 const route = useRoute()
 const router = useRouter()
@@ -284,6 +292,10 @@ onMounted(() => {
   applyTheme(theme)
   isDark.value = theme === 'dark'
   scheduleNextThemeSwitch()
+  
+  if (isLoggedIn.value) {
+    initializeApp()
+  }
 })
 
 onUnmounted(() => {
@@ -373,6 +385,23 @@ useKeyboardShortcuts([
 </script>
 
 <style lang="scss" scoped>
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #667eea;
+  color: #fff;
+  padding: 8px 16px;
+  z-index: 10000;
+  transition: top 0.3s;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
 .app-container {
   height: 100vh;
   overflow: hidden;

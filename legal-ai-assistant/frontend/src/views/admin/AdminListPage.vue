@@ -26,10 +26,25 @@
     </div>
 
     <el-card class="filter-card">
-      <el-form inline :model="filter">
-        <el-form-item label="关键词">
-          <el-input v-model="filter.keyword" placeholder="搜索 ID / 标题 / 名称" clearable style="width: 220px" @keyup.enter="handleSearch" />
-        </el-form-item>
+      <el-form inline :model="filter" class="filter-form" @submit.prevent>
+        <FormField
+          field="keyword"
+          label="关键词"
+          :modelValue="filter.keyword"
+          :error="filterErrors.keyword"
+          :touched="filterTouched.keyword"
+          :hint="showModuleFilter ? '至少2个字符' : ''"
+        >
+          <el-input
+            v-model="filter.keyword"
+            placeholder="搜索 ID / 标题 / 名称"
+            clearable
+            style="width: 220px"
+            @input="(v) => handleFilterChange('keyword', v)"
+            @blur="() => touchField('keyword')"
+            @keyup.enter="handleSearch"
+          />
+        </FormField>
         <el-form-item v-if="showModuleFilter" label="模块">
           <el-select v-model="filter.module" placeholder="全部模块" clearable style="width: 180px">
             <el-option v-for="m in moduleOptions" :key="m" :label="m" :value="m" />
@@ -46,7 +61,18 @@
       <template v-if="rows.length === 0 && !loading">
         <table-empty-state text="暂无数据" />
       </template>
-      <el-table v-else :data="rows" v-loading="loading" stripe border @header-dragend="handleHeaderDragend">
+        <el-table
+          v-else
+          :data="rows"
+          v-loading="loading"
+          stripe
+          border
+          @header-dragend="handleHeaderDragend"
+          @row-click="handleRowClick"
+          ref="tableRef"
+          :row-class-name="rowClassName"
+          tabindex="0"
+        >
         <el-table-column type="index" label="#" width="60" />
         <el-table-column v-for="col in tableColumns.filter(c => !c.hidden)" :key="col.prop" :prop="col.prop" :label="col.label" :width="col.width" :min-width="col.minWidth || col.width || 120" :fixed="col.fixed" :show-overflow-tooltip="true">
           <template #default="{ row }">
@@ -86,12 +112,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { Refresh, Setting } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
-import TableEmptyState from './components/TableEmptyState.vue'
+import TableEmptyState from '../components/TableEmptyState.vue'
 import { useTableColumnConfig } from '../../composables/useTableColumnConfig'
+import { useFormValidation } from '../../composables/useFormValidation'
+import FormField from '../../components/common/FormField.vue'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -116,6 +144,8 @@ const rows = ref([])
 const total = ref(0)
 const showDetail = ref(false)
 const detail = ref(null)
+const tableRef = ref(null)
+const focusedRowIndex = ref(-1)
 
 const filter = reactive({
   page: 1,
@@ -123,6 +153,20 @@ const filter = reactive({
   keyword: '',
   module: ''
 })
+
+const filterRules = computed(() => ({
+  keyword: {
+    minLength: props.showModuleFilter ? 2 : undefined,
+    message: '关键词至少2个字符'
+  }
+}))
+
+const { errors: filterErrors, touched: filterTouched, validate, validateAll, touch: touchField, clearErrors: clearFilterErrors } = useFormValidation(filterRules.value)
+
+function handleFilterChange(field, value) {
+  filter[field] = value
+  validate(field, value)
+}
 
 const detailKeys = computed(() => detail.value ? Object.keys(detail.value) : [])
 
@@ -171,6 +215,7 @@ function handleReset() {
   filter.keyword = ''
   filter.module = ''
   filter.page = 1
+  clearFilterErrors()
   load()
 }
 
@@ -194,7 +239,66 @@ function handleColumnCommand(command) {
   }
 }
 
+function handleRowClick(row) {
+  focusedRowIndex.value = rows.value.indexOf(row)
+}
+
+function rowClassName({ rowIndex }) {
+  return rowIndex === focusedRowIndex.value ? 'is-focused' : ''
+}
+
+function handleTableKeyDown(event) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    const focusedRow = rows.value[focusedRowIndex.value]
+    if (focusedRow) handleView(focusedRow)
+  }
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    focusNextRow()
+  }
+
+  if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    focusPreviousRow()
+  }
+}
+
+function focusPreviousRow() {
+  if (focusedRowIndex.value > 0) {
+    focusedRowIndex.value--
+    focusRow(focusedRowIndex.value)
+  }
+}
+
+function focusNextRow() {
+  if (focusedRowIndex.value < rows.value.length - 1) {
+    focusedRowIndex.value++
+    focusRow(focusedRowIndex.value)
+  }
+}
+
+function focusRow(index) {
+  nextTick(() => {
+    const table = tableRef.value
+    if (table) {
+      const rowEl = table.$el.querySelector(`.el-table__body-wrapper tr[data-index="${index}"]`)
+      if (rowEl) {
+        rowEl.focus()
+      }
+    }
+  })
+}
+
 onMounted(load)
+
+onMounted(() => {
+  const tableEl = tableRef.value?.$el
+  if (tableEl) {
+    tableEl.addEventListener('keydown', handleTableKeyDown)
+  }
+})
 </script>
 
 <style lang="scss" scoped>
@@ -298,4 +402,22 @@ onMounted(load)
     gap: 8px;
   }
 }
+
+.filter-form {
+  .el-input.is-error {
+    animation: shake 0.4s ease;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+.is-focused {
+  outline: 2px solid #667eea;
+  outline-offset: -2px;
+}
+
 </style>
