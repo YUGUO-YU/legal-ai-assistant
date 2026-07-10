@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/v1/admin/data-import")
@@ -19,6 +20,9 @@ public class JudgmentImportController {
 
     @Autowired
     private JudgmentImportService judgmentImportService;
+
+    private final Map<Long, Map<String, Object>> caseImportJobs = new ConcurrentHashMap<>();
+    private final Map<Long, Long> caseImportCounter = new ConcurrentHashMap<>();
 
     @PostMapping("/judgments/preview")
     public ApiResponse<Map<String, Object>> previewJudgmentImport(@RequestParam("file") MultipartFile file) {
@@ -50,17 +54,71 @@ public class JudgmentImportController {
                 return ApiResponse.error(400, "没有可导入的案例数据");
             }
 
-            Map<String, Object> result = judgmentImportService.confirmImport(cases);
+            long jobId = System.currentTimeMillis();
+            int total = cases.size();
 
-            int imported = (int) result.getOrDefault("imported", 0);
-            int skipped = (int) result.getOrDefault("skipped", 0);
+            Map<String, Object> jobInfo = new ConcurrentHashMap<>();
+            jobInfo.put("status", "running");
+            jobInfo.put("total", total);
+            jobInfo.put("processed", 0);
+            jobInfo.put("imported", 0);
+            jobInfo.put("skipped", 0);
+            jobInfo.put("startedAt", System.currentTimeMillis());
+            caseImportJobs.put(jobId, jobInfo);
+            caseImportCounter.put(jobId, 0L);
 
-            log.info("确认导入判决书: 成功={}, 跳过={}", imported, skipped);
+            new Thread(() -> {
+                try {
+                    Map<String, Object> result = judgmentImportService.confirmImport(cases, progress -> {
+                        Map<String, Object> info = caseImportJobs.get(jobId);
+                        if (info != null) {
+                            info.put("processed", progress);
+                            info.put("imported", progress);
+                        }
+                    });
+                    Map<String, Object> info = caseImportJobs.get(jobId);
+                    if (info != null) {
+                        info.put("status", "success");
+                        info.put("imported", result.getOrDefault("imported", 0));
+                        info.put("skipped", result.getOrDefault("skipped", 0));
+                        info.put("finishedAt", System.currentTimeMillis());
+                    }
+                } catch (Exception e) {
+                    Map<String, Object> info = caseImportJobs.get(jobId);
+                    if (info != null) {
+                        info.put("status", "failed");
+                        info.put("error", e.getMessage());
+                        info.put("finishedAt", System.currentTimeMillis());
+                    }
+                } finally {
+                    caseImportCounter.remove(jobId);
+                }
+            }).start();
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("jobId", jobId);
+            result.put("total", total);
 
             return ApiResponse.success(result);
         } catch (Exception e) {
             log.error("确认导入判决书失败: {}", e.getMessage(), e);
             return ApiResponse.error(500, "导入失败: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/judgments/status/{jobId}")
+    public ApiResponse<Map<String, Object>> getJudgmentImportStatus(@PathVariable Long jobId) {
+        Map<String, Object> job = caseImportJobs.get(jobId);
+        if (job == null) {
+            return ApiResponse.error(404, "任务不存在");
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>(job);
+        int total = (int) job.getOrDefault("total", 0);
+        int processed = (int) job.getOrDefault("processed", 0);
+        int progress = total > 0 ? (int) (processed * 100.0 / total) : 0;
+        result.put("progress", Math.min(progress, 100));
+
+        return ApiResponse.success(result);
     }
 }

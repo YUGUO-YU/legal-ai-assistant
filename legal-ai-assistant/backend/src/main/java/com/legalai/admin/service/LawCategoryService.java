@@ -131,14 +131,17 @@ public class LawCategoryService {
     public void setDocumentCategories(Long lawId, List<Long> categoryIds) {
         lawDocumentCategoryMapper.delete(new LambdaQueryWrapper<LawDocumentCategory>()
                 .eq(LawDocumentCategory::getLawId, lawId));
-        if (categoryIds != null) {
-            for (Long catId : categoryIds) {
-                LawDocumentCategory docCat = new LawDocumentCategory();
-                docCat.setLawId(lawId);
-                docCat.setCategoryId(catId);
-                lawDocumentCategoryMapper.insert(docCat);
-            }
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return;
         }
+        List<LawDocumentCategory> docCategories = new ArrayList<>(categoryIds.size());
+        for (Long catId : categoryIds) {
+            LawDocumentCategory docCat = new LawDocumentCategory();
+            docCat.setLawId(lawId);
+            docCat.setCategoryId(catId);
+            docCategories.add(docCat);
+        }
+        lawDocumentCategoryMapper.batchInsert(docCategories);
     }
 
     private Map<String, Object> toMap(LawCategoryType type) {

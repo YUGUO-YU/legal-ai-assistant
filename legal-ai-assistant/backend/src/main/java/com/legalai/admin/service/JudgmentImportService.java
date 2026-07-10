@@ -76,9 +76,14 @@ public class JudgmentImportService {
     }
 
     public Map<String, Object> confirmImport(List<Map<String, Object>> cases) {
+        return confirmImport(cases, null);
+    }
+
+    public Map<String, Object> confirmImport(List<Map<String, Object>> cases, java.util.function.Consumer<Integer> progressCallback) {
         int imported = 0;
         int skipped = 0;
         List<String> errors = new ArrayList<>();
+        int total = cases.size();
 
         String insertSql = """
             INSERT INTO tb_case
@@ -95,11 +100,13 @@ public class JudgmentImportService {
                 key_facts = VALUES(key_facts), judgment_summary = VALUES(judgment_summary)
         """;
 
-        for (Map<String, Object> c : cases) {
+        for (int i = 0; i < cases.size(); i++) {
+            Map<String, Object> c = cases.get(i);
             try {
                 String caseName = String.valueOf(c.getOrDefault("caseName", ""));
                 if (caseName.isEmpty() || "null".equals(caseName)) {
                     skipped++;
+                    if (progressCallback != null) progressCallback.accept(i + 1);
                     continue;
                 }
 
@@ -145,6 +152,7 @@ public class JudgmentImportService {
                 errors.add("案例 " + c.getOrDefault("caseName", "未知") + " 导入失败: " + e.getMessage());
                 skipped++;
             }
+            if (progressCallback != null) progressCallback.accept(i + 1);
         }
 
         Map<String, Object> result = new LinkedHashMap<>();

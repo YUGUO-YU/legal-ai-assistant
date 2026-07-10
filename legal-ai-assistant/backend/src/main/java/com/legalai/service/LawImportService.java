@@ -328,6 +328,10 @@ public class LawImportService {
     }
 
     public LawImportJob confirmImport(LawImportPreview preview, String operator) {
+        String taskUuid = "IMPORT-" + System.currentTimeMillis();
+        int totalArticles = preview.getArticles() != null ? preview.getArticles().size() : 0;
+        long historyId = createHistory(taskUuid, preview.getLawTitle(), "upload", operator);
+
         LawDocument doc = new LawDocument();
         doc.setLawUuid(UUID.randomUUID().toString());
         doc.setTitle(preview.getLawTitle());
@@ -338,6 +342,7 @@ public class LawImportService {
         doc.setEffectiveDate(parseDateOrNull(preview.getEffectiveDate()));
         lawDocumentMapper.insert(doc);
 
+        int inserted = 0;
         for (LawImportPreview.ArticleParse ap : preview.getArticles()) {
             LawArticle article = new LawArticle();
             article.setLawId(doc.getId());
@@ -346,9 +351,9 @@ public class LawImportService {
             article.setTitle(ap.getTitle());
             article.setContent(ap.getContent());
             lawArticleMapper.insert(article);
+            inserted++;
         }
 
-        // Save document-category associations
         if (preview.getSuggestedCategories() != null) {
             for (LawImportPreview.CategorySuggestion cs : preview.getSuggestedCategories()) {
                 if (cs.getCategoryId() != null) {
@@ -360,19 +365,7 @@ public class LawImportService {
             }
         }
 
-        LawImportJob job = new LawImportJob();
-        job.setTaskUuid(UUID.randomUUID().toString());
-        job.setLawName(preview.getLawTitle());
-        job.setSource("upload");
-        job.setStatus("success");
-        job.setTotalArticles(preview.getArticles().size());
-        job.setInsertedArticles(preview.getArticles().size());
-        job.setMysqlOk(true);
-        job.setOperator(operator);
-
-        long historyId = createHistory(job.getTaskUuid(), job.getLawName(), job.getSource(), operator);
-        finishHistory(historyId, job.getStatus(), job.getTotalArticles(), job.getInsertedArticles(), 0,
-                job.getMysqlOk(), false, false, null, null);
+        finishHistory(historyId, "success", totalArticles, inserted, 0, true, false, false, null, null);
         return loadJob(historyId);
     }
 

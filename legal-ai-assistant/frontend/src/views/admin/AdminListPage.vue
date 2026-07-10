@@ -8,6 +8,20 @@
       <div class="header-actions">
         <el-tag v-if="domain" :type="domainType" size="small">{{ domain }}</el-tag>
         <el-button :icon="Refresh" @click="load">刷新</el-button>
+        <el-dropdown trigger="click" @command="handleColumnCommand" class="column-config-dropdown">
+          <el-button size="small">
+            <el-icon><Setting /></el-icon> 列配置
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item v-for="col in tableColumns" :key="col.prop" :command="{ type: 'toggle', prop: col.prop }">
+                <el-checkbox :model-value="!col.hidden" @change="toggleColumn(col.prop)" />
+                {{ col.label }}
+              </el-dropdown-item>
+              <el-dropdown-item command="reset" divided>恢复默认</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
 
@@ -32,9 +46,9 @@
       <template v-if="rows.length === 0 && !loading">
         <table-empty-state text="暂无数据" />
       </template>
-      <el-table v-else :data="rows" v-loading="loading" stripe border>
+      <el-table v-else :data="rows" v-loading="loading" stripe border @header-dragend="handleHeaderDragend">
         <el-table-column type="index" label="#" width="60" />
-        <el-table-column v-for="col in columns" :key="col.prop" :prop="col.prop" :label="col.label" :min-width="col.width || 120" :show-overflow-tooltip="true">
+        <el-table-column v-for="col in tableColumns.filter(c => !c.hidden)" :key="col.prop" :prop="col.prop" :label="col.label" :width="col.width" :min-width="col.minWidth || col.width || 120" :fixed="col.fixed" :show-overflow-tooltip="true">
           <template #default="{ row }">
             <span v-if="!col.formatter">{{ row[col.prop] ?? '-' }}</span>
             <el-tag v-else-if="col.formatter === 'tag'" :type="tagType(row[col.prop])" size="small">{{ row[col.prop] }}</el-tag>
@@ -73,10 +87,11 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Refresh } from '@element-plus/icons-vue'
+import { Refresh, Setting } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '../../api'
 import TableEmptyState from './components/TableEmptyState.vue'
+import { useTableColumnConfig } from '../../composables/useTableColumnConfig'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -87,8 +102,14 @@ const props = defineProps({
   detailPath: { type: String, default: '' },
   columns: { type: Array, required: true },
   moduleOptions: { type: Array, default: () => [] },
-  showModuleFilter: { type: Boolean, default: false }
+  showModuleFilter: { type: Boolean, default: false },
+  tableName: { type: String, default: '' }
 })
+
+const { columns: tableColumns, saveConfig, resetConfig, toggleColumn, handleHeaderDragend } = useTableColumnConfig(
+  props.tableName || props.apiPath,
+  props.columns
+)
 
 const loading = ref(false)
 const rows = ref([])
@@ -165,6 +186,14 @@ async function handleView(row) {
   }
 }
 
+function handleColumnCommand(command) {
+  if (command.type === 'toggle') {
+    toggleColumn(command.prop)
+  } else if (command === 'reset') {
+    resetConfig()
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -211,5 +240,15 @@ onMounted(load)
   margin-top: 16px;
   justify-content: flex-end;
   display: flex;
+}
+</style>
+
+<style lang="scss">
+.column-config-dropdown {
+  .el-dropdown-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 </style>

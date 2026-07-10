@@ -143,7 +143,27 @@
           </el-button>
         </div>
         <div class="right-preview">
-          <template v-if="importPreview">
+          <template v-if="importProgress">
+            <el-progress :percentage="importProgress.progress || 0" :stroke-width="10" style="margin-bottom: 16px;" />
+            <div style="text-align: center; margin-bottom: 16px;">
+              <template v-if="importProgress.status === 'running'">
+                <el-tag type="warning">
+                  <el-icon class="is-loading"><Refresh /></el-icon> 导入中 {{ importProgress.processed || 0 }} / {{ importProgress.total || 0 }}
+                </el-tag>
+              </template>
+              <template v-else-if="importProgress.status === 'success'">
+                <el-tag type="success">导入完成</el-tag>
+                <div style="margin-top: 8px;">
+                  <span style="color: #67c23a;">成功: {{ importProgress.imported }}</span>
+                  <span style="margin-left: 12px; color: #f56c6c;">跳过: {{ importProgress.skipped }}</span>
+                </div>
+              </template>
+              <template v-else-if="importProgress.status === 'failed'">
+                <el-tag type="danger">导入失败: {{ importProgress.error }}</el-tag>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="importPreview">
             <el-alert v-if="importPreview.errors > 0" type="warning" :closable="false" style="margin-bottom: 12px;">
               存在 {{ importPreview.errors }} 条无效数据，请检查后确认导入
             </el-alert>
@@ -177,7 +197,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, computed, onMounted } from 'vue'
+import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -197,6 +217,8 @@ const uploadRef = ref(null)
 const uploadFile = ref(null)
 const importPreview = ref(null)
 const importing = ref(false)
+const importProgress = ref(null)
+const importPollTimer = ref(null)
 
 const stats = reactive({ total: 0, civil: 0, criminal: 0, admin: 0 })
 
@@ -225,11 +247,23 @@ function reset() { filter.cause = ''; filter.type = ''; filter.result = ''; load
 watch([page, pageSize], load)
 onMounted(load)
 
+onUnmounted(() => {
+  if (importPollTimer.value) {
+    clearInterval(importPollTimer.value)
+    importPollTimer.value = null
+  }
+})
+
 function showImportDialog() {
   showImport.value = true
   importPreview.value = null
   uploadFile.value = null
+  importProgress.value = null
   uploadRef.value?.clearFiles()
+  if (importPollTimer.value) {
+    clearInterval(importPollTimer.value)
+    importPollTimer.value = null
+  }
 }
 
 function handleFileChange(file) {
@@ -257,14 +291,40 @@ async function handleConfirm() {
   if (!importPreview.value?.data) return
   try {
     const res = await api.judgmentImport.confirm({ cases: importPreview.value.data })
-    const imported = res.data?.imported || 0
-    const skipped = res.data?.skipped || 0
-    ElMessage.success(`导入完成：成功 ${imported} 条，跳过 ${skipped} 条`)
-    showImport.value = false
+    const jobId = res.data?.jobId
+    const total = res.data?.total || 0
+
+    importProgress.value = { status: 'running', progress: 0, processed: 0, total, imported: 0, skipped: 0 }
     importPreview.value = null
-    uploadFile.value = null
-    uploadRef.value?.clearFiles()
-    load()
+
+    if (jobId) {
+      importPollTimer.value = setInterval(async () => {
+        try {
+          const statusRes = await api.get(`/admin/data-import/judgments/status/${jobId}`)
+          const status = statusRes.data
+          if (status) {
+            importProgress.value = status
+            if (status.status === 'success' || status.status === 'failed') {
+              clearInterval(importPollTimer.value)
+              importPollTimer.value = null
+              if (status.status === 'success') {
+                ElMessage.success(`导入完成：成功 ${status.imported} 条，跳过 ${status.skipped} 条`)
+                load()
+                setTimeout(() => {
+                  showImport.value = false
+                  importProgress.value = null
+                }, 1500)
+              } else {
+                ElMessage.error('导入失败: ' + (status.error || '未知错误'))
+              }
+            }
+          }
+        } catch (e) {
+          clearInterval(importPollTimer.value)
+          importPollTimer.value = null
+        }
+      }, 1000)
+    }
   } catch (e) {
     ElMessage.error('导入失败: ' + (e.message || '未知错误'))
   }

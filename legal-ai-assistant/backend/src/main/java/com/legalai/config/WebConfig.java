@@ -1,5 +1,6 @@
 package com.legalai.config;
 
+import com.legalai.admin.interceptor.CsrfInterceptor;
 import com.legalai.admin.interceptor.RateLimitInterceptor;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
@@ -21,9 +22,14 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private RateLimitInterceptor rateLimitInterceptor;
 
+    @Autowired
+    private CsrfInterceptor csrfInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(rateLimitInterceptor)
+                .addPathPatterns("/api/**");
+        registry.addInterceptor(csrfInterceptor)
                 .addPathPatterns("/api/**");
     }
 

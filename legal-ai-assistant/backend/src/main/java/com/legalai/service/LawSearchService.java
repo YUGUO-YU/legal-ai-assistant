@@ -107,8 +107,10 @@ public class LawSearchService {
                 return null;
             }
 
+            Map<Long, Integer> articleCountMap = batchQueryArticleCounts(lawDocuments);
+
             List<LawSearchResponse.LawSearchItem> items = lawDocuments.stream()
-                .map(this::convertToLawSearchItem)
+                .map(doc -> convertToLawSearchItem(doc, articleCountMap))
                 .collect(Collectors.toList());
 
             int total = items.size();
@@ -134,7 +136,34 @@ public class LawSearchService {
         }
     }
 
-    private LawSearchResponse.LawSearchItem convertToLawSearchItem(LawDocument doc) {
+    private Map<Long, Integer> batchQueryArticleCounts(List<LawDocument> documents) {
+        Map<Long, Integer> articleCountMap = new HashMap<>();
+        if (documents == null || documents.isEmpty()) {
+            return articleCountMap;
+        }
+        List<Long> docIds = documents.stream()
+            .map(LawDocument::getId)
+            .collect(Collectors.toList());
+
+        QueryWrapper<LawArticle> countQuery = new QueryWrapper<>();
+        countQuery.select("law_id", "COUNT(*) as cnt")
+            .in("law_id", docIds)
+            .groupBy("law_id");
+        List<Map<String, Object>> countResults = lawArticleMapper.selectMaps(countQuery);
+
+        for (Map<String, Object> row : countResults) {
+            Object lawIdObj = row.get("law_id");
+            Object cntObj = row.get("cnt");
+            if (lawIdObj != null && cntObj != null) {
+                Long lawId = ((Number) lawIdObj).longValue();
+                int count = ((Number) cntObj).intValue();
+                articleCountMap.put(lawId, count);
+            }
+        }
+        return articleCountMap;
+    }
+
+    private LawSearchResponse.LawSearchItem convertToLawSearchItem(LawDocument doc, Map<Long, Integer> articleCountMap) {
         LawSearchResponse.LawSearchItem item = new LawSearchResponse.LawSearchItem();
         item.setLawUuid(doc.getLawUuid());
         item.setTitle(doc.getTitle());
@@ -149,11 +178,7 @@ public class LawSearchService {
         item.setViewCount(doc.getViewCount());
         item.setSourceUrl(doc.getSourceUrl());
         item.setSourceName(doc.getSourceName());
-
-        QueryWrapper<LawArticle> articleQuery = new QueryWrapper<>();
-        articleQuery.eq("law_id", doc.getId());
-        item.setArticleCount(Long.valueOf(lawArticleMapper.selectCount(articleQuery)).intValue());
-
+        item.setArticleCount(articleCountMap.getOrDefault(doc.getId(), 0));
         return item;
     }
 

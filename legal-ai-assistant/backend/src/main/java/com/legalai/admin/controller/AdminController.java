@@ -60,6 +60,26 @@ public class AdminController {
     @Autowired
     private com.legalai.admin.service.AppLogService appLogService;
 
+    @Autowired
+    private com.legalai.service.CsrfTokenService csrfTokenService;
+
+    // ============================================================
+    // CSRF Token
+    // ============================================================
+
+    @Operation(summary = "获取CSRF Token", description = "获取CSRF Token用于后续请求验证")
+    @GetMapping("/csrf-token")
+    public ApiResponse<Map<String, String>> getCsrfToken(HttpServletRequest request) {
+        String sessionId = request.getHeader("X-Session-Id");
+        if (sessionId == null) {
+            sessionId = "default";
+        }
+        String token = csrfTokenService.generateToken(sessionId);
+        Map<String, String> result = new java.util.HashMap<>();
+        result.put("token", token);
+        return ApiResponse.success(result);
+    }
+
     // ============================================================
     // 通用：列表 / 详情 / 统计
     // ============================================================

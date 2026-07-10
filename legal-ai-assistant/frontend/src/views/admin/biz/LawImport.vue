@@ -65,21 +65,44 @@
         <span>导入历史</span>
       </template>
       <el-table :data="historyData" stripe>
-        <el-table-column prop="title" label="法规标题" />
-        <el-table-column prop="documentNo" label="文号" />
-        <el-table-column prop="issuingAuthority" label="发布机关" />
-        <el-table-column prop="issueDate" label="发布日期" width="120" />
-        <el-table-column prop="importedAt" label="导入时间" width="180" />
-        <el-table-column prop="status" label="状态" width="80" />
+        <el-table-column prop="lawName" label="法规标题" />
+        <el-table-column label="状态" width="140">
+          <template #default="{ row }">
+            <template v-if="row.status === 'running' || row.status === 'pending'">
+              <el-tag type="warning" size="small">
+                <el-icon class="is-loading" v-if="row.status === 'running'"><Loading /></el-icon>
+                进行中 {{ row.progress || 0 }}%
+              </el-tag>
+            </template>
+            <template v-else-if="row.status === 'success'">
+              <el-tag type="success" size="small">完成</el-tag>
+            </template>
+            <template v-else-if="row.status === 'failed'">
+              <el-tag type="danger" size="small">失败</el-tag>
+            </template>
+            <template v-else>
+              <el-tag type="info" size="small">{{ row.status || '未知' }}</el-tag>
+            </template>
+          </template>
+        </el-table-column>
+        <el-table-column label="结果" min-width="160">
+          <template #default="{ row }">
+            <span v-if="row.successCount" style="color: #67c23a;">成功: {{ row.successCount }}</span>
+            <span v-if="row.failCount" style="color: #f56c6c; margin-left: 8px;">失败: {{ row.failCount }}</span>
+            <span v-if="!row.successCount && !row.failCount && row.totalArticles" style="color: #909399;">共 {{ row.totalArticles }} 条</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="startedAt" label="开始时间" width="170" />
+        <el-table-column prop="operator" label="操作人" width="80" />
       </el-table>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { UploadFilled } from '@element-plus/icons-vue'
+import { UploadFilled, Loading } from '@element-plus/icons-vue'
 import api from '@/api'
 
 const uploadRef = ref(null)
@@ -89,6 +112,7 @@ const previewForm = ref({})
 const selectedCategoryIds = ref([])
 const categoryList = ref([])
 const historyData = ref([])
+const pollTimers = ref({})
 
 const chapterTree = computed(() => {
   if (!previewData.value?.chapterTree) return []
@@ -137,25 +161,74 @@ const handlePreview = async () => {
 
 const handleConfirm = async () => {
   try {
-    await api.importConfirm({
+    const res = await api.importConfirm({
       ...previewForm.value,
       categoryIds: selectedCategoryIds.value,
       chapters: previewData.value?.chapters || [],
       articles: previewData.value?.articles || []
     })
-    ElMessage.success('导入成功')
+    const jobId = res.data?.jobId
+    ElMessage.success('导入任务已提交')
     previewData.value = null
     uploadFile.value = null
     uploadRef.value?.clearFiles()
-    loadHistory()
+
+    if (jobId) {
+      const newItem = {
+        id: jobId,
+        lawName: previewForm.value.lawTitle,
+        status: 'running',
+        progress: 0,
+        successCount: 0,
+        failCount: 0,
+        startedAt: new Date().toLocaleString()
+      }
+      historyData.value.unshift(newItem)
+      pollJobStatus(jobId)
+    } else {
+      loadHistory()
+    }
   } catch (e) {
     ElMessage.error('导入失败')
   }
 }
 
+const pollJobStatus = (jobId) => {
+  if (pollTimers.value[jobId]) {
+    clearInterval(pollTimers.value[jobId])
+  }
+  pollTimers.value[jobId] = setInterval(async () => {
+    try {
+      const res = await api.lawImport.historyById(jobId)
+      const job = res.data
+      if (job) {
+        const index = historyData.value.findIndex(h => h.id === jobId)
+        if (index !== -1) {
+          historyData.value[index] = {
+            ...historyData.value[index],
+            status: job.status,
+            progress: job.progress,
+            successCount: job.successCount,
+            failCount: job.failCount,
+            errorMessage: job.errorMessage,
+            finishedAt: job.finishedAt
+          }
+        }
+        if (job.status === 'success' || job.status === 'failed') {
+          clearInterval(pollTimers.value[jobId])
+          delete pollTimers.value[jobId]
+        }
+      }
+    } catch (e) {
+      clearInterval(pollTimers.value[jobId])
+      delete pollTimers.value[jobId]
+    }
+  }, 3000)
+}
+
 const loadHistory = async () => {
   try {
-    const res = await api.lawImportHistory()
+    const res = await api.lawImport.history(1, 20)
     historyData.value = res.data || []
   } catch (e) {
     ElMessage.error('加载历史失败')
@@ -165,6 +238,11 @@ const loadHistory = async () => {
 onMounted(() => {
   loadCategories()
   loadHistory()
+})
+
+onUnmounted(() => {
+  Object.values(pollTimers.value).forEach(timer => clearInterval(timer))
+  pollTimers.value = {}
 })
 </script>
 
