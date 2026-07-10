@@ -161,13 +161,10 @@
       </div>
     </div>
 
-    <empty-state
+    <SearchEmptyState
       v-else-if="searched"
-      icon="Search"
-      title="未找到相关法规"
-      description="未找到相关法规，建议更换关键词或缩短查询语句"
-      action-text="清除搜索"
-      @action="query = ''; searched = false"
+      :suggestions="suggestions"
+      @suggestion-click="(s) => { query = s; handleSearch() }"
     />
 
     <div v-if="relatedCases.length > 0" class="related-cases">
@@ -215,7 +212,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../api'
 import Loading from '../components/Loading.vue'
-import EmptyState from '../components/EmptyState.vue'
+import SearchEmptyState from '@/components/common/SearchEmptyState.vue'
 import PptProgressDialog from '../components/PptProgressDialog.vue'
 import { useUsageMemory } from '@/composables/useUsageMemory'
 import { useKeyboardShortcuts, matchShortcut, isInputFocused } from '@/composables/useKeyboardShortcuts'

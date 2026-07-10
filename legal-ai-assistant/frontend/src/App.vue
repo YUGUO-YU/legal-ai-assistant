@@ -208,6 +208,8 @@
   </div>
   <NotificationToast />
   <OperationReplay v-if="showReplay && import.meta.env.DEV" />
+  <QuickActions ref="quickActionsRef" />
+  <CommandPalette ref="commandPaletteRef" />
 </template>
 
 <script setup>
@@ -242,6 +244,8 @@ import { useKeyboardShortcuts, isInputFocused } from './composables/useKeyboardS
 import NotificationToast from '@/components/common/NotificationToast.vue'
 import SRAnnouncer from '@/components/common/SRAnnouncer.vue'
 import OperationReplay from '@/components/common/OperationReplay.vue'
+import QuickActions from '@/components/common/QuickActions.vue'
+import CommandPalette from '@/components/common/CommandPalette.vue'
 import { initializeApp } from '@/services/dataService'
 import { wsService } from '@/services/websocketService'
 
@@ -251,6 +255,8 @@ const router = useRouter()
 const isDark = ref(false)
 const showReplay = ref(false)
 let themeTimer = null
+const quickActionsRef = ref(null)
+const commandPaletteRef = ref(null)
 
 if (import.meta.env.DEV) {
   document.addEventListener('keydown', (e) => {
@@ -260,6 +266,13 @@ if (import.meta.env.DEV) {
     }
   })
 }
+
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+    e.preventDefault()
+    quickActionsRef.value?.show()
+  }
+})
 
 const toggleTheme = () => {
   const newTheme = isDark.value ? 'light' : 'dark'

@@ -57,10 +57,23 @@
       </el-form>
     </el-card>
 
+    <AdvancedFilter
+      v-if="showAdvancedFilter"
+      :fields="filterFields"
+      :saved-filters="savedFilters"
+      :searching="loading"
+      @search="handleAdvancedSearch"
+      @update:saved-filters="(v) => savedFilters = v"
+    />
+
     <el-card class="table-card">
-      <template v-if="rows.length === 0 && !loading">
-        <table-empty-state text="暂无数据" />
-      </template>
+      <TableEmptyState
+        v-if="rows.length === 0 && !loading"
+        title="暂无记录"
+        description="当前没有数据，请尝试其他筛选条件"
+        illustration="data"
+        @action="load"
+      />
         <el-table
           v-else
           :data="rows"
@@ -84,7 +97,16 @@
         </el-table-column>
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleView(row)">查看</el-button>
+            <div class="action-buttons">
+              <el-button link type="primary" @click="handleView(row)">
+                <Icons name="view" :size="14" />
+                查看
+              </el-button>
+              <el-button link type="primary" @click="handleEdit(row)">
+                <Icons name="edit" :size="14" />
+                编辑
+              </el-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column width="50" fixed="right">
@@ -142,12 +164,70 @@ import { Refresh, Setting } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import draggable from 'vuedraggable'
 import api from '../../api'
-import TableEmptyState from '../components/TableEmptyState.vue'
+import TableEmptyState from '@/components/common/TableEmptyState.vue'
 import { useTableColumnConfig } from '../../composables/useTableColumnConfig'
 import { useFormValidation } from '../../composables/useFormValidation'
 import FormField from '../../components/common/FormField.vue'
 import ContextMenu from '../../components/common/ContextMenu.vue'
 import { useContextMenu } from '../../composables/useContextMenu'
+import Icons from '../../components/common/Icons.vue'
+import AdvancedFilter from '../../components/common/AdvancedFilter.vue'
+
+const filterFields = [
+  {
+    key: 'username',
+    label: '用户名',
+    type: 'input',
+    operators: [
+      { value: 'contains', label: '包含' },
+      { value: '=', label: '等于' },
+      { value: 'startsWith', label: '开头是' },
+      { value: 'endsWith', label: '结尾是' }
+    ]
+  },
+  {
+    key: 'email',
+    label: '邮箱',
+    type: 'input',
+    operators: [
+      { value: 'contains', label: '包含' },
+      { value: '=', label: '等于' }
+    ]
+  },
+  {
+    key: 'status',
+    label: '状态',
+    type: 'select',
+    options: [
+      { label: '待审核', value: 'pending' },
+      { label: '已通过', value: 'approved' },
+      { label: '已拒绝', value: 'rejected' }
+    ],
+    operators: [
+      { value: '=', label: '是' },
+      { value: '!=', label: '不是' }
+    ]
+  },
+  {
+    key: 'createdAt',
+    label: '创建时间',
+    type: 'daterange',
+    operators: [
+      { value: 'between', label: '介于' }
+    ]
+  }
+]
+
+const savedFilters = ref([])
+
+const handleAdvancedSearch = ({ filters, query }) => {
+  Object.keys(query).forEach(key => {
+    const { operator, value } = query[key]
+    filter[key] = operator === 'contains' ? value : value
+  })
+  filter.page = 1
+  load()
+}
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -159,7 +239,8 @@ const props = defineProps({
   columns: { type: Array, required: true },
   moduleOptions: { type: Array, default: () => [] },
   showModuleFilter: { type: Boolean, default: false },
-  tableName: { type: String, default: '' }
+  tableName: { type: String, default: '' },
+  showAdvancedFilter: { type: Boolean, default: false }
 })
 
 const { columns: tableColumns, saveConfig, resetConfig, toggleColumn, handleHeaderDragend } = useTableColumnConfig(
