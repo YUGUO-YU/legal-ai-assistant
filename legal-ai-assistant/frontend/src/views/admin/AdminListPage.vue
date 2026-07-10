@@ -241,6 +241,53 @@ onMounted(load)
   justify-content: flex-end;
   display: flex;
 }
+
+// 移动端适配
+@media (max-width: 768px) {
+  .admin-list-page {
+    padding: 0;
+
+    .page-header {
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+
+      .header-content {
+        width: 100%;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+
+    .filter-card {
+      .el-form {
+        flex-direction: column;
+        gap: 12px;
+
+        .el-form-item {
+          width: 100%;
+          margin-right: 0;
+
+          .el-input,
+          .el-select {
+            width: 100% !important;
+          }
+        }
+      }
+    }
+
+    .table-card {
+      overflow-x: auto;
+
+      .el-table {
+        min-width: 600px;
+      }
+    }
+  }
+}
 </style>
 
 <style lang="scss">

@@ -1,6 +1,15 @@
 <template>
-  <div :class="['admin-layout', { 'sidebar-collapsed': sidebarCollapsed }]">
-    <el-aside :class="['aside', { 'aside--collapsed': sidebarCollapsed }]">
+  <div :class="['admin-layout', { 'sidebar-collapsed': sidebarCollapsed, 'is-mobile': isMobile }]">
+    <!-- 移动端顶部导航 -->
+    <header class="mobile-header" v-if="isMobile">
+      <div class="mobile-menu-btn" @click="toggleSidebar">
+        <el-icon><component :is="sidebarOpen ? 'Close' : 'Menu'" /></el-icon>
+      </div>
+      <div class="mobile-title">{{ currentPage || '后台管理' }}</div>
+    </header>
+
+    <!-- 侧边栏 -->
+    <el-aside :class="['aside', { 'aside--collapsed': sidebarCollapsed, 'is-open': sidebarOpen }]" v-show="!isMobile || sidebarOpen">
       <div class="aside-header">
         <span v-if="!sidebarCollapsed">法律AI助手</span>
         <el-icon @click="toggleSidebar" class="collapse-icon"><component :is="sidebarCollapsed ? Expand : Fold" /></el-icon>
@@ -103,6 +112,9 @@
       </el-menu>
     </el-aside>
 
+    <!-- 遮罩层 -->
+    <div class="sidebar-overlay" v-if="isMobile && sidebarOpen" @click="closeSidebar"></div>
+
     <div class="right-area">
       <div class="top-bar">
         <span class="top-bar-title">Legal AI 后台</span>
@@ -123,16 +135,20 @@
           <el-breadcrumb-item v-if="currentGroup">{{ currentGroup }}</el-breadcrumb-item>
           <el-breadcrumb-item v-if="currentPage">{{ currentPage }}</el-breadcrumb-item>
         </el-breadcrumb>
-        <router-view />
+        <router-view v-slot="{ Component, route }">
+          <transition :name="route.meta.transition || 'admin-fade'" mode="out-in">
+            <component :is="Component" :key="route.path" />
+          </transition>
+        </router-view>
       </el-main>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Setting, Odometer, Tools, Document, MagicStick, DataAnalysis, Bell, SwitchButton, Sunny, Moon, Fold, Expand } from '@element-plus/icons-vue'
+import { Setting, Odometer, Tools, Document, MagicStick, DataAnalysis, Bell, SwitchButton, Sunny, Moon, Fold, Expand, Close, Menu } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -141,10 +157,24 @@ const activeMenu = computed(() => route.path)
 const adminName = ref('管理员')
 const isDark = ref(false)
 const sidebarCollapsed = ref(false)
+const isMobile = ref(false)
+const sidebarOpen = ref(false)
+
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768
+}
 
 const toggleSidebar = () => {
-  sidebarCollapsed.value = !sidebarCollapsed.value
-  localStorage.setItem('sidebar_collapsed', sidebarCollapsed.value)
+  if (isMobile.value) {
+    sidebarOpen.value = !sidebarOpen.value
+  } else {
+    sidebarCollapsed.value = !sidebarCollapsed.value
+    localStorage.setItem('sidebar_collapsed', sidebarCollapsed.value)
+  }
+}
+
+const closeSidebar = () => {
+  sidebarOpen.value = false
 }
 
 const menuMap = {
@@ -230,6 +260,8 @@ onMounted(() => {
   if (savedCollapsed === 'true') {
     sidebarCollapsed.value = true
   }
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
 })
 
 const toggleDark = () => {
@@ -249,6 +281,10 @@ const handleLogout = () => {
   ElMessage.success('已退出后台管理')
   router.push('/admin/login')
 }
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 </script>
 
 <style lang="scss" scoped>
@@ -347,6 +383,99 @@ const handleLogout = () => {
 
 .page-breadcrumb {
   margin-bottom: 16px;
+}
+
+.admin-fade-enter-active,
+.admin-fade-leave-active {
+  transition: all 0.25s ease;
+}
+
+.admin-fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.admin-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+// 移动端顶部导航
+.mobile-header {
+  display: none;
+  height: 56px;
+  background: #fff;
+  border-bottom: 1px solid var(--color-border-light);
+  padding: 0 16px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+
+  .mobile-menu-btn {
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+  }
+
+  .mobile-title {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--color-text-primary);
+  }
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 999;
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+// 移动端布局适配
+.admin-layout {
+  &.is-mobile {
+    .aside {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 1000;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+
+      &.is-open {
+        transform: translateX(0);
+      }
+    }
+
+    .right-area {
+      margin-left: 0 !important;
+    }
+
+    .main {
+      padding-top: 56px;
+    }
+  }
 }
 </style>
 

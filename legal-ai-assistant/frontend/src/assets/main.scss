@@ -1,5 +1,25 @@
 @import './styles/animations.css';
 
+// 响应式布局混入
+@mixin responsive($breakpoint) {
+  @if $breakpoint == 'xs' {
+    @media (max-width: 480px) { @content; }
+  } @else if $breakpoint == 'sm' {
+    @media (max-width: 576px) { @content; }
+  } @else if $breakpoint == 'md' {
+    @media (max-width: 768px) { @content; }
+  } @else if $breakpoint == 'lg' {
+    @media (max-width: 992px) { @content; }
+  }
+}
+
+// 触摸友好的操作按钮
+@mixin touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -238,6 +258,129 @@ body {
       font-weight: 600;
       color: var(--color-text-primary);
     }
+
+    .el-drawer__close-btn {
+      &:hover {
+        color: var(--color-primary);
+        transform: rotate(90deg);
+        transition: all 0.2s ease;
+      }
+    }
+  }
+
+  .el-drawer__body {
+    padding: 20px;
+    overflow-y: auto;
+  }
+}
+
+[data-theme="dark"] {
+  pre, code {
+    background-color: var(--color-bg-mute);
+    color: var(--color-text-primary);
+  }
+
+  pre {
+    code {
+      background: transparent;
+    }
+  }
+}
+
+[data-theme="dark"] {
+  .el-table {
+    --el-table-bg-color: transparent;
+    --el-table-tr-bg-color: transparent;
+    --el-table-header-bg-color: var(--color-bg-soft);
+    --el-table-row-hover-bg-color: rgba(102, 126, 234, 0.1);
+    --el-table-border-color: var(--color-border);
+
+    th.el-table__cell {
+      background-color: var(--color-bg-soft);
+    }
+
+    td.el-table__cell {
+      border-bottom-color: var(--color-border);
+    }
+  }
+}
+
+[data-theme="dark"] {
+  .el-card {
+    --el-card-bg-color: var(--color-bg-soft);
+    border-color: var(--color-border);
+  }
+}
+
+[data-theme="dark"] {
+  .el-input {
+    --el-input-bg-color: var(--color-bg);
+    --el-input-border-color: var(--color-border);
+    --el-input-hover-border-color: var(--color-primary);
+    --el-input-focus-border-color: var(--color-primary);
+  }
+}
+
+[data-theme="dark"] {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-bg);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+
+    &:hover {
+      background: #484f58;
+    }
+  }
+}
+}
+
+// 触摸友好的操作按钮 - 移动端适配
+.action-btn {
+  @include touch-target;
+}
+
+.el-button {
+  @media (max-width: 768px) {
+    @include touch-target;
+  }
+}
+
+// 管理后台布局响应式
+.admin-container {
+  display: flex;
+
+  .sidebar {
+    width: 200px;
+
+    @include responsive('md') {
+      position: fixed;
+      z-index: 1000;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+
+      &.is-open {
+        transform: translateX(0);
+      }
+    }
+  }
+
+  .main-content {
+    flex: 1;
+
+    @include responsive('md') {
+      width: 100%;
+      padding: 16px;
+    }
+  }
+}
 
     .el-drawer__close-btn {
       &:hover {

@@ -889,6 +889,75 @@ const loadMore = () => {
   animation: fadeIn 0.5s ease;
 }
 
+.stat-card {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: cardFadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+
+  &:nth-child(1) { animation-delay: 0.05s; }
+  &:nth-child(2) { animation-delay: 0.1s; }
+  &:nth-child(3) { animation-delay: 0.15s; }
+  &:nth-child(4) { animation-delay: 0.2s; }
+}
+
+@keyframes cardFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.quick-item {
+  opacity: 0;
+  transform: translateX(-20px);
+  animation: quickItemFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+
+  &:nth-child(1) { animation-delay: 0.25s; }
+  &:nth-child(2) { animation-delay: 0.3s; }
+  &:nth-child(3) { animation-delay: 0.35s; }
+  &:nth-child(4) { animation-delay: 0.4s; }
+  &:nth-child(5) { animation-delay: 0.45s; }
+  &:nth-child(6) { animation-delay: 0.5s; }
+  &:nth-child(7) { animation-delay: 0.55s; }
+}
+
+@keyframes quickItemFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.detail-card {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: cardFadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+
+  @for $i from 1 through 8 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{0.4 + ($i - 1) * 0.08}s;
+    }
+  }
+}
+
+.stat-value {
+  animation: statFadeIn 0.6s ease forwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes statFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .wave-icon {
   display: inline-block;
   animation: wave 1.2s ease-in-out infinite;
@@ -2008,6 +2077,78 @@ const loadMore = () => {
     font-size: 11px;
     color: var(--color-text-placeholder);
     flex-shrink: 0;
+  }
+}
+
+// 移动端适配
+@media (max-width: 768px) {
+  .dashboard {
+    .dashboard-header {
+      padding: 20px;
+      margin-bottom: 16px;
+
+      .greeting-area {
+        .greeting-text {
+          font-size: 22px !important;
+        }
+      }
+
+      .header-decoration {
+        display: none;
+      }
+    }
+
+    .stats-row {
+      .el-col {
+        margin-bottom: 12px;
+      }
+
+      .stat-card {
+        :deep(.el-card__body) {
+          padding: 16px;
+        }
+
+        .stat-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 10px;
+        }
+
+        .stat-info {
+          .stat-value {
+            font-size: 22px;
+          }
+        }
+      }
+    }
+
+    .content-row {
+      .el-col {
+        margin-bottom: 16px;
+      }
+
+      .quick-access {
+        .quick-item {
+          padding: 12px;
+        }
+
+        .quick-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+        }
+      }
+    }
+
+    .detail-cards-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .detail-cards-row {
+      .detail-card {
+        margin-bottom: 12px;
+      }
+    }
   }
 }
 </style>

@@ -191,9 +191,9 @@
           </el-header>
 
         <el-main class="main-content">
-          <router-view v-slot="{ Component }">
-            <transition name="fade-slide" mode="out-in">
-              <component :is="Component" />
+          <router-view v-slot="{ Component, route }">
+            <transition :name="route.meta.transition || 'page-fade'" mode="out-in">
+              <component :is="Component" :key="route.path" />
             </transition>
           </router-view>
         </el-main>
@@ -700,29 +700,49 @@ useKeyboardShortcuts([
   }
 }
 
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-  transition: all 0.3s ease;
+.page-slide-enter-active,
+.page-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.fade-slide-enter-from {
+.page-slide-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.page-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: all 0.25s ease;
+}
+
+.page-fade-enter-from {
   opacity: 0;
   transform: translateY(20px);
 }
 
-.fade-slide-leave-to {
+.page-fade-leave-to {
   opacity: 0;
   transform: translateY(-10px);
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
+.page-zoom-enter-active,
+.page-zoom-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.fade-enter-from,
-.fade-leave-to {
+.page-zoom-enter-from {
   opacity: 0;
+  transform: scale(0.95);
+}
+
+.page-zoom-leave-to {
+  opacity: 0;
+  transform: scale(1.02);
 }
 
 :deep(.el-dropdown-menu) {

@@ -67,8 +67,9 @@
               <span>用户活跃度趋势（近7天）</span>
             </div>
           </template>
-          <div class="chart-area">
-            <v-chart :option="activeTrendOption" autoresize />
+          <div class="chart-area" style="position:relative">
+            <v-chart :option="activeTrendOption" autoresize @click="handleChartClick" />
+            <div class="chart-overlay">点击查看详情</div>
           </div>
         </el-card>
       </el-col>
@@ -82,8 +83,9 @@
               <span>TOP 10 活跃用户（近30天）</span>
             </div>
           </template>
-          <div class="chart-area">
-            <v-chart :option="topUsersOption" autoresize />
+          <div class="chart-area" style="position:relative">
+            <v-chart :option="topUsersOption" autoresize @click="handleChartClick" />
+            <div class="chart-overlay">点击查看详情</div>
           </div>
         </el-card>
       </el-col>
@@ -137,8 +139,9 @@
               <el-tag size="small" type="info">{{ totalTokensFmt }} tokens · ¥{{ totalCostFmt }}</el-tag>
             </div>
           </template>
-          <div class="chart-area">
-            <v-chart :option="tokenTrendOption" autoresize />
+          <div class="chart-area" style="position:relative">
+            <v-chart :option="tokenTrendOption" autoresize @click="handleChartClick" />
+            <div class="chart-overlay">点击查看详情</div>
           </div>
         </el-card>
       </el-col>
@@ -151,8 +154,9 @@
               <el-tag size="small" type="info">近 7 日</el-tag>
             </div>
           </template>
-          <div class="chart-area">
-            <v-chart :option="moduleTokenOption" autoresize />
+          <div class="chart-area" style="position:relative">
+            <v-chart :option="moduleTokenOption" autoresize @click="handleChartClick" />
+            <div class="chart-overlay">点击查看详情</div>
           </div>
         </el-card>
       </el-col>
@@ -210,17 +214,27 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Refresh, Link, InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
+import * as echarts from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart, BarChart } from 'echarts/charts'
+import { LineChart, BarChart, PieChart, RadarChart } from 'echarts/charts'
 import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
 import api from '../../api'
 import { useCountUp } from '@/composables/useCountUp'
+import { legalAITheme, legalAIDarkTheme } from '@/utils/echartsTheme'
 
-use([CanvasRenderer, LineChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
+use([CanvasRenderer, LineChart, BarChart, PieChart, RadarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
+echarts.registerTheme('legalAI', legalAITheme)
+echarts.registerTheme('legalAIDark', legalAIDarkTheme)
+
+const isDark = computed(() => document.documentElement.getAttribute('data-theme') === 'dark')
+const chartTheme = computed(() => isDark.value ? 'legalAIDark' : 'legalAI')
+
+const router = useRouter()
 
 const counts = ref({})
 const overview = ref({})
@@ -422,6 +436,20 @@ const quickModules = [
   { code: 'MON', name: '告警中心', desc: '规则/历史', path: '/admin/monitor/rules', tag: 'mon' }
 ]
 
+const chartClickHandlers = {
+  userActivity: () => router.push('/admin/users?filter=active'),
+  lawCategory: (params) => router.push(`/admin/laws?category=${encodeURIComponent(params.name)}`),
+  searchTrend: () => router.push('/admin/biz/mod06'),
+  alertTrend: () => router.push('/admin/monitor/history')
+}
+
+function handleChartClick(params) {
+  const { seriesName, name } = params
+  if (seriesName === '用户活跃度' || params.componentType === 'series' && params.seriesIndex === 0) {
+    chartClickHandlers.userActivity()
+  }
+}
+
 function formatNum(v) {
   const n = Number(v) || 0
   if (n >= 10000) return (n / 10000).toFixed(1) + 'w'
@@ -572,6 +600,21 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
   overflow: hidden;
   border-left: 4px solid var(--color-border-dark);
   transition: transform 0.2s;
+  opacity: 0;
+  transform: scale(0.9);
+  animation: kpiScaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+
+  &:nth-child(1) { animation-delay: 0.1s; }
+  &:nth-child(2) { animation-delay: 0.15s; }
+  &:nth-child(3) { animation-delay: 0.2s; }
+  &:nth-child(4) { animation-delay: 0.25s; }
+  &:nth-child(5) { animation-delay: 0.3s; }
+  &:nth-child(6) { animation-delay: 0.35s; }
+  &:nth-child(7) { animation-delay: 0.4s; }
+  &:nth-child(8) { animation-delay: 0.45s; }
+  &:nth-child(9) { animation-delay: 0.5s; }
+  &:nth-child(10) { animation-delay: 0.55s; }
+  &:nth-child(11) { animation-delay: 0.6s; }
 
   &:hover { transform: translateY(-2px); }
 
@@ -583,6 +626,39 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
   .kpi-label { font-size: 12px; color: var(--color-text-secondary); }
   .kpi-value { font-size: 24px; font-weight: 700; color: var(--color-text-primary); margin: 4px 0; }
   .kpi-foot { font-size: 11px; color: var(--color-text-placeholder); }
+}
+
+@keyframes kpiScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.quick-item {
+  opacity: 0;
+  animation: cardFadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+
+  @for $i from 1 through 12 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{0.6 + ($i - 1) * 0.05}s;
+    }
+  }
+}
+
+@keyframes cardFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .activity-kpis {
@@ -617,6 +693,30 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 .chart-area {
   width: 100%;
   height: 200px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+
+    .chart-overlay {
+      opacity: 1;
+    }
+  }
+
+  .chart-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-size: 12px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
 }
 
 .quick-grid {
@@ -731,5 +831,66 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
   border-radius: 50%;
   &.dot-success { background: var(--color-success); }
   &.dot-danger { background: var(--color-danger); }
+}
+
+// 移动端适配
+@media (max-width: 768px) {
+  .admin-dashboard {
+    .page-header {
+      padding: 16px;
+      flex-direction: column;
+      gap: 12px;
+
+      .header-content h2 {
+        font-size: 18px !important;
+      }
+    }
+
+    .kpi-row {
+      .el-col {
+        margin-bottom: 12px;
+      }
+    }
+
+    .kpi-card {
+      .kpi-value {
+        font-size: 20px;
+      }
+    }
+
+    .activity-row,
+    .charts-row,
+    .bottom-row {
+      .el-col {
+        margin-bottom: 12px;
+      }
+    }
+
+    .quick-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 10px;
+    }
+
+    .quick-item {
+      padding: 8px;
+    }
+
+    .llm-status-card {
+      .llm-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .llm-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+    }
+
+    .chart-area {
+      height: 160px;
+    }
+  }
 }
 </style>
