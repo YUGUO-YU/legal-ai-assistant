@@ -50,7 +50,7 @@ public class AdminDataService {
         }
         try {
             var rows = jdbc.queryForList(
-                "SELECT au.id, au.username, au.dept_id, au.team_id, " +
+                "SELECT au.id, au.username, au.team_id, " +
                 "aur.role_id, ar.data_scope " +
                 "FROM admin_user au " +
                 "LEFT JOIN admin_user_role aur ON au.id = aur.user_id " +
@@ -68,7 +68,6 @@ public class AdminDataService {
             result.put("username", row.get("username"));
             result.put("roleId", row.get("role_id"));
             result.put("dataScope", DataScope.fromValue(dataScopeValue));
-            result.put("deptId", row.get("dept_id"));
             result.put("teamId", row.get("team_id"));
         } catch (Exception e) {
             log.warn("[Admin] getCurrentAdminInfo 失败 userId={}: {}", userId, e.getMessage());
@@ -89,7 +88,7 @@ public class AdminDataService {
             case SELF:
                 return " AND " + userField + " = ?";
             case DEPT:
-                return " AND dept_id = (SELECT dept_id FROM admin_user WHERE id = ?)";
+                return " AND team_id = (SELECT team_id FROM admin_user WHERE id = ?)";
             case TEAM:
                 return " AND team_id = (SELECT team_id FROM admin_user WHERE id = ?)";
             default:
@@ -481,7 +480,7 @@ public class AdminDataService {
                         args.add(adminUserId);
                         break;
                     case DEPT:
-                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE dept_id = (SELECT dept_id FROM admin_user WHERE id = ?))");
+                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE team_id = (SELECT team_id FROM admin_user WHERE id = ?))");
                         args.add(adminUserId);
                         break;
                     case TEAM:
@@ -1867,10 +1866,10 @@ public class AdminDataService {
                             where.append(" AND created_by = ?");
                             args.add(adminUserId);
                             break;
-                        case DEPT:
-                            where.append(" AND dept_id = (SELECT dept_id FROM admin_user WHERE id = ?)");
-                            args.add(adminUserId);
-                            break;
+                    case DEPT:
+                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE team_id = (SELECT team_id FROM admin_user WHERE id = ?))");
+                        args.add(adminUserId);
+                        break;
                         case TEAM:
                             where.append(" AND team_id = (SELECT team_id FROM admin_user WHERE id = ?)");
                             args.add(adminUserId);
@@ -3031,7 +3030,7 @@ public class AdminDataService {
                         args.add(adminUserId);
                         break;
                     case DEPT:
-                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE dept_id = (SELECT dept_id FROM admin_user WHERE id = ?))");
+                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE team_id = (SELECT team_id FROM admin_user WHERE id = ?))");
                         args.add(adminUserId);
                         break;
                     case TEAM:
@@ -3074,7 +3073,7 @@ public class AdminDataService {
                         args.add(adminUserId);
                         break;
                     case DEPT:
-                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE dept_id = (SELECT dept_id FROM admin_user WHERE id = ?))");
+                        where.append(" AND user_id IN (SELECT id FROM admin_user WHERE team_id = (SELECT team_id FROM admin_user WHERE id = ?))");
                         args.add(adminUserId);
                         break;
                     case TEAM:
