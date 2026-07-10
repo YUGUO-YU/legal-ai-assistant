@@ -43,7 +43,19 @@
       </div>
     </div>
 
-    <loading v-if="loading" text="正在检索相关法规..." />
+    <div v-if="loading" class="skeleton-list">
+      <div v-for="i in 5" :key="i" class="skeleton-card">
+        <div class="skeleton-header">
+          <div class="skeleton-title skeleton"></div>
+          <div class="skeleton-badge skeleton"></div>
+        </div>
+        <div class="skeleton-content skeleton"></div>
+        <div class="skeleton-footer">
+          <div class="skeleton-tag skeleton"></div>
+          <div class="skeleton-tag skeleton"></div>
+        </div>
+      </div>
+    </div>
 
     <div v-else-if="results.length > 0" class="results-container">
       <div class="result-header">
@@ -345,6 +357,62 @@ useKeyboardShortcuts([
 <style lang="scss" scoped>
 .legal-search {
   animation: fadeIn 0.4s ease;
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeleton-card {
+  padding: 20px;
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+
+  .skeleton-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+
+    .skeleton-title {
+      width: 60%;
+      height: 24px;
+    }
+
+    .skeleton-badge {
+      width: 80px;
+      height: 24px;
+    }
+  }
+
+  .skeleton-content {
+    height: 60px;
+    margin-bottom: 12px;
+  }
+
+  .skeleton-footer {
+    display: flex;
+    gap: 8px;
+
+    .skeleton-tag {
+      width: 60px;
+      height: 24px;
+    }
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 @keyframes fadeIn {

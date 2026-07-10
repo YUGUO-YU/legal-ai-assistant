@@ -104,7 +104,13 @@
             </div>
           </template>
 
-          <loading v-if="loading" text="正在分析合同风险..." type="spin" />
+          <div v-if="loading" class="skeleton-review">
+            <div class="skeleton-header skeleton"></div>
+            <div class="skeleton-body">
+              <div class="skeleton-panel skeleton"></div>
+              <div class="skeleton-panel skeleton"></div>
+            </div>
+          </div>
 
           <div v-else-if="reviewResult" class="review-result fade-in-up">
             <div class="score-panel">
@@ -137,7 +143,26 @@
                 <el-icon><DataAnalysis /></el-icon>
                 各维度评分
               </h4>
-              <div class="dimension-list">
+
+              <div v-if="reviewResult.dimensions" class="dimension-content">
+                <div class="radar-wrapper">
+                  <v-chart :option="radarOption" autoresize class="radar-chart" />
+                </div>
+
+                <div class="dimensions-summary">
+                  <div
+                    v-for="dim in reviewResult.dimensions"
+                    :key="dim.dimensionCode"
+                    class="dim-card"
+                    :class="'risk-' + getRiskLevel(dim.score)"
+                  >
+                    <span class="dim-name">{{ dim.dimensionName }}</span>
+                    <span class="dim-score">{{ dim.score }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="dimension-list">
                 <div v-for="dim in reviewResult.dimensions" :key="dim.dimensionCode" class="dimension-item">
                   <div class="dim-header">
                     <span class="dim-name">{{ dim.dimensionName }}</span>
@@ -287,7 +312,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -314,6 +339,13 @@ import api from '../api'
 import Loading from '../components/Loading.vue'
 import { useUsageMemory } from '@/composables/useUsageMemory'
 import { useKeyboardShortcuts, matchShortcut, isInputFocused } from '@/composables/useKeyboardShortcuts'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { RadarChart } from 'echarts/charts'
+import { TitleComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+
+use([CanvasRenderer, RadarChart, TitleComponent, TooltipComponent, LegendComponent])
 
 const router = useRouter()
 const { addRecord } = useUsageMemory()
@@ -407,6 +439,91 @@ const getScoreGradient = (score) => {
   if (score >= 60) return [{ color: '#f59e0b', percentage: 0 }, { color: '#fbbf24', percentage: 100 }]
   return [{ color: '#ef4444', percentage: 0 }, { color: '#f87171', percentage: 100 }]
 }
+
+const getRiskLevel = (score) => {
+  if (score >= 80) return 'high'
+  if (score >= 50) return 'medium'
+  return 'low'
+}
+
+const radarOption = computed(() => {
+  if (!reviewResult.value?.dimensions) return {}
+
+  const dimensions = reviewResult.value.dimensions
+
+  return {
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(255,255,255,0.95)',
+      borderColor: '#e5e7eb',
+      textStyle: {
+        color: '#1f2937'
+      }
+    },
+    radar: {
+      indicator: dimensions.map(d => ({
+        name: d.dimensionName,
+        max: 100
+      })),
+      shape: 'polygon',
+      splitNumber: 4,
+      axisName: {
+        color: '#6b7280',
+        fontSize: 12
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#e5e7eb'
+        }
+      },
+      splitArea: {
+        show: true,
+        areaStyle: {
+          color: ['rgba(102,126,234,0.02)', 'rgba(102,126,234,0.05)', 'rgba(102,126,234,0.08)', 'rgba(102,126,234,0.12)']
+        }
+      },
+      axisLine: {
+        lineStyle: {
+          color: '#e5e7eb'
+        }
+      }
+    },
+    series: [{
+      type: 'radar',
+      data: [{
+        value: dimensions.map(d => d.score),
+        name: '风险评分',
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: {
+          color: '#667eea',
+          width: 2
+        },
+        areaStyle: {
+          color: {
+            type: 'radial',
+            x: 0.5,
+            y: 0.5,
+            r: 0.5,
+            colorStops: [
+              { offset: 0, color: 'rgba(102,126,234,0.6)' },
+              { offset: 1, color: 'rgba(102,126,234,0.1)' }
+            ]
+          }
+        },
+        itemStyle: {
+          color: '#667eea'
+        },
+        label: {
+          show: true,
+          formatter: '{c}',
+          color: '#667eea',
+          fontWeight: 'bold'
+        }
+      }]
+    }]
+  }
+})
 
 const exportReport = () => {
   if (!reviewResult.value) {
@@ -608,6 +725,38 @@ useKeyboardShortcuts([
 <style lang="scss" scoped>
 .contract-review {
   animation: fadeIn 0.4s ease;
+}
+
+.skeleton-review {
+  padding: 20px 0;
+
+  .skeleton-header {
+    height: 120px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+  }
+
+  .skeleton-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .skeleton-panel {
+      height: 80px;
+      border-radius: 12px;
+    }
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 @keyframes fadeIn {
@@ -957,6 +1106,29 @@ useKeyboardShortcuts([
       }
     }
 
+    .dimension-content {
+      display: flex;
+      gap: 24px;
+
+      .radar-wrapper {
+        flex: 0 0 300px;
+        height: 300px;
+
+        .radar-chart {
+          width: 100%;
+          height: 100%;
+        }
+      }
+
+      .dimensions-summary {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        align-content: start;
+      }
+    }
+
     .dimension-list {
       display: flex;
       flex-direction: column;
@@ -990,6 +1162,48 @@ useKeyboardShortcuts([
         font-size: 12px;
         color: #9ca3af;
         margin-top: 6px;
+      }
+    }
+
+    .dim-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border-left: 3px solid;
+      background: #f9fafb;
+
+      .dim-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: #374151;
+      }
+
+      .dim-score {
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      &.risk-high {
+        background: rgba(245, 108, 108, 0.1);
+        border-left-color: #f56c6c;
+
+        .dim-score { color: #f56c6c; }
+      }
+
+      &.risk-medium {
+        background: rgba(230, 162, 60, 0.1);
+        border-left-color: #e6a23c;
+
+        .dim-score { color: #e6a23c; }
+      }
+
+      &.risk-low {
+        background: rgba(103, 194, 58, 0.1);
+        border-left-color: #67c23a;
+
+        .dim-score { color: #67c23a; }
       }
     }
   }

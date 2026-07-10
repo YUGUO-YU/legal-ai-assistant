@@ -26,10 +26,10 @@
     </el-alert>
 
     <el-row :gutter="14" class="kpi-row">
-      <el-col :xs="12" :sm="6" :md="4" :lg="3" v-for="m in kpis" :key="m.label">
+      <el-col :xs="12" :sm="6" :md="4" :lg="3" v-for="(m, index) in kpis" :key="m.label">
         <el-card class="kpi-card" :body-style="{ padding: '14px' }" :class="m.tone">
           <div class="kpi-label">{{ m.label }}</div>
-          <div class="kpi-value">{{ m.value }}</div>
+          <div class="kpi-value">{{ animatedKpis.value[index]?.value ?? 0 }}</div>
           <div class="kpi-foot">{{ m.foot }}</div>
         </el-card>
       </el-col>
@@ -209,7 +209,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Refresh, Link, InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import VChart from 'vue-echarts'
@@ -218,6 +218,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, BarChart } from 'echarts/charts'
 import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
 import api from '../../api'
+import { useCountUp } from '@/composables/useCountUp'
 
 use([CanvasRenderer, LineChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
 
@@ -230,6 +231,11 @@ const dbStatus = ref({ connected: false, message: '' })
 const userActivity = ref({})
 const lawUsage = ref({})
 let timer = null
+
+const animatedKpis = ref([
+  { value: 0 }, { value: 0 }, { value: 0 }, { value: 0 }, { value: 0 },
+  { value: 0 }, { value: 0 }, { value: 0 }, { value: 0 }, { value: 0 }, { value: 0 }
+])
 
 const kpis = computed(() => [
   { label: '在线告警', value: overview.value.activeAlerts ?? '-', foot: '未解决', tone: 'danger' },
@@ -507,6 +513,33 @@ onMounted(() => {
   loadAll()
   timer = setInterval(loadOverview, 30000)
 })
+
+watch(() => overview.value, () => {
+  animateAllKpis()
+}, { deep: true })
+
+function animateAllKpis() {
+  const kpiValues = [
+    overview.value.activeAlerts ?? 0,
+    overview.value.pendingLaws ?? 0,
+    overview.value.pendingDrafts ?? 0,
+    overview.value.pendingFeedback ?? 0,
+    overview.value.totalFrontendUsers ?? 0,
+    overview.value.pendingApprovals ?? 0,
+    overview.value.todayLogins ?? 0,
+    overview.value.todayRegs ?? 0,
+    overview.value.weeklyTokens ?? 0,
+    overview.value.weeklyCost ?? 0,
+    overview.value.activeAnnouncements ?? 0
+  ]
+
+  kpiValues.forEach((target, index) => {
+    const countUp = useCountUp(target)
+    countUp.start()
+    animatedKpis.value[index] = countUp.displayValue
+  })
+}
+
 onUnmounted(() => { if (timer) clearInterval(timer) })
 </script>
 

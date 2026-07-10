@@ -1,18 +1,15 @@
 <template>
   <div class="dashboard">
-    <div class="page-header">
-      <div class="welcome-section">
-        <h2><el-icon class="wave-icon"><ChatDotRound /></el-icon> {{ greeting }}，{{ username }}</h2>
-        <p>今天是 {{ today }}，为您准备了一些快捷功能</p>
-      </div>
-      <div class="header-stats">
-        <div class="stat-pill">
-          <el-icon><Clock /></el-icon>
-          <span>本周活跃 {{ activeDays }} 天</span>
+    <div class="page-header dashboard-header">
+      <div class="header-content">
+        <div class="greeting-area">
+          <h1 class="greeting-text">{{ greeting }}，{{ username }}</h1>
+          <p class="greeting-sub">{{ currentDate }} · {{ greetingTip }}</p>
         </div>
-        <div class="stat-pill success">
-          <el-icon><CircleCheck /></el-icon>
-          <span>效率提升 32%</span>
+        <div class="header-decoration">
+          <div class="decoration-circle circle-1"></div>
+          <div class="decoration-circle circle-2"></div>
+          <div class="decoration-circle circle-3"></div>
         </div>
       </div>
     </div>
@@ -294,6 +291,7 @@
       direction="rtl"
       size="560px"
       :destroy-on-close="true"
+      class="drawer-slide-right"
     >
       <div v-if="activeDetailCard" class="detail-drawer">
         <div class="drawer-banner" :style="{ background: activeDetailCard.gradient }">
@@ -552,9 +550,28 @@ const username = computed(() => {
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
-  if (hour < 12) return '早上好'
+  if (hour < 12) return '上午好'
   if (hour < 18) return '下午好'
   return '晚上好'
+})
+
+const greetingTip = computed(() => {
+  const tips = [
+    '新的一天，新的开始',
+    '保持专注，高效工作',
+    '法律助手，随时待命',
+    '今天有哪些案件需要处理？'
+  ]
+  return tips[Math.floor(Math.random() * tips.length)]
+})
+
+const currentDate = computed(() => {
+  return new Date().toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  })
 })
 
 const statsLoading = ref(false)
@@ -945,6 +962,105 @@ const loadMore = () => {
       }
     }
   }
+}
+
+.dashboard-header {
+  position: relative;
+  padding: 32px 32px 28px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  margin-bottom: 24px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 100%;
+    background: radial-gradient(circle at top right, rgba(255,255,255,0.15) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .header-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .greeting-area {
+    position: relative;
+    z-index: 1;
+
+    .greeting-text {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      animation: fadeInUp 0.6s ease;
+    }
+
+    .greeting-sub {
+      font-size: 14px;
+      color: rgba(255,255,255,0.85);
+      animation: fadeInUp 0.6s ease 0.1s both;
+    }
+  }
+
+  .header-decoration {
+    position: absolute;
+    right: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.3;
+
+    .decoration-circle {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+
+      &.circle-1 {
+        width: 120px;
+        height: 120px;
+        top: -60px;
+        right: 0;
+        animation: float 6s ease-in-out infinite;
+      }
+
+      &.circle-2 {
+        width: 80px;
+        height: 80px;
+        top: 20px;
+        right: 100px;
+        animation: float 5s ease-in-out 1s infinite;
+      }
+
+      &.circle-3 {
+        width: 50px;
+        height: 50px;
+        top: 60px;
+        right: 40px;
+        animation: float 4s ease-in-out 2s infinite;
+      }
+    }
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
 }
 
 .stats-row {

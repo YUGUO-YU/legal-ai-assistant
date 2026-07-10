@@ -74,7 +74,7 @@
       />
     </el-card>
 
-    <el-drawer v-model="showDetail" :title="`详情：${detail?.id ?? ''}`" size="50%" direction="rtl">
+    <el-drawer v-model="showDetail" :title="`详情：${detail?.id ?? ''}`" size="50%" direction="rtl" class="drawer-slide-right">
       <el-descriptions v-if="detail" :column="1" border>
         <el-descriptions-item v-for="key in detailKeys" :key="key" :label="key">
           <span style="white-space: pre-wrap; word-break: break-all;">{{ formatDetailValue(detail[key]) }}</span>

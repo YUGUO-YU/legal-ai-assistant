@@ -105,7 +105,13 @@
           </el-select>
         </div>
 
-        <loading v-if="loading" text="正在加载法规..." />
+        <div v-if="loading" class="skeleton-laws">
+          <div v-for="i in 5" :key="i" class="skeleton-law-item">
+            <div class="skeleton-law-header skeleton"></div>
+            <div class="skeleton-law-meta skeleton"></div>
+            <div class="skeleton-law-info skeleton"></div>
+          </div>
+        </div>
 
         <div v-else-if="results.length > 0" class="result-list">
           <div v-for="law in results" :key="law.lawUuid" class="law-item">
@@ -378,6 +384,49 @@ const loadCategories = async () => {
 </script>
 
 <style lang="scss" scoped>
+.skeleton-laws {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeleton-law-item {
+  padding: 20px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+
+  .skeleton-law-header {
+    height: 24px;
+    width: 60%;
+    margin-bottom: 12px;
+    border-radius: 4px;
+  }
+
+  .skeleton-law-meta {
+    height: 16px;
+    width: 80%;
+    margin-bottom: 12px;
+    border-radius: 4px;
+  }
+
+  .skeleton-law-info {
+    height: 16px;
+    width: 50%;
+    border-radius: 4px;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .category-panel {
   background: #fafafa;
   padding: 16px;

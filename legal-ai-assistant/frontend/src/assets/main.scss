@@ -113,3 +113,143 @@ body {
     font-weight: 400;
   }
 }
+
+// 表格行 hover 效果增强
+.el-table {
+  tbody tr:hover > td {
+    background-color: rgba(102, 126, 234, 0.08) !important;
+    transition: background-color 0.2s ease;
+  }
+
+  tbody tr:hover > td:first-child {
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--color-primary);
+      border-radius: 0 2px 2px 0;
+    }
+  }
+}
+
+.el-drawer {
+  &.drawer-slide-right {
+    animation: drawerSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  &.drawer-slide-left {
+    animation: drawerSlideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  &.drawer-close {
+    animation: drawerSlideOut 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+}
+
+@keyframes drawerSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes drawerSlideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes drawerSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.el-dialog {
+  animation: dialogFadeScale 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.el-dialog--center {
+    animation: dialogCenterIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@keyframes dialogFadeScale {
+  from {
+    transform: scale(0.95) translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes dialogCenterIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.el-overlay {
+  animation: overlayFadeIn 0.2s ease;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.el-drawer {
+  .el-drawer__header {
+    padding: 16px 20px;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--color-border-light);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+
+    .el-drawer__title {
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    .el-drawer__close-btn {
+      &:hover {
+        color: var(--color-primary);
+        transform: rotate(90deg);
+        transition: all 0.2s ease;
+      }
+    }
+  }
+
+  .el-drawer__body {
+    padding: 20px;
+    overflow-y: auto;
+  }
+}

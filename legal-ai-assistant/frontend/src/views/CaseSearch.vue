@@ -80,7 +80,12 @@
       </div>
     </el-card>
 
-    <loading v-if="loading" text="正在检索案例..." />
+    <div v-if="loading" class="skeleton-cases">
+      <div v-for="i in 6" :key="i" class="skeleton-case-card">
+        <div class="skeleton-case-header skeleton"></div>
+        <div class="skeleton-case-content skeleton"></div>
+      </div>
+    </div>
 
     <div v-else-if="results.length > 0" class="results-container">
       <div class="result-stats">
@@ -266,6 +271,41 @@ const copyCaseNo = (caseNo) => {
 <style lang="scss" scoped>
 .case-search {
   animation: fadeIn 0.4s ease;
+}
+
+.skeleton-cases {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeleton-case-card {
+  padding: 20px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+
+  .skeleton-case-header {
+    height: 60px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+  }
+
+  .skeleton-case-content {
+    height: 40px;
+    border-radius: 8px;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 @keyframes fadeIn {
