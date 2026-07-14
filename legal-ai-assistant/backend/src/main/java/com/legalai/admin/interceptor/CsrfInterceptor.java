@@ -21,7 +21,21 @@ public class CsrfInterceptor implements HandlerInterceptor {
             "/auth/login",
             "/auth/register",
             "/auth/forgot-password",
-            "/csrf-token"
+            "/csrf-token",
+            "/company",
+            "/law-search",
+            "/legal-search",
+            "/case-search",
+            "/case-similar",
+            "/document",
+            "/legal-research",
+            "/contract",
+            "/knowledge-base",
+            "/doc-qa",
+            "/law-favorite",
+            "/usage",
+            "/progress",
+            "/ppt"
     );
 
     @Autowired
