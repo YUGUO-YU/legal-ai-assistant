@@ -1,6 +1,7 @@
 package com.legalai.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.config.MilvusConfig;
 import com.legalai.dto.*;
@@ -167,14 +168,14 @@ public class CaseService {
     }
 
     private List<CaseSimilarSearchResponse.SimilarCaseItem> parseAIResponse(String aiResponse, CaseSimilarSearchRequest request) {
-        java.util.List<CaseSimilarSearchResponse.SimilarCaseItem> items = new java.util.ArrayList<>();
+        List<CaseSimilarSearchResponse.SimilarCaseItem> items = new ArrayList<>();
 
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(aiResponse);
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(aiResponse);
 
             if (node.isArray()) {
-                for (com.fasterxml.jackson.databind.JsonNode item : node) {
+                for (JsonNode item : node) {
                     CaseSimilarSearchResponse.SimilarCaseItem caseItem = new CaseSimilarSearchResponse.SimilarCaseItem();
                     caseItem.setCaseId(item.has("caseId") ? item.get("caseId").asLong() : System.currentTimeMillis());
                     caseItem.setCaseNo(item.has("caseNo") ? item.get("caseNo").asText() : "");
@@ -186,9 +187,9 @@ public class CaseService {
                     caseItem.setLitigationAmount(item.has("litigationAmount") ? new BigDecimal(item.get("litigationAmount").asText()) : BigDecimal.ZERO);
                     caseItem.setSimilarityScore(item.has("similarityScore") ? item.get("similarityScore").asDouble() : 0.85);
 
-                    java.util.Map<String, Double> features = new java.util.HashMap<>();
+                    Map<String, Double> features = new HashMap<>();
                     if (item.has("matchingFeatures")) {
-                        com.fasterxml.jackson.databind.JsonNode mf = item.get("matchingFeatures");
+                        JsonNode mf = item.get("matchingFeatures");
                         features.put("fact_similarity", mf.has("fact_similarity") ? mf.get("fact_similarity").asDouble() : 0.8);
                         features.put("claim_similarity", mf.has("claim_similarity") ? mf.get("claim_similarity").asDouble() : 0.8);
                         features.put("dispute_similarity", mf.has("dispute_similarity") ? mf.get("dispute_similarity").asDouble() : 0.8);
@@ -201,8 +202,8 @@ public class CaseService {
                     caseItem.setSourceName(item.has("sourceName") ? item.get("sourceName").asText() : "中国裁判文书网");
 
                     if (item.has("legalBasis") && item.get("legalBasis").isArray()) {
-                        java.util.List<String> basis = new java.util.ArrayList<>();
-                        for (com.fasterxml.jackson.databind.JsonNode b : item.get("legalBasis")) {
+                        List<String> basis = new ArrayList<>();
+                        for (JsonNode b : item.get("legalBasis")) {
                             basis.add(b.asText());
                         }
                         caseItem.setLegalBasis(basis);

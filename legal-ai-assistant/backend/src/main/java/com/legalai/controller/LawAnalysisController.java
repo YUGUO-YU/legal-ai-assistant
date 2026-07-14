@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -26,7 +27,7 @@ public class LawAnalysisController {
         String lawUuid = (String) request.get("lawUuid");
         String lawTitle = (String) request.get("lawTitle");
         @SuppressWarnings("unchecked")
-        java.util.List<Map<String, Object>> articles = (java.util.List<Map<String, Object>>) request.get("articles");
+        List<Map<String, Object>> articles = (List<Map<String, Object>>) request.get("articles");
 
         if (lawUuid == null || lawUuid.isBlank()) {
             return ApiResponse.error(400, "lawUuid 不能为空");

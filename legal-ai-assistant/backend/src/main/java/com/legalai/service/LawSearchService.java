@@ -1,6 +1,8 @@
 package com.legalai.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.config.ElasticsearchConfig;
 import com.legalai.dto.*;
 import com.legalai.model.LawArticle;
@@ -309,7 +311,7 @@ public class LawSearchService {
     }
 
     private LawSearchResponse parseAIResponse(String aiResponse, LawSearchRequest request, long startTime) {
-        java.util.List<LawSearchResponse.LawSearchItem> items = new java.util.ArrayList<>();
+        List<LawSearchResponse.LawSearchItem> items = new ArrayList<>();
 
         String jsonContent = extractJsonFromResponse(aiResponse);
         if (jsonContent == null || jsonContent.isEmpty()) {
@@ -318,11 +320,11 @@ public class LawSearchService {
         }
 
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(jsonContent);
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(jsonContent);
 
             if (node.isArray()) {
-                for (com.fasterxml.jackson.databind.JsonNode item : node) {
+                for (JsonNode item : node) {
                     LawSearchResponse.LawSearchItem lawItem = parseLawItem(item);
                     if (lawItem != null && lawItem.getTitle() != null && !lawItem.getTitle().isEmpty()) {
                         items.add(lawItem);
@@ -355,7 +357,7 @@ public class LawSearchService {
         return response;
     }
 
-    private LawSearchResponse.LawSearchItem parseLawItem(com.fasterxml.jackson.databind.JsonNode item) {
+    private LawSearchResponse.LawSearchItem parseLawItem(JsonNode item) {
         try {
             LawSearchResponse.LawSearchItem lawItem = new LawSearchResponse.LawSearchItem();
             lawItem.setLawUuid(item.has("lawUuid") ? item.get("lawUuid").asText() : "AI-" + System.currentTimeMillis());
@@ -461,8 +463,8 @@ public class LawSearchService {
                     "只返回JSON数组，列出主要条款（不少于5条）。";
 
             String aiResponse = aiService.chat(prompt);
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(aiResponse);
+            ObjectMapper mapper2 = new ObjectMapper();
+            JsonNode node = mapper2.readTree(aiResponse);
 
             QueryWrapper<LawDocument> lawQuery = new QueryWrapper<>();
             lawQuery.eq("law_uuid", lawUuid);
@@ -473,7 +475,7 @@ public class LawSearchService {
             }
 
             int sortOrder = 1;
-            for (com.fasterxml.jackson.databind.JsonNode articleNode : node) {
+            for (JsonNode articleNode : node) {
                 LawArticle article = new LawArticle();
                 article.setLawId(lawDocument.getId());
                 article.setArticleUuid("ART-" + lawUuid.substring(lawUuid.length() - 8) + "-" + String.format("%04d", sortOrder));

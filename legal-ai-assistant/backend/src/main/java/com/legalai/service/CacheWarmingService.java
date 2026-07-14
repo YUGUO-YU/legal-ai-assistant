@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -189,7 +190,7 @@ public class CacheWarmingService {
 
     private Map<String, Object> getDefaultHotLaws() {
         return Map.of(
-            "laws", java.util.List.of(
+            "laws", List.of(
                 Map.of("name", "中华人民共和国宪法", "count", 15234),
                 Map.of("name", "中华人民共和国民法典", "count", 12456),
                 Map.of("name", "中华人民共和国刑法", "count", 9876),
@@ -200,19 +201,19 @@ public class CacheWarmingService {
         );
     }
 
-    private java.util.List<Map<String, String>> getDefaultDict(String type) {
+    private List<Map<String, String>> getDefaultDict(String type) {
         return switch (type) {
-            case "status" -> java.util.List.of(
+            case "status" -> List.of(
                 Map.of("value", "active", "label", "激活"),
                 Map.of("value", "inactive", "label", "未激活"),
                 Map.of("value", "deleted", "label", "已删除")
             );
-            case "gender" -> java.util.List.of(
+            case "gender" -> List.of(
                 Map.of("value", "male", "label", "男"),
                 Map.of("value", "female", "label", "女"),
                 Map.of("value", "unknown", "label", "未知")
             );
-            default -> java.util.List.of();
+            default -> List.of();
         };
     }
 

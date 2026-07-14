@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +76,7 @@ public class AdminController {
             sessionId = "default";
         }
         String token = csrfTokenService.generateToken(sessionId);
-        Map<String, String> result = new java.util.HashMap<>();
+        Map<String, String> result = new HashMap<>();
         result.put("token", token);
         return ApiResponse.success(result);
     }
@@ -415,7 +416,7 @@ public class AdminController {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             @SuppressWarnings("unchecked")
-            var menuIds = (java.util.List<Integer>) payload.get("menu_ids");
+            var menuIds = (List<Integer>) payload.get("menu_ids");
             if (menuIds == null) menuIds = java.util.Collections.emptyList();
             adminDataService.jdbc().update("DELETE FROM admin_role_menu WHERE role_id = ?", roleId);
             for (Integer mid : menuIds) {
@@ -439,7 +440,7 @@ public class AdminController {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             @SuppressWarnings("unchecked")
-            var roleIds = (java.util.List<Integer>) payload.get("role_ids");
+            var roleIds = (List<Integer>) payload.get("role_ids");
             if (roleIds == null) roleIds = java.util.Collections.emptyList();
             adminDataService.jdbc().update("DELETE FROM admin_user_role WHERE user_id = ?", userId);
             for (Integer rid : roleIds) {

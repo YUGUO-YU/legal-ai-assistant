@@ -137,8 +137,8 @@ public class MilvusService {
     }
 
     public Map<String, Object> getCollectionsStatus() {
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
-        List<Map<String, Object>> cols = new java.util.ArrayList<>();
+        Map<String, Object> result = new LinkedHashMap<>();
+        List<Map<String, Object>> cols = new ArrayList<>();
 
         boolean enabled = milvusConfig.isEnabled() && milvusClient.orElse(null) != null;
         result.put("milvusEnabled", enabled);
@@ -150,10 +150,10 @@ public class MilvusService {
                     io.milvus.param.collection.ShowCollectionsParam.newBuilder().build();
                 var resp = milvusClient.get().showCollections(showParam);
                 if (resp.getStatus() == 0 && resp.getData() != null) {
-                    java.util.List<String> names = resp.getData().getCollectionNamesList();
+                    List<String> names = resp.getData().getCollectionNamesList();
                     if (names != null) {
                         for (String name : names) {
-                            Map<String, Object> c = new java.util.LinkedHashMap<>();
+                            Map<String, Object> c = new LinkedHashMap<>();
                             c.put("name", name);
                             c.put("count", "-");
                             c.put("indexStatus", "健康");
@@ -174,7 +174,7 @@ public class MilvusService {
         if (cols.isEmpty()) {
             String[] names = {"legal_law_articles", "legal_cases", "legal_contracts", "kb_documents"};
             for (String n : names) {
-                Map<String, Object> c = new java.util.LinkedHashMap<>();
+                Map<String, Object> c = new LinkedHashMap<>();
                 c.put("name", n);
                 c.put("count", "-");
                 c.put("indexStatus", enabled ? "获取中" : "未启用");

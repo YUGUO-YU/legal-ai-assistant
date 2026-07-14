@@ -21,6 +21,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,7 +115,7 @@ public class HealthController {
             stmt.setInt(1, pageSize);
             stmt.setInt(2, offset);
             var rows = stmt.executeQuery();
-            List<Map<String, Object>> list = new java.util.ArrayList<>();
+            List<Map<String, Object>> list = new ArrayList<>();
             while (rows.next()) {
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("id", rows.getLong("id"));
@@ -134,7 +135,7 @@ public class HealthController {
             result.put("source", "public");
         } catch (Exception e) {
             log.warn("获取公告失败: {}", e.getMessage());
-            result.put("list", java.util.Collections.emptyList());
+            result.put("list", Collections.emptyList());
             result.put("total", 0);
         }
         return result;

@@ -49,7 +49,7 @@ public class JudgmentImportController {
     public ApiResponse<Map<String, Object>> confirmJudgmentImport(@RequestBody Map<String, Object> payload) {
         try {
             @SuppressWarnings("unchecked")
-            java.util.List<Map<String, Object>> cases = (java.util.List<Map<String, Object>>) payload.get("cases");
+            List<Map<String, Object>> cases = (List<Map<String, Object>>) payload.get("cases");
             if (cases == null || cases.isEmpty()) {
                 return ApiResponse.error(400, "没有可导入的案例数据");
             }

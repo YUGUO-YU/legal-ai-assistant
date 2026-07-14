@@ -1,6 +1,8 @@
 package com.legalai.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.config.ElasticsearchConfig;
 import com.legalai.dto.*;
 import com.legalai.model.LegalCase;
@@ -269,7 +271,7 @@ public class CaseSearchService {
     }
 
     private CaseSearchResponse parseAIResponse(String aiResponse, CaseSearchRequest request, long startTime) {
-        java.util.List<CaseSearchResponse.CaseSearchItem> items = new java.util.ArrayList<>();
+        List<CaseSearchResponse.CaseSearchItem> items = new ArrayList<>();
 
         String jsonContent = extractJsonFromResponse(aiResponse);
         if (jsonContent == null || jsonContent.isEmpty()) {
@@ -278,11 +280,11 @@ public class CaseSearchService {
         }
 
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(jsonContent);
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(jsonContent);
 
             if (node.isArray()) {
-                for (com.fasterxml.jackson.databind.JsonNode item : node) {
+                for (JsonNode item : node) {
                     CaseSearchResponse.CaseSearchItem caseItem = parseCaseItem(item);
                     if (caseItem != null && caseItem.getTitle() != null && !caseItem.getTitle().isEmpty()) {
                         items.add(caseItem);
@@ -315,7 +317,7 @@ public class CaseSearchService {
         return response;
     }
 
-    private CaseSearchResponse.CaseSearchItem parseCaseItem(com.fasterxml.jackson.databind.JsonNode item) {
+    private CaseSearchResponse.CaseSearchItem parseCaseItem(JsonNode item) {
         try {
             CaseSearchResponse.CaseSearchItem caseItem = new CaseSearchResponse.CaseSearchItem();
             caseItem.setCaseUuid(item.has("caseUuid") ? item.get("caseUuid").asText() : "AI-" + System.currentTimeMillis());

@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,7 +48,7 @@ public class DocQaController {
         var history = docQaService.getSessionHistory(sessionId);
         List<Map<String, Object>> result = history.stream()
             .map(msg -> {
-                Map<String, Object> map = new java.util.HashMap<>();
+                Map<String, Object> map = new HashMap<>();
                 map.put("role", msg.getRole());
                 map.put("content", msg.getContent());
                 map.put("createdAt", msg.getCreatedAt() != null ? msg.getCreatedAt().toString() : "");

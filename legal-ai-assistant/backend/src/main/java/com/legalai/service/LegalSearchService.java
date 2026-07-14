@@ -1,5 +1,7 @@
 package com.legalai.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.config.ElasticsearchConfig;
 import com.legalai.config.MilvusConfig;
 import com.legalai.dto.*;
@@ -208,14 +210,14 @@ public class LegalSearchService {
     }
 
     private List<LegalSearchResponse.SearchResultItem> parseAISearchResponse(String aiResponse, LegalSearchRequest request) {
-        java.util.List<LegalSearchResponse.SearchResultItem> items = new java.util.ArrayList<>();
+        List<LegalSearchResponse.SearchResultItem> items = new ArrayList<>();
 
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(aiResponse);
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(aiResponse);
 
             if (node.isArray()) {
-                for (com.fasterxml.jackson.databind.JsonNode item : node) {
+                for (JsonNode item : node) {
                     LegalSearchResponse.SearchResultItem result = new LegalSearchResponse.SearchResultItem();
                     result.setArticleId(item.has("articleId") ? item.get("articleId").asText() : "AI-" + System.currentTimeMillis());
                     result.setLawId("LAW-AI-001");
@@ -228,7 +230,7 @@ public class LegalSearchService {
                     result.setSourceUrl(item.has("sourceUrl") ? item.get("sourceUrl").asText() : "https://flk.npc.gov.cn/");
                     result.setSourceName(item.has("sourceName") ? item.get("sourceName").asText() : "国家法律法规信息库");
                     result.setScore(item.has("score") ? item.get("score").asDouble() : 0.85);
-                    result.setHighlights(java.util.List.of("<em>" + (request.getQuery() != null ? request.getQuery() : "法律") + "</em>"));
+                    result.setHighlights(List.of("<em>" + (request.getQuery() != null ? request.getQuery() : "法律") + "</em>"));
 
                     items.add(result);
                 }

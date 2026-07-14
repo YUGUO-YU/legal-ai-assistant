@@ -1,5 +1,6 @@
 package com.legalai.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.llm.LLMClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,7 +127,7 @@ public class LawAnalysisService {
     private Map<String, Object> parseAnalysisResult(String jsonStr) {
         Map<String, Object> result = new HashMap<>();
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            ObjectMapper mapper = new ObjectMapper();
             String cleanJson = jsonStr.trim();
             int start = cleanJson.indexOf('{');
             int end = cleanJson.lastIndexOf('}');

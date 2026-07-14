@@ -1,5 +1,7 @@
 package com.legalai.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -164,16 +166,16 @@ public class ContractService {
         response.setContractType(request.getContractType());
 
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(aiResponse);
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(aiResponse);
 
             response.setTotalScore(node.has("totalScore") ? node.get("totalScore").asInt() : 75);
             response.setRiskLevel(node.has("riskLevel") ? node.get("riskLevel").asText() : "MEDIUM");
             response.setOverallComment(node.has("overallComment") ? node.get("overallComment").asText() : "AI审查完成");
 
-            java.util.List<ContractReviewResponse.DimensionReview> dimensions = new java.util.ArrayList<>();
+            List<ContractReviewResponse.DimensionReview> dimensions = new ArrayList<>();
             if (node.has("dimensions")) {
-                for (com.fasterxml.jackson.databind.JsonNode dim : node.get("dimensions")) {
+                for (JsonNode dim : node.get("dimensions")) {
                     ContractReviewResponse.DimensionReview d = new ContractReviewResponse.DimensionReview();
                     d.setDimensionCode(dim.get("dimensionCode").asText());
                     d.setDimensionName(getDimensionName(dim.get("dimensionCode").asText()));
@@ -196,10 +198,10 @@ public class ContractService {
         return response;
     }
 
-    private java.util.List<ContractReviewResponse.RiskItem> parseRiskItems(com.fasterxml.jackson.databind.JsonNode node, String fieldName, String level) {
-        java.util.List<ContractReviewResponse.RiskItem> items = new java.util.ArrayList<>();
+    private List<ContractReviewResponse.RiskItem> parseRiskItems(JsonNode node, String fieldName, String level) {
+        List<ContractReviewResponse.RiskItem> items = new ArrayList<>();
         if (node.has(fieldName)) {
-            for (com.fasterxml.jackson.databind.JsonNode item : node.get(fieldName)) {
+            for (JsonNode item : node.get(fieldName)) {
                 ContractReviewResponse.RiskItem ri = new ContractReviewResponse.RiskItem();
                 ri.setLevel(level);
                 ri.setDimension(item.has("dimension") ? item.get("dimension").asText() : "");

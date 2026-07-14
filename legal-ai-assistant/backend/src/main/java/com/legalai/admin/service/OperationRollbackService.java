@@ -1,5 +1,6 @@
 package com.legalai.admin.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -173,7 +174,7 @@ public class OperationRollbackService {
     private String toJson(Object obj) {
         if (obj == null) return null;
         try {
-            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(obj);
+            return new ObjectMapper().writeValueAsString(obj);
         } catch (Exception e) {
             return obj.toString();
         }
@@ -182,14 +183,14 @@ public class OperationRollbackService {
     private String parseJson(String json) {
         if (json == null || json.isEmpty()) return json;
         try {
-            var map = new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, Map.class);
+            var map = new ObjectMapper().readValue(json, Map.class);
             if (map.containsKey("status")) {
                 return String.format("status = '%s'", map.get("status"));
             }
             if (map.containsKey("deleted")) {
                 return String.format("deleted = %s", Boolean.TRUE.equals(map.get("deleted")) ? 1 : 0);
             }
-        } catch (Exception e) {}
+        } catch (Exception e) { log.debug("解析还原SQL失败: {}", e.getMessage()); }
         return json;
     }
 }

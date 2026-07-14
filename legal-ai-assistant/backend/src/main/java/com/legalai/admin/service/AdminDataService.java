@@ -114,7 +114,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (module != null && !module.isEmpty()) {
                 where.append(" AND biz_module = ? ");
                 args.add(module);
@@ -188,7 +188,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 AND biz_module = 'MOD-02' ");
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (cause != null && !cause.isEmpty()) {
                 where.append(" AND case_cause LIKE ? ");
                 args.add("%" + cause + "%");
@@ -252,7 +252,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (sourceArticleId != null) {
                 where.append(" AND lr.source_article_id = ? ");
                 args.add(sourceArticleId);
@@ -363,8 +363,8 @@ public class AdminDataService {
                 result.put("error", "关联记录不存在");
                 return result;
             }
-            java.util.List<String> sets = new java.util.ArrayList<>();
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<String> sets = new ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (data.containsKey("relationType")) {
                 sets.add("relation_type = ?");
                 args.add(data.get("relationType"));
@@ -459,7 +459,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-            List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (userId != null && !userId.isEmpty()) {
                 try {
                     where.append(" AND user_id = ? ");
@@ -515,7 +515,7 @@ public class AdminDataService {
 
     public String exportAuditLogsCsv(String userId, String operation, String module) {
         StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-        List<Object> args = new java.util.ArrayList<>();
+        List<Object> args = new ArrayList<>();
         if (userId != null && !userId.isEmpty()) {
             try { where.append(" AND user_id = ? "); args.add(Long.valueOf(userId)); } catch (Exception e) { log.debug("无效的用户ID: {}", userId); }
         }
@@ -738,8 +738,8 @@ public class AdminDataService {
             result.put("error", "payload 为空");
             return result;
         }
-        List<String> cols = new java.util.ArrayList<>();
-        List<Object> vals = new java.util.ArrayList<>();
+        List<String> cols = new ArrayList<>();
+        List<Object> vals = new ArrayList<>();
         for (Map.Entry<String, Object> e : payload.entrySet()) {
             String k = e.getKey();
             if (k == null || k.isEmpty() || "id".equals(k) || "created_at".equals(k) || "updated_at".equals(k)) continue;
@@ -779,8 +779,8 @@ public class AdminDataService {
             result.put("error", "payload 为空");
             return result;
         }
-        List<String> sets = new java.util.ArrayList<>();
-        List<Object> vals = new java.util.ArrayList<>();
+        List<String> sets = new ArrayList<>();
+        List<Object> vals = new ArrayList<>();
         for (Map.Entry<String, Object> e : payload.entrySet()) {
             String k = e.getKey();
             if (k == null || k.isEmpty() || "id".equals(k) || "created_at".equals(k)) continue;
@@ -1190,7 +1190,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             String dateFilter = "";
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (startDate != null && !startDate.isEmpty()) {
                 dateFilter += " AND created_at >= ? ";
                 args.add(startDate);
@@ -1278,7 +1278,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             String dateFilter = "";
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (startDate != null && !startDate.isEmpty()) {
                 dateFilter += " AND sl.created_at >= ? ";
                 args.add(startDate);
@@ -1298,7 +1298,7 @@ public class AdminDataService {
                 ORDER BY count DESC
                 LIMIT ?
                 """;
-            java.util.List<Object> searchArgs = new java.util.ArrayList<>(args);
+            List<Object> searchArgs = new ArrayList<>(args);
             searchArgs.add(topN);
             List<Map<String, Object>> topLawsSearch = jdbc.queryForList(topLawsSearchSql, searchArgs.toArray());
 
@@ -1330,7 +1330,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-            List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (userId != null) {
                 where.append(" AND user_id = ? ");
                 args.add(userId);
@@ -1444,7 +1444,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             List<Map<String, Object>> models = jdbc.queryForList("SELECT * FROM llm_model_config WHERE status = 1");
-            List<Map<String, Object>> checks = new java.util.ArrayList<>();
+            List<Map<String, Object>> checks = new ArrayList<>();
             for (Map<String, Object> m : models) {
                 Map<String, Object> ck = new LinkedHashMap<>();
                 ck.put("model_code", m.get("model_code"));
@@ -1485,7 +1485,7 @@ public class AdminDataService {
             return milvusService.getCollectionsStatus();
         }
         Map<String, Object> result = new LinkedHashMap<>();
-        List<Map<String, Object>> cols = new java.util.ArrayList<>();
+        List<Map<String, Object>> cols = new ArrayList<>();
         String[] names = {"legal_law_articles", "legal_cases", "legal_contracts", "kb_documents"};
         Random r = new Random(42);
         for (String n : names) {
@@ -1590,8 +1590,8 @@ public class AdminDataService {
                 result.put("error", "模型配置不存在");
                 return result;
             }
-            List<String> sets = new java.util.ArrayList<>();
-            List<Object> args = new java.util.ArrayList<>();
+            List<String> sets = new ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (payload.containsKey("model_code")) { sets.add("model_code = ?"); args.add(payload.get("model_code")); }
             if (payload.containsKey("model_name")) { sets.add("model_name = ?"); args.add(payload.get("model_name")); }
             if (payload.containsKey("provider")) { sets.add("provider = ?"); args.add(payload.get("provider")); }
@@ -1644,7 +1644,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE biz_module = 'MOD-03' ");
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (category != null && !category.isEmpty()) {
                 where.append(" AND category = ? ");
                 args.add(category);
@@ -1684,7 +1684,7 @@ public class AdminDataService {
 
     public void updateDocTemplate(Long id, Map<String, Object> data) {
         StringBuilder sql = new StringBuilder("UPDATE doc_template SET ");
-        java.util.List<Object> args = new java.util.ArrayList<>();
+        List<Object> args = new ArrayList<>();
         if (data.get("template_name") != null) { sql.append("template_name = ?, "); args.add(data.get("template_name")); }
         if (data.get("category") != null) { sql.append("category = ?, "); args.add(data.get("category")); }
         if (data.get("schema_json") != null) { sql.append("schema_json = ?, "); args.add(data.get("schema_json")); }
@@ -1733,7 +1733,7 @@ public class AdminDataService {
 
     public void updateDocReviewRule(Long id, Map<String, Object> data) {
         StringBuilder sql = new StringBuilder("UPDATE doc_review_rule SET ");
-        java.util.List<Object> args = new java.util.ArrayList<>();
+        List<Object> args = new ArrayList<>();
         if (data.get("template_code") != null) { sql.append("template_code = ?, "); args.add(data.get("template_code")); }
         if (data.get("rule_type") != null) { sql.append("rule_type = ?, "); args.add(data.get("rule_type")); }
         if (data.get("operator") != null) { sql.append("operator = ?, "); args.add(data.get("operator")); }
@@ -1800,7 +1800,7 @@ public class AdminDataService {
     public Map<String, Object> updatePromptTemplate(Long id, Map<String, Object> data) {
         Map<String, Object> result = new LinkedHashMap<>();
         StringBuilder sql = new StringBuilder("UPDATE prompt_template SET ");
-        java.util.List<Object> args = new java.util.ArrayList<>();
+        List<Object> args = new ArrayList<>();
         if (data.get("prompt_code") != null) { sql.append("prompt_code = ?, "); args.add(data.get("prompt_code")); }
         if (data.get("module") != null) { sql.append("module = ?, "); args.add(data.get("module")); }
         if (data.get("scene") != null) { sql.append("scene = ?, "); args.add(data.get("scene")); }
@@ -1991,8 +1991,8 @@ public class AdminDataService {
                 result.put("error", "用户不存在");
                 return result;
             }
-            java.util.List<String> sets = new java.util.ArrayList<>();
-            java.util.List<Object> vals = new java.util.ArrayList<>();
+            List<String> sets = new ArrayList<>();
+            List<Object> vals = new ArrayList<>();
             if (payload.containsKey("real_name")) {
                 sets.add("real_name = ?");
                 vals.add(payload.get("real_name"));
@@ -2143,7 +2143,7 @@ public class AdminDataService {
     public Map<String, Object> listAnnouncements(int page, int pageSize, String keyword) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
-            List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             StringBuilder where = new StringBuilder(" WHERE 1=1");
             if (keyword != null && !keyword.isEmpty()) {
                 where.append(" AND (title LIKE ? OR content LIKE ?)");
@@ -2222,8 +2222,8 @@ public class AdminDataService {
                 result.put("error", "公告不存在");
                 return result;
             }
-            List<String> sets = new java.util.ArrayList<>();
-            List<Object> args = new java.util.ArrayList<>();
+            List<String> sets = new ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (payload.containsKey("title")) { sets.add("title = ?"); args.add(payload.get("title")); }
             if (payload.containsKey("content")) { sets.add("content = ?"); args.add(payload.get("content")); }
             if (payload.containsKey("type")) { sets.add("type = ?"); args.add(payload.get("type")); }
@@ -2280,7 +2280,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             String where = "";
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (dictType != null && !dictType.isEmpty()) {
                 where = " WHERE dict_type = ?";
                 args.add(dictType);
@@ -2335,8 +2335,8 @@ public class AdminDataService {
                 result.put("error", "字典项不存在");
                 return result;
             }
-            List<String> sets = new java.util.ArrayList<>();
-            List<Object> args = new java.util.ArrayList<>();
+            List<String> sets = new ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (payload.containsKey("dict_type")) { sets.add("dict_type = ?"); args.add(payload.get("dict_type")); }
             if (payload.containsKey("dict_label")) { sets.add("dict_label = ?"); args.add(payload.get("dict_label")); }
             if (payload.containsKey("dict_value")) { sets.add("dict_value = ?"); args.add(payload.get("dict_value")); }
@@ -2380,7 +2380,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (articleId != null) {
                 where.append(" AND sf.article_id = ? ");
                 args.add(articleId);
@@ -2434,7 +2434,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (startDate != null && !startDate.isEmpty()) {
                 where.append(" AND created_at >= ? ");
                 args.add(startDate);
@@ -2446,7 +2446,7 @@ public class AdminDataService {
 
             Integer totalFeedbacks = jdbc.queryForObject("SELECT COUNT(*) FROM search_feedback" + where, Integer.class, args.toArray());
 
-            java.util.List<Object> helpfulArgs = new java.util.ArrayList<>(args);
+            List<Object> helpfulArgs = new ArrayList<>(args);
             StringBuilder helpfulWhere = new StringBuilder(" WHERE is_helpful = 1 ");
             if (startDate != null && !startDate.isEmpty()) {
                 helpfulWhere.append(" AND created_at >= ? ");
@@ -2490,7 +2490,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (userId != null) {
                 where.append(" AND lf.user_id = ? ");
                 args.add(userId);
@@ -2593,7 +2593,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (kbId != null) {
                 where.append(" AND c.kb_id = ? ");
                 args.add(kbId);
@@ -2664,7 +2664,7 @@ public class AdminDataService {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-            java.util.List<Object> args = new java.util.ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (taskId != null) {
                 where.append(" AND task_id = ? ");
                 args.add(taskId);
@@ -2806,8 +2806,8 @@ public class AdminDataService {
                 result.put("error", "告警规则不存在");
                 return result;
             }
-            List<String> sets = new java.util.ArrayList<>();
-            List<Object> args = new java.util.ArrayList<>();
+            List<String> sets = new ArrayList<>();
+            List<Object> args = new ArrayList<>();
             if (data.containsKey("name")) {
                 String name = (String) data.get("name");
                 if (name == null || name.isEmpty()) {
@@ -2956,8 +2956,8 @@ public class AdminDataService {
             String currentStatus = rows.get(0).get("status") != null ? String.valueOf(rows.get(0).get("status")) : "pending";
             String newStatus = data.get("status") != null ? String.valueOf(data.get("status")) : currentStatus;
 
-            List<String> sets = new java.util.ArrayList<>();
-            List<Object> args = new java.util.ArrayList<>();
+            List<String> sets = new ArrayList<>();
+            List<Object> args = new ArrayList<>();
 
             sets.add("status = ?");
             args.add(newStatus);

@@ -1,5 +1,6 @@
 package com.legalai.admin.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.llm.LLMClient;
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
@@ -259,7 +260,7 @@ public class JudgmentImportService {
             }
             json = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");
 
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            ObjectMapper mapper = new ObjectMapper();
             var list = mapper.readValue(json, List.class);
             for (var item : list) {
                 if (item instanceof Map) {

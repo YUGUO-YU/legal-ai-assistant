@@ -103,7 +103,7 @@ public class KnowledgeBaseController {
 
     @GetMapping("/{id}/chunks")
     @Operation(summary = "获取文档分块", description = "获取知识库中文档的分块信息")
-    public ApiResponse<java.util.List<com.legalai.service.KnowledgeBaseService.DocumentChunk>> chunks(@PathVariable Long id) {
+    public ApiResponse<List<com.legalai.service.KnowledgeBaseService.DocumentChunk>> chunks(@PathVariable Long id) {
         return ApiResponse.success(knowledgeBaseService.getDocumentChunks(id));
     }
 }
