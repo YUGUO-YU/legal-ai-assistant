@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -274,8 +275,8 @@ public class CompanyService {
         }
 
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(jsonContent);
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(jsonContent);
 
             CompanyQueryResponse response = new CompanyQueryResponse();
             response.setCompanyName(node.has("companyName") ? node.get("companyName").asText() : request.getCompanyName());
@@ -297,9 +298,9 @@ public class CompanyService {
                 response.setSearchSources(Collections.singletonList("通过互联网搜索引擎获取的公开企业信息"));
             }
 
-            java.util.List<CompanyQueryResponse.ShareholderInfo> shareholders = new java.util.ArrayList<>();
+            List<CompanyQueryResponse.ShareholderInfo> shareholders = new ArrayList<>();
             if (node.has("shareholders")) {
-                for (com.fasterxml.jackson.databind.JsonNode sh : node.get("shareholders")) {
+                for (JsonNode sh : node.get("shareholders")) {
                     CompanyQueryResponse.ShareholderInfo info = new CompanyQueryResponse.ShareholderInfo();
                     info.setName(sh.has("name") ? sh.get("name").asText() : "未知");
                     info.setCapitalContribution(sh.has("capitalContribution") ? sh.get("capitalContribution").asText() : "0万元");
@@ -311,9 +312,9 @@ public class CompanyService {
             response.setShareholders(shareholders);
 
             if (Boolean.TRUE.equals(request.getEnableRiskWarning())) {
-                java.util.List<CompanyQueryResponse.RiskWarning> warnings = new java.util.ArrayList<>();
+                List<CompanyQueryResponse.RiskWarning> warnings = new ArrayList<>();
                 if (node.has("riskWarnings")) {
-                    for (com.fasterxml.jackson.databind.JsonNode w : node.get("riskWarnings")) {
+                    for (JsonNode w : node.get("riskWarnings")) {
                         CompanyQueryResponse.RiskWarning warning = new CompanyQueryResponse.RiskWarning();
                         warning.setLevel(w.has("level") ? w.get("level").asText() : "LOW");
                         warning.setType(w.has("type") ? w.get("type").asText() : "其他");
@@ -326,7 +327,7 @@ public class CompanyService {
                 response.setRiskWarnings(warnings);
                 response.setRiskLevel(node.has("riskLevel") ? node.get("riskLevel").asText() : "LOW");
             } else {
-                response.setRiskWarnings(new java.util.ArrayList<>());
+                response.setRiskWarnings(new ArrayList<>());
                 response.setRiskLevel("NONE");
             }
 

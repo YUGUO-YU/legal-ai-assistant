@@ -2,6 +2,7 @@ package com.legalai.admin.service;
 
 import com.legalai.admin.enums.DataScope;
 import com.legalai.llm.LLMClient;
+import com.legalai.service.ElasticsearchService;
 import com.legalai.service.MilvusService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,7 @@ public class AdminDataService {
     private MilvusService milvusService;
 
     @Autowired(required = false)
-    private com.legalai.service.ElasticsearchService elasticsearchService;
+    private ElasticsearchService elasticsearchService;
 
     public JdbcTemplate jdbc() {
         return jdbc;
