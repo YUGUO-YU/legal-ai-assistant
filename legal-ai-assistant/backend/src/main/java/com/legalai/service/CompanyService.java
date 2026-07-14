@@ -399,7 +399,6 @@ public class CompanyService {
                 if (bo.has("actualRatio")) {
                     owner.setActualRatio(bo.get("actualRatio").asDouble());
                 }
-                owner.setRatioChain(bo.has("ratioChain") ? bo.get("ratioChain").asText() : null);
                 return owner;
             }
         } catch (Exception e) {
@@ -429,9 +428,9 @@ public class CompanyService {
                     for (JsonNode yd : ba.get("yearlyData")) {
                         CompanyQueryResponse.YearData data = new CompanyQueryResponse.YearData();
                         data.setYear(yd.has("year") ? yd.get("year").asInt() : 0);
-                        data.setRevenue(yd.has("revenue") ? new BigDecimal(yd.get("revenue").asText()) : BigDecimal.ZERO);
-                        data.setEmployeeCount(yd.has("employeeCount") ? yd.get("employeeCount").asInt() : 0);
-                        data.setTrend(yd.has("trend") ? yd.get("trend").asText() : "稳定");
+                        data.setCapital(yd.has("capital") ? new BigDecimal(yd.get("capital").asText()) : BigDecimal.ZERO);
+                        data.setEmployee(yd.has("employee") ? yd.get("employee").asInt() : 0);
+                        data.setRevenue(yd.has("revenue") ? yd.get("revenue").asText() : "");
                         yearlyData.add(data);
                     }
                     analysis.setYearlyData(yearlyData);
