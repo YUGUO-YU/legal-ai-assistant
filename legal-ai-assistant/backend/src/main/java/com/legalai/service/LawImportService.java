@@ -603,7 +603,7 @@ public class LawImportService {
                 if (!hashes.isEmpty()) {
                     existingHash = hashes.get(0);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) { log.debug("查询已有hash失败: lawId={}, articleNo={}", lawId, a.articleNo, e.getMessage()); }
 
             if (existingHash == null) {
                 String articleUuid = "ART-" + System.currentTimeMillis() + "-" + order;

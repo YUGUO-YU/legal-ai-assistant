@@ -624,7 +624,7 @@ public class DocumentService {
         if (!ageStr.isEmpty()) {
             try {
                 info.setAge(Integer.parseInt(ageStr.replaceAll("[^0-9]", "")));
-            } catch (Exception ignore) {}
+            } catch (Exception e) { log.debug("解析年龄失败: {}", ageStr, e.getMessage()); }
         }
         // 解析多当事人
         JsonNode pNamesNode = node.get("plaintiffNames");
@@ -1167,7 +1167,7 @@ public class DocumentService {
             if (m.find()) {
                 return m.group(1) != null ? m.group(1) : m.group();
             }
-        } catch (Exception ignore) {}
+        } catch (Exception e) { log.debug("正则解析失败: {}", e.getMessage()); }
         return null;
     }
 
@@ -1603,7 +1603,7 @@ public class DocumentService {
                         return date;
                     }
                 }
-            } catch (Exception ignore) {}
+            } catch (Exception e) { log.debug("解析年龄失败: {}", ageStr, e.getMessage()); }
         }
 
         return null;
@@ -1679,7 +1679,7 @@ public class DocumentService {
             try {
                 int age = Integer.parseInt(m.group(1));
                 if (age > 0 && age < 120) return age;
-            } catch (Exception ignore) {}
+            } catch (Exception e) { log.debug("解析年龄失败: {}", ageStr, e.getMessage()); }
         }
 
         // 从身份证号反推出生年份
@@ -2050,7 +2050,7 @@ public class DocumentService {
                     if (text.contains("万元") || text.contains("万")) bd = bd.multiply(new BigDecimal("10000"));
                     if (bd.signum() > 0) return bd;
                 }
-            } catch (Exception ignore) {}
+            } catch (Exception e) { log.debug("解析年龄失败: {}", ageStr, e.getMessage()); }
         }
 
         // 策略3：处理中文大写数字（拾、贰、叁等）
@@ -2096,7 +2096,7 @@ public class DocumentService {
                         return bd;
                     }
                 }
-            } catch (Exception ignore) {}
+            } catch (Exception e) { log.debug("解析年龄失败: {}", ageStr, e.getMessage()); }
         }
         return null;
     }

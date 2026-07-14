@@ -662,7 +662,7 @@ const loadAiStatus = async () => {
       baseUrl: data.baseUrl || '',
       message: data.message || (status === 'online' ? 'AI 服务在线' : 'AI 服务离线')
     }
-    console.log('[AI Status]', aiStatusData.value)
+    console.debug('[AI Status]', aiStatusData.value?.status)
   } catch (e) {
     aiStatusData.value = {
       status: 'offline',

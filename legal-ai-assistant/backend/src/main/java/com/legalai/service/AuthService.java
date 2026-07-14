@@ -171,7 +171,7 @@ public class AuthService {
         } catch (Exception e) {
             log.warn("记录登录历史失败: {}", e.getMessage());
         }
-        try { String loginParams = "{\"username\":\"" + request.getUsername() + "\",\"password\":\"****\"}"; recordAudit(0L, request.getUsername(), "LOGIN", "AUTH", "frontend_user", userId, "/api/v1/auth/login", "POST", loginParams, "ok", null, 0, true, null); } catch (Exception ignored) {}
+        try { String loginParams = "{\"username\":\"" + request.getUsername() + "\",\"password\":\"****\"}"; recordAudit(0L, request.getUsername(), "LOGIN", "AUTH", "frontend_user", userId, "/api/v1/auth/login", "POST", loginParams, "ok", null, 0, true, null); } catch (Exception e) { log.warn("审计日志写入失败: {}", e.getMessage()); }
         return response;
     }
 
@@ -364,8 +364,9 @@ public class AuthService {
         if (username.length() < 3 || username.length() > 32) {
             throw new RuntimeException("用户名长度需在3-32个字符之间");
         }
-        if (password.length() < 6 || password.length() > 32) {
-            throw new RuntimeException("密码长度需在6-32个字符之间");
+        String strengthError = validatePasswordStrength(password);
+        if (strengthError != null) {
+            throw new RuntimeException(strengthError);
         }
 
         var existing = jdbc.queryForList(
@@ -390,7 +391,7 @@ public class AuthService {
             userId, username, hashedPassword, realName, email);
 
         log.info("新用户注册成功: username={}, userId={}, 待审核", username, userId);
-        try { String regParams = "{\"username\":\"" + username + "\",\"password\":\"****\",\"email\":\"" + (email != null ? email : "") + "\"}"; recordAudit(0L, username, "REGISTER", "AUTH", "frontend_user", userId, "/api/v1/auth/register", "POST", regParams, "ok", null, 0, true, null); } catch (Exception ignored) {}
+        try { String regParams = "{\"username\":\"" + username + "\",\"password\":\"****\",\"email\":\"" + (email != null ? email : "") + "\"}"; recordAudit(0L, username, "REGISTER", "AUTH", "frontend_user", userId, "/api/v1/auth/register", "POST", regParams, "ok", null, 0, true, null); } catch (Exception e) { log.warn("审计日志写入失败: {}", e.getMessage()); }
     }
 
     public ForgotPasswordResponse sendResetCode(String username) {
@@ -406,7 +407,7 @@ public class AuthService {
         jdbc.update("DELETE FROM password_reset_code WHERE username = ? AND used = 0", username);
         jdbc.update("INSERT INTO password_reset_code (username, code, expire_at) VALUES (?, ?, ?)", username, code, expireAt);
 
-        log.info("密码重置码已生成: username={}, code={}", username, code);
+        log.info("密码重置码已生成: username={}", username);
         return new ForgotPasswordResponse(code, "验证码发送成功，10分钟内有效");
     }
 
@@ -436,7 +437,7 @@ public class AuthService {
         jdbc.update("DELETE FROM password_reset_code WHERE username = ? AND code = ?", username, code);
 
         log.info("密码重置成功: username={}", username);
-        try { String resetParams = "{\"username\":\"" + username + "\",\"code\":\"****\",\"newPassword\":\"****\"}"; recordAudit(0L, username, "PASSWORD_RESET", "AUTH", "frontend_user", null, "/api/v1/auth/reset-password", "POST", resetParams, "ok", null, 0, true, null); } catch (Exception ignored) {}
+        try { String resetParams = "{\"username\":\"" + username + "\",\"code\":\"****\",\"newPassword\":\"****\"}"; recordAudit(0L, username, "PASSWORD_RESET", "AUTH", "frontend_user", null, "/api/v1/auth/reset-password", "POST", resetParams, "ok", null, 0, true, null); } catch (Exception e) { log.warn("审计日志写入失败: {}", e.getMessage()); }
     }
 
     private void recordAudit(Long userId, String username, String operation, String bizModule, String bizType, String bizId, String url, String method, String params, String result, String ip, int duration, boolean ok, String error) {

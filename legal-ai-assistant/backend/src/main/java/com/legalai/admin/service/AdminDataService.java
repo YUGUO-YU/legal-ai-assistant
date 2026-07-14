@@ -516,7 +516,7 @@ public class AdminDataService {
         StringBuilder where = new StringBuilder(" WHERE 1=1 ");
         List<Object> args = new java.util.ArrayList<>();
         if (userId != null && !userId.isEmpty()) {
-            try { where.append(" AND user_id = ? "); args.add(Long.valueOf(userId)); } catch (Exception ignored) {}
+            try { where.append(" AND user_id = ? "); args.add(Long.valueOf(userId)); } catch (Exception e) { log.debug("无效的用户ID: {}", userId); }
         }
         if (operation != null && !operation.isEmpty()) { where.append(" AND operation = ? "); args.add(operation); }
         if (module != null && !module.isEmpty()) { where.append(" AND biz_module = ? "); args.add(module); }
@@ -761,7 +761,7 @@ public class AdminDataService {
             try {
                 Long newId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
                 result.put("id", newId);
-            } catch (Exception ignore) {}
+                } catch (Exception e) { log.debug("解析风险计数JSON失败: {}", e.getMessage()); }
         } catch (Exception e) {
             log.warn("[Admin] create 失败 table={}: {}", table, e.getMessage());
             result.put("ok", false);
@@ -1384,7 +1384,7 @@ public class AdminDataService {
                         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                         Object parsed = mapper.readValue(riskDetails, Object.class);
                         row.put("riskDetailsJson", parsed);
-                    } catch (Exception ignore) {}
+            } catch (Exception e) { log.warn("获取LAST_INSERT_ID失败: {}", e.getMessage()); }
                 }
                 result.put("data", row);
             }
@@ -1425,7 +1425,7 @@ public class AdminDataService {
                     if (node.has("lowRiskItems") && node.get("lowRiskItems").isArray()) {
                         riskCount += node.get("lowRiskItems").size();
                     }
-                } catch (Exception ignore) {}
+                    } catch (Exception e) { log.debug("解析风险详情JSON失败: {}", e.getMessage()); }
             }
             jdbc.update(sql, uuid, null, null, fileName, null, reviewType, riskLevel, riskCount, summary, riskDetails, new java.sql.Timestamp(System.currentTimeMillis()));
             result.put("id", uuid);
