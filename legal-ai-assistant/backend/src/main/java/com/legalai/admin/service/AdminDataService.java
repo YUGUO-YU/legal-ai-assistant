@@ -1201,65 +1201,117 @@ public class AdminDataService {
             }
 
             String dailyActiveSql = """
-                SELECT COUNT(DISTINCT user_id) FROM (
-                    SELECT user_id FROM frontend_user WHERE DATE(last_login_at) = CURDATE()
-                    UNION
-                    SELECT user_id FROM search_log WHERE DATE(created_at) = CURDATE()
-                    UNION
-                    SELECT user_id FROM user_login_history WHERE DATE(login_at) = CURDATE()
-                ) t
+                SELECT (
+                    SELECT COUNT(*) FROM frontend_user WHERE DATE(last_login_at) = CURDATE()
+                ) + (
+                    SELECT COUNT(DISTINCT user_id) FROM search_log WHERE DATE(created_at) = CURDATE()
+                ) + (
+                    SELECT COUNT(DISTINCT user_id) FROM user_login_history WHERE DATE(login_at) = CURDATE()
+                )
                 """;
             Integer dailyActive = jdbc.queryForObject(dailyActiveSql, Integer.class);
 
             String weeklyActiveSql = """
-                SELECT COUNT(DISTINCT user_id) FROM (
-                    SELECT user_id FROM frontend_user WHERE last_login_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                    UNION
-                    SELECT user_id FROM search_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-                    UNION
-                    SELECT user_id FROM user_login_history WHERE login_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-                ) t
+                SELECT (
+                    SELECT COUNT(DISTINCT user_id) FROM frontend_user WHERE last_login_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                ) + (
+                    SELECT COUNT(DISTINCT user_id) FROM search_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                ) + (
+                    SELECT COUNT(DISTINCT user_id) FROM user_login_history WHERE login_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                )
                 """;
             Integer weeklyActive = jdbc.queryForObject(weeklyActiveSql, Integer.class);
 
             String monthlyActiveSql = """
-                SELECT COUNT(DISTINCT user_id) FROM (
-                    SELECT user_id FROM frontend_user WHERE last_login_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                    UNION
-                    SELECT user_id FROM search_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                    UNION
-                    SELECT user_id FROM user_login_history WHERE login_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                ) t
+                SELECT (
+                    SELECT COUNT(DISTINCT user_id) FROM frontend_user WHERE last_login_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                ) + (
+                    SELECT COUNT(DISTINCT user_id) FROM search_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                ) + (
+                    SELECT COUNT(DISTINCT user_id) FROM user_login_history WHERE login_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                )
                 """;
             Integer monthlyActive = jdbc.queryForObject(monthlyActiveSql, Integer.class);
 
-            String trendSql = """
+            String searchTrendSql = """
                 SELECT DATE(created_at) AS date, COUNT(DISTINCT user_id) AS count
-                FROM (
-                    SELECT user_id, created_at FROM search_log WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-                    UNION ALL
-                    SELECT user_id, created_at FROM user_login_history WHERE login_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-                ) t
+                FROM search_log
+                WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
                 GROUP BY DATE(created_at)
                 ORDER BY date
                 """;
-            List<Map<String, Object>> activeTrend = jdbc.queryForList(trendSql);
+            List<Map<String, Object>> searchTrend = jdbc.queryForList(searchTrendSql);
 
-            String topUsersSql = """
+            String loginTrendSql = """
+                SELECT DATE(login_at) AS date, COUNT(DISTINCT user_id) AS count
+                FROM user_login_history
+                WHERE login_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+                GROUP BY DATE(login_at)
+                ORDER BY date
+                """;
+            List<Map<String, Object>> loginTrend = jdbc.queryForList(loginTrendSql);
+
+            Map<String, Long> trendMap = new LinkedHashMap<>();
+            for (Map<String, Object> row : searchTrend) {
+                String date = row.get("date").toString();
+                long cnt = ((Number) row.get("count")).longValue();
+                trendMap.merge(date, cnt, Long::sum);
+            }
+            for (Map<String, Object> row : loginTrend) {
+                String date = row.get("date").toString();
+                long cnt = ((Number) row.get("count")).longValue();
+                trendMap.merge(date, cnt, Long::sum);
+            }
+            List<Map<String, Object>> activeTrend = new ArrayList<>();
+            for (Map.Entry<String, Long> e : trendMap.entrySet()) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("date", e.getKey());
+                m.put("count", e.getValue());
+                activeTrend.add(m);
+            }
+
+            String searchTopUsersSql = """
                 SELECT username, COUNT(*) AS count
-                FROM (
-                    SELECT username, created_at FROM search_log
-                    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                    UNION ALL
-                    SELECT username, created_at FROM user_login_history
-                    WHERE login_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                ) t
-                WHERE username IS NOT NULL AND username != ''
+                FROM search_log
+                WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                  AND username IS NOT NULL AND username != ''
                 GROUP BY username
                 ORDER BY count DESC
                 LIMIT 10
                 """;
-            List<Map<String, Object>> topUsers = jdbc.queryForList(topUsersSql);
+            List<Map<String, Object>> searchTopUsers = jdbc.queryForList(searchTopUsersSql);
+
+            String loginTopUsersSql = """
+                SELECT username, COUNT(*) AS count
+                FROM user_login_history
+                WHERE login_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                  AND username IS NOT NULL AND username != ''
+                GROUP BY username
+                ORDER BY count DESC
+                LIMIT 10
+                """;
+            List<Map<String, Object>> loginTopUsers = jdbc.queryForList(loginTopUsersSql);
+
+            Map<String, Long> userCountMap = new LinkedHashMap<>();
+            for (Map<String, Object> row : searchTopUsers) {
+                String username = (String) row.get("username");
+                long cnt = ((Number) row.get("count")).longValue();
+                userCountMap.merge(username, cnt, Long::sum);
+            }
+            for (Map<String, Object> row : loginTopUsers) {
+                String username = (String) row.get("username");
+                long cnt = ((Number) row.get("count")).longValue();
+                userCountMap.merge(username, cnt, Long::sum);
+            }
+            List<Map<String, Object>> topUsers = new ArrayList<>();
+            int limit = 10;
+            for (Map.Entry<String, Long> e : userCountMap.entrySet()) {
+                if (topUsers.size() >= limit) break;
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("username", e.getKey());
+                m.put("count", e.getValue());
+                topUsers.add(m);
+            }
 
             result.put("dailyActive", dailyActive == null ? 0 : dailyActive);
             result.put("weeklyActive", weeklyActive == null ? 0 : weeklyActive);
@@ -1290,10 +1342,9 @@ public class AdminDataService {
 
             String topLawsSearchSql = """
                 SELECT la.title, COUNT(*) AS count
-                FROM search_log sl
-                JOIN law_article la ON sl.article_id = la.id
-                WHERE sl.article_id IS NOT NULL
-                AND sl.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                FROM search_feedback sf
+                JOIN law_article la ON sf.article_id = la.id
+                WHERE sf.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
                 GROUP BY la.id, la.title
                 ORDER BY count DESC
                 LIMIT ?
