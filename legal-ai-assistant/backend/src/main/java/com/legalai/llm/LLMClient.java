@@ -209,15 +209,49 @@ public class LLMClient {
         log.info("调用 MiniMax(联网搜索): model={}, prompt长度={}", model, prompt == null ? 0 : prompt.length());
 
         List<Map<String, Object>> tools = List.of(Map.of(
-            "type", "web_search",
-            "web_search", Map.of(
-                "search_query", prompt != null ? prompt : "",
-                "search_mode", "highlight",
-                "enable_brief_search_result", true
+            "type", "function",
+            "function", Map.of(
+                "name", "web_search",
+                "description", "联网搜索功能，可以搜索互联网上的最新信息",
+                "parameters", Map.of(
+                    "type", "object",
+                    "properties", Map.of(
+                        "search_query", Map.of("type", "string", "description", "搜索查询内容"),
+                        "search_mode", Map.of("type", "string", "description", "搜索模式"),
+                        "enable_brief_search_result", Map.of("type", "boolean", "description", "是否启用简短结果")
+                    ),
+                    "required", List.of("search_query")
+                )
             )
         ));
 
-        return chatWithTools(prompt, tools);
+        String argumentsJson = new ObjectMapper().writeValueAsString(Map.of(
+            "search_query", prompt != null ? prompt : "",
+            "search_mode", "highlight",
+            "enable_brief_search_result", true
+        ));
+
+        List<Map<String, Object>> toolCalls = List.of(Map.of(
+            "id", "call_1",
+            "type", "function",
+            "function", Map.of(
+                "name", "web_search",
+                "arguments", argumentsJson
+            )
+        ));
+
+        List<Map<String, String>> messages = List.of(
+            Map.of("role", "user", "content", prompt != null ? prompt : "")
+        );
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", model);
+        requestBody.put("messages", messages);
+        requestBody.put("stream", false);
+        requestBody.put("tools", tools);
+        requestBody.put("tool_calls", toolCalls);
+
+        return executeChatRequest(requestBody);
     }
 
     /**
