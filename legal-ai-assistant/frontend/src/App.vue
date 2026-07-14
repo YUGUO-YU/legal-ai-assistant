@@ -370,6 +370,8 @@ const handleCommand = (command) => {
     case 'logout':
       localStorage.removeItem('token')
       localStorage.removeItem('userInfo')
+      localStorage.removeItem('admin_token')
+      localStorage.removeItem('admin_user')
       ElMessage.success('已退出登录')
       window.location.href = '/'
       break

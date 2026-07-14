@@ -26,6 +26,9 @@ export const useUserStore = defineStore('user', () => {
     token.value = ''
     userInfo.value = null
     localStorage.removeItem('token')
+    localStorage.removeItem('admin_token')
+    localStorage.removeItem('admin_user')
+    localStorage.removeItem('userInfo')
   }
 
   const setUserInfo = (info) => {

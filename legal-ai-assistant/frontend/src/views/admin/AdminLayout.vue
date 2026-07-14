@@ -278,8 +278,10 @@ const toggleDark = () => {
 const handleLogout = () => {
   localStorage.removeItem('admin_token')
   localStorage.removeItem('admin_user')
+  localStorage.removeItem('token')
+  localStorage.removeItem('userInfo')
   ElMessage.success('已退出后台管理')
-  router.push('/admin/login')
+  window.location.href = '/'
 }
 
 onUnmounted(() => {
