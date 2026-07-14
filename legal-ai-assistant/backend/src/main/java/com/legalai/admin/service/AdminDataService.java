@@ -683,13 +683,13 @@ public class AdminDataService {
                 com.fasterxml.jackson.databind.JsonNode value = field.getValue();
                 if (isSensitiveField(fieldName)) {
                     toRemove.add(fieldName);
-                    toAdd.put(fieldName, com.fasterxml.jackson.databind.JsonNodeFactory.instance.textNode("****"));
+                    toAdd.put(fieldName, com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.textNode("****"));
                 } else if (value.isObject() || value.isArray()) {
                     maskNode(value);
                 }
             }
-            ((com.fasterxml.jackson.databind.ObjectNode) node).remove(toRemove);
-            ((com.fasterxml.jackson.databind.ObjectNode) node).setAll(toAdd);
+            ((com.fasterxml.jackson.databind.node.ObjectNode) node).remove(toRemove);
+            ((com.fasterxml.jackson.databind.node.ObjectNode) node).setAll(toAdd);
         } else if (node.isArray()) {
             for (com.fasterxml.jackson.databind.JsonNode element : node) {
                 if (element.isObject() || element.isArray()) {
