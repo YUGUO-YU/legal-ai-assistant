@@ -80,7 +80,7 @@ public class CacheWarmingService {
             return;
         }
         try {
-            Map<String, Object> stats = adminDataService.getStatsOverview();
+            Map<String, Object> stats = adminDataService.stats();
             if (stats != null) {
                 redisTemplate.opsForValue().set(STATS_CACHE_KEY, stats, STATS_TTL);
                 incrementMetric("stats");
