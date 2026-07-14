@@ -688,22 +688,14 @@ public class LawImportService {
         } catch (IOException e) {
             throw new RuntimeException("联网搜索失败: " + e.getMessage(), e);
         }
-        try {
-            return parseStructuredJson(lawName, response);
-        } catch (IOException e) {
-            throw new RuntimeException("JSON 解析失败: " + e.getMessage(), e);
-        }
+        return parseStructuredJson(lawName, response);
     }
 
     private ParsedLaw parseUploadedJson(String lawName, String jsonContent) {
-        try {
-            return parseStructuredJson(lawName, jsonContent);
-        } catch (IOException e) {
-            throw new RuntimeException("JSON 解析失败: " + e.getMessage(), e);
-        }
+        return parseStructuredJson(lawName, jsonContent);
     }
 
-    private ParsedLaw parseStructuredJson(String defaultName, String content) throws IOException {
+    private ParsedLaw parseStructuredJson(String defaultName, String content) {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("输入内容为空");
         }
@@ -715,7 +707,12 @@ public class LawImportService {
         }
         json = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");
 
-        JsonNode root = objectMapper.readTree(json);
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(json);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new RuntimeException("JSON 解析失败: " + e.getMessage(), e);
+        }
         ParsedLaw law = new ParsedLaw();
         law.lawTitle = textOr(root, "lawTitle", defaultName);
         law.issuingAuthority = textOr(root, "issuingAuthority", null);
