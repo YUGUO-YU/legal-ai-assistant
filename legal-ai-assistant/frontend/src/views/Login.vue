@@ -486,20 +486,24 @@ onMounted(() => {
   margin-top: 32px;
   padding-top: 24px;
   border-top: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
 
-  p {
+  span {
     font-size: 14px;
     color: #6b7280;
+  }
 
-    a {
-      color: #667eea;
-      text-decoration: none;
-      font-weight: 500;
+  .footer-divider {
+    color: #d1d5db;
+  }
 
-      &:hover {
-        color: #764ba2;
-      }
-    }
+  :deep(.el-link) {
+    font-size: 14px;
+    font-weight: 500;
   }
 }
 
@@ -592,7 +596,7 @@ onMounted(() => {
 }
 
 .footer-divider {
-  color: var(--color-border-dark);
+  color: #d1d5db;
 }
 
 .admin-quick-link {
