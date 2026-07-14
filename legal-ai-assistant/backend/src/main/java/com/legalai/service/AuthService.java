@@ -416,8 +416,9 @@ public class AuthService {
         String code = request.getCode().trim();
         String newPassword = request.getNewPassword();
 
-        if (newPassword.length() < 6 || newPassword.length() > 32) {
-            throw new RuntimeException("密码长度需在6-32个字符之间");
+        String strengthError = validatePasswordStrength(newPassword);
+        if (strengthError != null) {
+            throw new RuntimeException(strengthError);
         }
 
         var codeRows = jdbc.queryForList(

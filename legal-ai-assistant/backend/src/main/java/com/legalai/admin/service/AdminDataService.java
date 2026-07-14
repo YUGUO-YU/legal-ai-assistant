@@ -1915,9 +1915,34 @@ public class AdminDataService {
             result.put("error", "用户名为空");
             return result;
         }
-        if (password == null || password.length() < 6) {
+        if (password == null || password.isEmpty()) {
             result.put("ok", false);
-            result.put("error", "密码长度需至少6位");
+            result.put("error", "密码不能为空");
+            return result;
+        }
+        if (password.length() < 8 || password.length() > 32) {
+            result.put("ok", false);
+            result.put("error", "密码长度需在8-32位之间");
+            return result;
+        }
+        if (!password.matches(".*[A-Z].*")) {
+            result.put("ok", false);
+            result.put("error", "密码必须包含至少一个大写字母");
+            return result;
+        }
+        if (!password.matches(".*[a-z].*")) {
+            result.put("ok", false);
+            result.put("error", "密码必须包含至少一个小写字母");
+            return result;
+        }
+        if (!password.matches(".*[0-9].*")) {
+            result.put("ok", false);
+            result.put("error", "密码必须包含至少一个数字");
+            return result;
+        }
+        if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*")) {
+            result.put("ok", false);
+            result.put("error", "密码必须包含至少一个特殊字符");
             return result;
         }
         try {
@@ -1994,9 +2019,10 @@ public class AdminDataService {
             }
             if (payload.containsKey("password") && payload.get("password") != null && !((String) payload.get("password")).isEmpty()) {
                 String pwd = (String) payload.get("password");
-                if (pwd.length() < 6) {
+                String pwdError = validatePassword(pwd);
+                if (pwdError != null) {
                     result.put("ok", false);
-                    result.put("error", "密码长度需至少6位");
+                    result.put("error", pwdError);
                     return result;
                 }
                 sets.add("password = ?");
@@ -3098,5 +3124,30 @@ public class AdminDataService {
             result.put("error", e.getMessage());
         }
         return result;
+    }
+
+    private String validatePassword(String password) {
+        if (password == null || password.isEmpty()) {
+            return "密码不能为空";
+        }
+        if (password.length() < 8) {
+            return "密码长度至少8位";
+        }
+        if (password.length() > 32) {
+            return "密码长度不能超过32位";
+        }
+        if (!password.matches(".*[A-Z].*")) {
+            return "密码必须包含至少一个大写字母";
+        }
+        if (!password.matches(".*[a-z].*")) {
+            return "密码必须包含至少一个小写字母";
+        }
+        if (!password.matches(".*[0-9].*")) {
+            return "密码必须包含至少一个数字";
+        }
+        if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*")) {
+            return "密码必须包含至少一个特殊字符";
+        }
+        return null;
     }
 }
