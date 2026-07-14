@@ -232,8 +232,7 @@ public class AlertMonitorService {
             try {
                 var rows = jdbc.queryForList("SELECT 1");
                 healthy = !rows.isEmpty();
-            } catch (Exception ignored) {
-            }
+            } catch (Exception e) { log.warn("数据库健康检查失败: {}", e.getMessage()); }
             long latencyMs = System.currentTimeMillis() - start;
 
             if (healthy) {

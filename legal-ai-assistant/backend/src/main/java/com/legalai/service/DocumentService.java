@@ -649,8 +649,7 @@ public class DocumentService {
         if (!amt.isEmpty()) {
             try {
                 info.setClaimAmount(new BigDecimal(amt.replaceAll("[,\\s]", "")));
-            } catch (Exception ignore) {
-            }
+            } catch (Exception e) { log.debug("解析索赔金额失败: amt={}", amt, e.getMessage()); }
         }
         return info;
     }
@@ -1293,8 +1292,7 @@ public class DocumentService {
                         return court;
                     }
                 }
-            } catch (Exception ignore) {
-            }
+            } catch (Exception e) { log.debug("法院名称提取失败: {}", e.getMessage()); }
         }
 
         // 从文书末尾提取（此致到文件结尾的区域）
@@ -2004,8 +2002,7 @@ public class DocumentService {
                     String hit = m.group(1);
                     if (hit != null) return hit;
                 }
-            } catch (Exception ignore) {
-            }
+            } catch (Exception e) { log.debug("正则匹配失败: {}", e.getMessage()); }
         }
         return null;
     }

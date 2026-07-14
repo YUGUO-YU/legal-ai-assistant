@@ -437,7 +437,8 @@ public class AdminDataService {
                 try {
                     Long c = jdbc.queryForObject("SELECT COUNT(*) FROM " + sanitize(t), Long.class);
                     counts.put(t, c == null ? 0L : c);
-                } catch (Exception ignore) {
+                } catch (Exception e) {
+                    log.warn("统计表 {} 行数失败: {}", t, e.getMessage());
                     counts.put(t, -1L);
                 }
             }
@@ -756,7 +757,7 @@ public class AdminDataService {
             try {
                 Long newId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
                 result.put("id", newId);
-                } catch (Exception e) { log.debug("解析风险计数JSON失败: {}", e.getMessage()); }
+                } catch (Exception e) { log.warn("获取INSERT ID失败: {}", e.getMessage()); }
         } catch (Exception e) {
             log.warn("[Admin] create 失败 table={}: {}", table, e.getMessage());
             result.put("ok", false);
@@ -1379,7 +1380,7 @@ public class AdminDataService {
                         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                         Object parsed = mapper.readValue(riskDetails, Object.class);
                         row.put("riskDetailsJson", parsed);
-            } catch (Exception e) { log.warn("获取LAST_INSERT_ID失败: {}", e.getMessage()); }
+                    } catch (Exception e) { log.debug("解析风险详情JSON失败: {}", e.getMessage()); }
                 }
                 result.put("data", row);
             }

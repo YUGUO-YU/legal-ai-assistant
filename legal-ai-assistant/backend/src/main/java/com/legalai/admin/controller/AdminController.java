@@ -1456,7 +1456,6 @@ public class AdminController {
         try {
             adminDataService.recordAudit(null, "system", operation, "ADMIN",
                     bizType, bizId, "/api/v1/admin", "GET", null, "ok", null, 0, true, null);
-        } catch (Exception ignore) {
-        }
+        } catch (Exception e) { log.warn("审计日志写入失败: {}", e.getMessage()); }
     }
 }

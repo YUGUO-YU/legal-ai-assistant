@@ -136,8 +136,7 @@ public class KnowledgeBaseService {
 
         try {
             jdbc.update("DELETE FROM kb_chunk_store WHERE kb_id = ? AND file_name = ?", kbId, fileName);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception e) { log.warn("删除旧分块记录失败: kbId={}, fileName={}, error={}", kbId, fileName, e.getMessage()); }
 
         jdbc.update(
             "UPDATE kb_knowledge_base SET doc_count = doc_count + 1, updated_at = ? WHERE id = ?",

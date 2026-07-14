@@ -158,7 +158,7 @@ public class CaseService {
         sb.append("    \"sourceName\": \"中国裁判文书网\"\n");
         sb.append("  }\n");
         sb.append("]\n\n");
-        sb.append("courtLevel说明：1=基层法院，2=中级人民法院，3=高级人民法院，4=最高人民法院。\n");
+        sb.append("courtLevel说明：1=最高人民法院，2=高级人民法院，3=中级人民法院，4=基层法院。\n");
         sb.append("judgmentResult说明：1=全部支持，2=部分支持，3=驳回。\n");
         sb.append("similarityScore范围：0-1，越接近1相似度越高。\n");
         sb.append("只返回JSON数组，不要有其他解释性文字。");
