@@ -358,7 +358,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -606,8 +606,10 @@ const quickAccess = [
   { path: '/data-manager', title: '数据管理', desc: 'AI 导入法律法规', icon: 'DataAnalysis', gradient: 'linear-gradient(135deg, #11998e, #38ef7d)', shadow: '0 8px 20px rgba(17, 153, 142, 0.35)' }
 ]
 
-const recentActivities = computed(() => {
-  return memoryRecords.value.slice(0, 10).map(record => ({
+const recentActivities = ref([])
+
+watch(memoryRecords, (records) => {
+  recentActivities.value = (records || []).slice(0, 10).map(record => ({
     id: record.id,
     title: record.title,
     desc: record.desc,
@@ -615,7 +617,7 @@ const recentActivities = computed(() => {
     icon: getTypeIcon(record.type),
     gradient: `${getTypeColor(record.type)}25`
   }))
-})
+}, { immediate: true })
 
 const hotTopics = ref([
   { title: '合同欺诈认定', count: 1256, percentage: 95, color: '#ff4d4f' },
