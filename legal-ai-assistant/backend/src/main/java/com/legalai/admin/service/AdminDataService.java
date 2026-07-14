@@ -1,5 +1,9 @@
 package com.legalai.admin.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.legalai.admin.enums.DataScope;
 import com.legalai.llm.LLMClient;
 import com.legalai.service.ElasticsearchService;
@@ -665,8 +669,8 @@ public class AdminDataService {
             return params;
         }
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode tree = mapper.readTree(trimmed);
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode tree = mapper.readTree(trimmed);
             maskNode(tree);
             return mapper.writeValueAsString(tree);
         } catch (Exception e) {
@@ -674,26 +678,26 @@ public class AdminDataService {
         }
     }
 
-    private void maskNode(com.fasterxml.jackson.databind.JsonNode node) {
+    private void maskNode(JsonNode node) {
         if (node.isObject()) {
-            java.util.Iterator<java.util.Map.Entry<String, com.fasterxml.jackson.databind.JsonNode>> fields = node.fields();
-            java.util.Set<String> toRemove = new java.util.HashSet<>();
-            java.util.Map<String, com.fasterxml.jackson.databind.JsonNode> toAdd = new java.util.LinkedHashMap<>();
+            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+            Set<String> toRemove = new HashSet<>();
+            Map<String, JsonNode> toAdd = new LinkedHashMap<>();
             while (fields.hasNext()) {
-                java.util.Map.Entry<String, com.fasterxml.jackson.databind.JsonNode> field = fields.next();
+                Map.Entry<String, JsonNode> field = fields.next();
                 String fieldName = field.getKey();
-                com.fasterxml.jackson.databind.JsonNode value = field.getValue();
+                JsonNode value = field.getValue();
                 if (isSensitiveField(fieldName)) {
                     toRemove.add(fieldName);
-                    toAdd.put(fieldName, com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.textNode("****"));
+                    toAdd.put(fieldName, JsonNodeFactory.instance.textNode("****"));
                 } else if (value.isObject() || value.isArray()) {
                     maskNode(value);
                 }
             }
-            ((com.fasterxml.jackson.databind.node.ObjectNode) node).remove(toRemove);
-            ((com.fasterxml.jackson.databind.node.ObjectNode) node).setAll(toAdd);
+            ((ObjectNode) node).remove(toRemove);
+            ((ObjectNode) node).setAll(toAdd);
         } else if (node.isArray()) {
-            for (com.fasterxml.jackson.databind.JsonNode element : node) {
+            for (JsonNode element : node) {
                 if (element.isObject() || element.isArray()) {
                     maskNode(element);
                 }
@@ -1378,7 +1382,7 @@ public class AdminDataService {
                 String riskDetails = row.get("risk_details") != null ? row.get("risk_details").toString() : null;
                 if (riskDetails != null && riskDetails.startsWith("{")) {
                     try {
-                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                        ObjectMapper mapper = new ObjectMapper();
                         Object parsed = mapper.readValue(riskDetails, Object.class);
                         row.put("riskDetailsJson", parsed);
                     } catch (Exception e) { log.debug("解析风险详情JSON失败: {}", e.getMessage()); }
@@ -1411,8 +1415,8 @@ public class AdminDataService {
             int riskCount = 0;
             if (riskDetails != null && riskDetails.contains("\"highRiskItems\"")) {
                 try {
-                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                    com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(riskDetails);
+                    ObjectMapper mapper2 = new ObjectMapper();
+                    JsonNode node = mapper2.readTree(riskDetails);
                     if (node.has("highRiskItems") && node.get("highRiskItems").isArray()) {
                         riskCount += node.get("highRiskItems").size();
                     }
