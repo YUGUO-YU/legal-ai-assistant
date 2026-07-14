@@ -657,7 +657,7 @@ public class LawSearchService {
             LawDocument lawDocument = lawDocumentMapper.selectOne(queryWrapper);
 
             if (lawDocument != null) {
-                return convertToLawSearchItem(lawDocument);
+                return convertToLawSearchItem(lawDocument, new HashMap<>());
             }
         } catch (Exception e) {
             log.error("数据库查询法规详情失败: {}", e.getMessage());
