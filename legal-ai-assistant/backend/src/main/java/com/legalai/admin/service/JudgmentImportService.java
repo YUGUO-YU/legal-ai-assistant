@@ -174,7 +174,7 @@ public class JudgmentImportService {
     private String extractTextFromExcel(MultipartFile file) {
         StringBuilder sb = new StringBuilder();
         try (InputStream is = file.getInputStream();
-             Workbook workbook = new WorkbookFactory().create(is)) {
+              Workbook workbook = WorkbookFactory.create(is)) {
             Sheet sheet = workbook.getSheetAt(0);
             for (Row row : sheet) {
                 StringBuilder rowText = new StringBuilder();
