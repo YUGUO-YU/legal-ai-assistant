@@ -1,6 +1,7 @@
 package com.legalai.admin.controller;
 
 import com.legalai.dto.ApiResponse;
+import com.legalai.dto.LegalSearchResponse;
 import com.legalai.model.LawDocument;
 import com.legalai.model.LawArticle;
 import com.legalai.repository.LawDocumentMapper;
@@ -408,7 +409,7 @@ public class LawDocumentAdminController {
             Map<String, Object> esStats = new LinkedHashMap<>();
             try {
                 if (elasticsearchService.isAvailable()) {
-                    List<Map<String, Object>> esDocs = elasticsearchService.searchByES("", 1, 1000, null);
+                    List<LegalSearchResponse.SearchResultItem> esDocs = elasticsearchService.searchByES("", 1, 1000, null);
                     esStats.put("articleCount", esDocs.size());
                     esStats.put("available", true);
                 } else {
