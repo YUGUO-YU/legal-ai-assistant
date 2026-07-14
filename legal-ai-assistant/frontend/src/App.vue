@@ -333,7 +333,12 @@ onUnmounted(() => {
   if (themeTimer) clearTimeout(themeTimer)
 })
 
-const isLoggedIn = computed(() => !!localStorage.getItem('token'))
+const isLoggedIn = ref(!!localStorage.getItem('token'))
+
+window.addEventListener('login-state-change', () => {
+  isLoggedIn.value = !!localStorage.getItem('token')
+})
+
 const username = computed(() => {
   const userInfo = localStorage.getItem('userInfo')
   if (userInfo) {

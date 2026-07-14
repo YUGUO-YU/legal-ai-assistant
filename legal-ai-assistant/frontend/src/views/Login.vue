@@ -276,6 +276,7 @@ const handleLogin = async () => {
 
     localStorage.setItem('token', res.data.token)
     localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))
+    window.dispatchEvent(new Event('login-state-change'))
 
     ElMessage.success('登录成功，即将跳转到首页...')
 
