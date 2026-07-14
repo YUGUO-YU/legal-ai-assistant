@@ -44,7 +44,7 @@ ai:
     # MiniMax OpenAI 兼容接口
     base-url: https://api.minimax.chat/v1
     # API Key（生产环境请使用环境变量或密钥管理服务）
-    api-key: ${MINIMAX_API_KEY:sk-cp-ekoYcsSAxZvJrF7fvTa6Ysotr5tUdq0tuDip1T288mxFO2VoH6oguSDnUvHUyyrpY1BzzQeifVkOTrSZMZ_gnr1NrvimwFs7IWccNtjjqMyLq1wOEBuagUs}
+    api-key: ${MINIMAX_API_KEY:}
     # 模型名
     model: MiniMax-M3
     # 请求超时（秒）
