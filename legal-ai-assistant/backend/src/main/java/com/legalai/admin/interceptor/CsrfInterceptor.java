@@ -19,6 +19,7 @@ public class CsrfInterceptor implements HandlerInterceptor {
     private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS");
     private static final Set<String> PUBLIC_PATHS = Set.of(
             "/auth/login",
+            "/auth/admin/login",
             "/auth/register",
             "/auth/forgot-password",
             "/csrf-token",
