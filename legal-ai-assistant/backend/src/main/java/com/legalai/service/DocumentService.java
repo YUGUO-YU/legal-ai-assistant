@@ -1601,7 +1601,7 @@ public class DocumentService {
                         return date;
                     }
                 }
-            } catch (Exception e) { log.debug("解析年龄失败: {}", ageStr, e.getMessage()); }
+            } catch (Exception e) { log.debug("解析日期失败: {}", text, e.getMessage()); }
         }
 
         return null;
@@ -1677,7 +1677,7 @@ public class DocumentService {
             try {
                 int age = Integer.parseInt(m.group(1));
                 if (age > 0 && age < 120) return age;
-            } catch (Exception e) { log.debug("解析年龄失败: {}", ageStr, e.getMessage()); }
+            } catch (Exception e) { log.debug("解析年龄失败: {}", segment, e.getMessage()); }
         }
 
         // 从身份证号反推出生年份
@@ -2047,7 +2047,7 @@ public class DocumentService {
                     if (text.contains("万元") || text.contains("万")) bd = bd.multiply(new BigDecimal("10000"));
                     if (bd.signum() > 0) return bd;
                 }
-            } catch (Exception e) { log.debug("解析年龄失败: {}", ageStr, e.getMessage()); }
+            } catch (Exception e) { log.debug("解析金额失败: {}", text, e.getMessage()); }
         }
 
         // 策略3：处理中文大写数字（拾、贰、叁等）
@@ -2093,7 +2093,7 @@ public class DocumentService {
                         return bd;
                     }
                 }
-            } catch (Exception e) { log.debug("解析年龄失败: {}", ageStr, e.getMessage()); }
+            } catch (Exception e) { log.debug("解析金额失败: {}", text, e.getMessage()); }
         }
         return null;
     }
