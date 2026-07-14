@@ -791,3 +791,5 @@ public class CaseService {
         if (val instanceof Integer) return (Integer) val;
         return Integer.valueOf(val.toString());
     }
+
+}

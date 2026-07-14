@@ -443,6 +443,8 @@ public class CompanyService {
         }
         return buildMockBusinessAnalysis();
     }
+
+    private String extractJsonFromResponse(String response) {
         if (response == null || response.isEmpty()) {
             return null;
         }
