@@ -151,13 +151,7 @@ public class LawImportService {
      * 三入口之一：联网搜索导入。AI 拉取数据，结构化后入库。
      */
     public LawImportJob importByWebSearch(String lawName, String operator) {
-        return runImport(lawName, "web_search", operator, () -> {
-            try {
-                return fetchByWebSearch(lawName);
-            } catch (IOException e) {
-                throw new RuntimeException("联网搜索失败: " + e.getMessage(), e);
-            }
-        });
+        return runImport(lawName, "web_search", operator, () -> fetchByWebSearch(lawName));
     }
 
     /**
@@ -665,7 +659,7 @@ public class LawImportService {
         return true;
     }
 
-    private ParsedLaw fetchByWebSearch(String lawName) throws IOException {
+    private ParsedLaw fetchByWebSearch(String lawName) {
         log.info("调用 LLM 联网搜索导入法律: {}", lawName);
 
         String searchPrompt = String.format(
@@ -687,10 +681,18 @@ public class LawImportService {
                 "}\n" +
                 "要求：articles 必须按条文顺序排列，content 保留原文；仅返回 JSON，无任何解释文字。", lawName);
 
-        String response = llmClient.searchAndStructure(searchPrompt,
-                "请将上述搜索结果整理为合法的 JSON，注意 content 字段必须是字符串，articles 数组不为空。");
-
-        return parseStructuredJson(lawName, response);
+        String response;
+        try {
+            response = llmClient.searchAndStructure(searchPrompt,
+                    "请将上述搜索结果整理为合法的 JSON，注意 content 字段必须是字符串，articles 数组不为空。");
+        } catch (IOException e) {
+            throw new RuntimeException("联网搜索失败: " + e.getMessage(), e);
+        }
+        try {
+            return parseStructuredJson(lawName, response);
+        } catch (IOException e) {
+            throw new RuntimeException("JSON 解析失败: " + e.getMessage(), e);
+        }
     }
 
     private ParsedLaw parseUploadedJson(String lawName, String jsonContent) {
