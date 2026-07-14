@@ -112,7 +112,7 @@ public class OperationRollbackService {
             log.error("回滚失败: operationId={}, error={}", operationId, e.getMessage());
             try {
                 jdbc.update("UPDATE sys_operation_rollback SET status = 'FAILED' WHERE operation_id = ?", operationId);
-            } catch (Exception e) { log.error("更新回滚状态失败: operationId={}, error={}", operationId, e.getMessage()); }
+            } catch (Exception ex) { log.error("更新回滚状态失败: operationId={}, error={}", operationId, ex.getMessage()); }
             return false;
         }
     }
