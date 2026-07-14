@@ -217,10 +217,13 @@ public class CompanyService {
         sb.append("1. 搜索 \"").append(request.getCompanyName()).append(" 企业基本信息 统一社会信用代码\"\n");
         sb.append("2. 搜索 \"").append(request.getCompanyName()).append(" 法定代表人 注册资本 经营范围\"\n");
         sb.append("3. 搜索 \"").append(request.getCompanyName()).append(" 股东信息 股权结构\"\n");
+        sb.append("4. 搜索 \"").append(request.getCompanyName()).append(" 关联企业 对外投资 分支机构\"\n");
+        sb.append("5. 搜索 \"").append(request.getCompanyName()).append(" 实际控制人 受益所有人\"\n");
+        sb.append("6. 搜索 \"").append(request.getCompanyName()).append(" 经营状况 员工人数 知识产权 专利商标\"\n");
         if (Boolean.TRUE.equals(request.getEnableRiskWarning())) {
-            sb.append("4. 搜索 \"").append(request.getCompanyName()).append(" 经营异常 法律诉讼 被执行人 失信\"\n");
+            sb.append("7. 搜索 \"").append(request.getCompanyName()).append(" 经营异常 法律诉讼 被执行人 失信\"\n");
         }
-        sb.append("\n请尽可能多地收集上述信息，包括企业基础信息、股东、风险提示等。");
+        sb.append("\n请尽可能多地收集上述信息，包括企业基础信息、股东、风险提示、关联企业、经营分析等。");
         return sb.toString();
     }
 
@@ -238,7 +241,7 @@ public class CompanyService {
             sb.append("3. 风险提示：经营异常、法律诉讼、被执行人、失信被执行人，风险等级(LOW/MEDIUM/HIGH)\n\n");
         }
 
-        sb.append("输出JSON格式（查不到的信息填\"未知\"）：\n");
+        sb.append("输出JSON格式（查不到的信息填\"未知\"或空数组）：\n");
         sb.append("{\n");
         sb.append("  \"companyName\": \"企业名称\",\n");
         sb.append("  \"unifiedSocialCreditCode\": \"统一社会信用代码\",\n");
@@ -248,8 +251,14 @@ public class CompanyService {
         sb.append("  \"registrationAuthority\": \"登记机关\",\n");
         sb.append("  \"establishDate\": \"成立日期如2020-01-15\",\n");
         sb.append("  \"shareholders\": [{\"name\":\"\", \"capitalContribution\":\"\", \"ratio\":\"\", \"type\":\"\"}],\n");
-        sb.append("  \"riskWarnings\": [{\"level\":\"LOW/MEDIUM/HIGH\", \"type\":\"\", \"description\":\"\", \"date\":\"\", \"count\":0}],\n");
-        sb.append("  \"riskLevel\": \"NONE/LOW/MEDIUM/HIGH\",\n");
+        sb.append("  \"equityChain\": [{\"name\":\"\", \"ratio\":\"\", \"level\":1, \"type\":\"自然人/企业\"}],\n");
+        sb.append("  \"relatedCompanies\": [{\"name\":\"\", \"relation\":\"子公司/对外投资/分支机构\", \"ratio\":\"\"}],\n");
+        sb.append("  \"beneficialOwner\": {\"name\":\"\", \"finalRatio\":\"\", \"controlPath\":\"\"},\n");
+        sb.append("  \"businessAnalysis\": {\"employeeCount\":0, \"employeeTrend\":\"\", \"paidInCapital\":0, \"industry\":\"\", \"industryAvgRatio\":\"\", \"patentCount\":0, \"trademarkCount\":0, \"copyrightCount\":0, \"businessScope\":\"\", \"mainBusiness\":\"\", \"yearlyData\":[{\"year\":2024, \"revenue\":0, \"employeeCount\":0, \"trend\":\"\"}]},\n");
+        if (Boolean.TRUE.equals(request.getEnableRiskWarning())) {
+            sb.append("  \"riskWarnings\": [{\"level\":\"LOW/MEDIUM/HIGH\", \"type\":\"\", \"description\":\"\", \"date\":\"\", \"count\":0}],\n");
+            sb.append("  \"riskLevel\": \"NONE/LOW/MEDIUM/HIGH\",\n");
+        }
         sb.append("  \"dataSource\": \"网络搜索+AI整理\"\n");
         sb.append("}\n\n");
         sb.append("只输出JSON，不要任何解释。");
@@ -321,10 +330,10 @@ public class CompanyService {
                 response.setRiskLevel("NONE");
             }
 
-            response.setEquityChain(buildMockEquityChain(response.getCompanyName()));
-            response.setRelatedCompanies(buildMockRelatedCompanies(response.getCompanyName()));
-            response.setBeneficialOwner(buildMockBeneficialOwner());
-            response.setBusinessAnalysis(buildMockBusinessAnalysis());
+            response.setEquityChain(parseEquityChain(node, response.getCompanyName()));
+            response.setRelatedCompanies(parseRelatedCompanies(node, response.getCompanyName()));
+            response.setBeneficialOwner(parseBeneficialOwner(node));
+            response.setBusinessAnalysis(parseBusinessAnalysis(node));
             response.setSubscribed(false);
 
             return response;
@@ -335,7 +344,105 @@ public class CompanyService {
         }
     }
 
-    private String extractJsonFromResponse(String response) {
+    private List<CompanyQueryResponse.EquityChain> parseEquityChain(JsonNode node, String companyName) {
+        List<CompanyQueryResponse.EquityChain> chain = new ArrayList<>();
+        try {
+            if (node.has("equityChain") && node.get("equityChain").isArray()) {
+                for (JsonNode item : node.get("equityChain")) {
+                    CompanyQueryResponse.EquityChain ec = new CompanyQueryResponse.EquityChain();
+                    ec.setLevel(item.has("level") ? item.get("level").asInt() : 1);
+                    ec.setCompanyName(item.has("name") ? item.get("name").asText() : "未知");
+                    ec.setRatio(item.has("ratio") ? item.get("ratio").asText() : "0%");
+                    ec.setType(item.has("type") ? item.get("type").asText() : "自然人");
+                    chain.add(ec);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("解析股权链失败: {}", e.getMessage());
+        }
+        if (chain.isEmpty()) {
+            return buildMockEquityChain(companyName);
+        }
+        return chain;
+    }
+
+    private List<CompanyQueryResponse.RelatedCompany> parseRelatedCompanies(JsonNode node, String companyName) {
+        List<CompanyQueryResponse.RelatedCompany> related = new ArrayList<>();
+        try {
+            if (node.has("relatedCompanies") && node.get("relatedCompanies").isArray()) {
+                for (JsonNode item : node.get("relatedCompanies")) {
+                    CompanyQueryResponse.RelatedCompany rc = new CompanyQueryResponse.RelatedCompany();
+                    rc.setName(item.has("name") ? item.get("name").asText() : "未知");
+                    rc.setRelation(item.has("relation") ? item.get("relation").asText() : "关联企业");
+                    rc.setUnifiedSocialCreditCode(item.has("unifiedSocialCreditCode") ? item.get("unifiedSocialCreditCode").asText() : null);
+                    rc.setBusinessStatus(item.has("businessStatus") ? item.get("businessStatus").asText() : null);
+                    rc.setLegalRepresentative(item.has("legalRepresentative") ? item.get("legalRepresentative").asText() : null);
+                    related.add(rc);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("解析关联企业失败: {}", e.getMessage());
+        }
+        if (related.isEmpty()) {
+            return buildMockRelatedCompanies(companyName);
+        }
+        return related;
+    }
+
+    private CompanyQueryResponse.BeneficialOwner parseBeneficialOwner(JsonNode node) {
+        try {
+            if (node.has("beneficialOwner") && !node.get("beneficialOwner").isNull()) {
+                JsonNode bo = node.get("beneficialOwner");
+                CompanyQueryResponse.BeneficialOwner owner = new CompanyQueryResponse.BeneficialOwner();
+                owner.setName(bo.has("name") ? bo.get("name").asText() : "未知");
+                owner.setType(bo.has("type") ? bo.get("type").asText() : "自然人");
+                if (bo.has("actualRatio")) {
+                    owner.setActualRatio(bo.get("actualRatio").asDouble());
+                }
+                owner.setRatioChain(bo.has("ratioChain") ? bo.get("ratioChain").asText() : null);
+                return owner;
+            }
+        } catch (Exception e) {
+            log.debug("解析受益所有人失败: {}", e.getMessage());
+        }
+        return buildMockBeneficialOwner();
+    }
+
+    private CompanyQueryResponse.BusinessAnalysis parseBusinessAnalysis(JsonNode node) {
+        try {
+            if (node.has("businessAnalysis") && !node.get("businessAnalysis").isNull()) {
+                JsonNode ba = node.get("businessAnalysis");
+                CompanyQueryResponse.BusinessAnalysis analysis = new CompanyQueryResponse.BusinessAnalysis();
+                analysis.setEmployeeCount(ba.has("employeeCount") ? ba.get("employeeCount").asInt() : 0);
+                analysis.setEmployeeTrend(ba.has("employeeTrend") ? ba.get("employeeTrend").asText() : "稳定");
+                analysis.setPaidInCapital(ba.has("paidInCapital") ? new BigDecimal(ba.get("paidInCapital").asText()) : BigDecimal.ZERO);
+                analysis.setIndustry(ba.has("industry") ? ba.get("industry").asText() : "未知");
+                analysis.setIndustryAvgRatio(ba.has("industryAvgRatio") ? ba.get("industryAvgRatio").asText() : "未知");
+                analysis.setPatentCount(ba.has("patentCount") ? ba.get("patentCount").asInt() : 0);
+                analysis.setTrademarkCount(ba.has("trademarkCount") ? ba.get("trademarkCount").asInt() : 0);
+                analysis.setCopyrightCount(ba.has("copyrightCount") ? ba.get("copyrightCount").asInt() : 0);
+                analysis.setBusinessScope(ba.has("businessScope") ? ba.get("businessScope").asText() : "未知");
+                analysis.setMainBusiness(ba.has("mainBusiness") ? ba.get("mainBusiness").asText() : "未知");
+
+                if (ba.has("yearlyData") && ba.get("yearlyData").isArray()) {
+                    List<CompanyQueryResponse.YearData> yearlyData = new ArrayList<>();
+                    for (JsonNode yd : ba.get("yearlyData")) {
+                        CompanyQueryResponse.YearData data = new CompanyQueryResponse.YearData();
+                        data.setYear(yd.has("year") ? yd.get("year").asInt() : 0);
+                        data.setRevenue(yd.has("revenue") ? new BigDecimal(yd.get("revenue").asText()) : BigDecimal.ZERO);
+                        data.setEmployeeCount(yd.has("employeeCount") ? yd.get("employeeCount").asInt() : 0);
+                        data.setTrend(yd.has("trend") ? yd.get("trend").asText() : "稳定");
+                        yearlyData.add(data);
+                    }
+                    analysis.setYearlyData(yearlyData);
+                }
+                return analysis;
+            }
+        } catch (Exception e) {
+            log.debug("解析经营分析失败: {}", e.getMessage());
+        }
+        return buildMockBusinessAnalysis();
+    }
         if (response == null || response.isEmpty()) {
             return null;
         }
