@@ -29,7 +29,7 @@
       <el-col :xs="12" :sm="6" :md="4" :lg="3" v-for="(m, index) in kpis" :key="m.label">
         <el-card class="kpi-card" :body-style="{ padding: '14px' }" :class="m.tone">
           <div class="kpi-label">{{ m.label }}</div>
-          <div class="kpi-value">{{ animatedKpis.value[index]?.value ?? 0 }}</div>
+          <div class="kpi-value">{{ animatedKpis[index]?.value ?? 0 }}</div>
           <div class="kpi-foot">{{ m.foot }}</div>
         </el-card>
       </el-col>
