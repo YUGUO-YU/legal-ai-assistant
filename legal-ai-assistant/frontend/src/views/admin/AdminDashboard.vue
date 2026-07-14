@@ -564,7 +564,7 @@ function animateAllKpis() {
   kpiValues.forEach((target, index) => {
     const countUp = useCountUp(target)
     countUp.start()
-    animatedKpis.value[index] = countUp.displayValue
+    animatedKpis.value[index] = { value: countUp.displayValue }
   })
 }
 
