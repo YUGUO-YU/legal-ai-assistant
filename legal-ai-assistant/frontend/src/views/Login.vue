@@ -6,6 +6,13 @@
       :interactive="true"
     />
 
+    <div class="top-right-admin">
+      <el-button text @click="$router.push('/admin/login')">
+        <el-icon><Setting /></el-icon>
+        后台管理
+      </el-button>
+    </div>
+
     <div class="login-box">
       <div class="login-header">
         <div class="logo-icon">
@@ -78,8 +85,6 @@
       <div class="login-footer">
         <span>还没有账号？</span>
         <el-link type="primary" @click="$router.push('/register')">立即注册</el-link>
-        <span class="footer-divider">|</span>
-        <el-link type="warning" @click="$router.push('/admin/login')">后台管理登录</el-link>
       </div>
 
       <div class="demo-accounts">
@@ -154,7 +159,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, CircleCheck, Sunny, Odometer } from '@element-plus/icons-vue'
+import { User, Lock, CircleCheck, Sunny, Odometer, Setting } from '@element-plus/icons-vue'
 import ParticleBackground from '@/components/common/ParticleBackground.vue'
 import api from '../api'
 
@@ -308,6 +313,36 @@ onMounted(() => {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   position: relative;
   overflow: hidden;
+}
+
+.top-right-admin {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 100;
+
+  :deep(.el-button) {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s;
+
+    &:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .el-icon {
+      font-size: 16px;
+    }
+  }
 }
 
 .login-box {
@@ -490,15 +525,10 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  flex-wrap: wrap;
 
   span {
     font-size: 14px;
     color: #6b7280;
-  }
-
-  .footer-divider {
-    color: #d1d5db;
   }
 
   :deep(.el-link) {
@@ -593,10 +623,6 @@ onMounted(() => {
       animation: float 7s ease-in-out 2s infinite;
     }
   }
-}
-
-.footer-divider {
-  color: #d1d5db;
 }
 
 .admin-quick-link {
