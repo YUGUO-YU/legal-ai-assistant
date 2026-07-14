@@ -322,21 +322,36 @@ public class LawImportService {
             "\"issueDate\":\"发布日期(YYYY-MM-DD格式)\",\"effectiveDate\":\"生效日期(YYYY-MM-DD格式)\"}\n" +
             "只返回JSON，不要其他文字。\n" +
             content.substring(0, Math.min(3000, content.length()));
-        String metaJson = llmClient.chat(metaPrompt);
+        String metaJson;
+        try {
+            metaJson = llmClient.chat(metaPrompt);
+        } catch (IOException e) {
+            throw new RuntimeException("AI分析元数据失败: " + e.getMessage(), e);
+        }
 
         String categoryPrompt = "判断以下法律文档的分类，以JSON数组格式返回：\n" +
             "[{\"categoryTypeId\":1,\"categoryId\":对应分类ID,\"categoryName\":\"分类名称\",\"confidence\":0.95},...]\n" +
             "categoryTypeId对应：1=效力层级,2=法律部门,3=行业领域,4=自定义分类\n" +
             "只返回JSON数组。\n" +
             content.substring(0, Math.min(3000, content.length()));
-        String categoryJson = llmClient.chat(categoryPrompt);
+        String categoryJson;
+        try {
+            categoryJson = llmClient.chat(categoryPrompt);
+        } catch (IOException e) {
+            throw new RuntimeException("AI分析分类失败: " + e.getMessage(), e);
+        }
 
         String chapterPrompt = "分析以下法律文档的章节结构，以JSON数组格式返回：\n" +
-            "[{\"title\":\"章节标题\",\"level\":1或2或3,\"children\":[...]}]\n" +
+            "[{\"title\":\"章节标题\",\"level\":1或2或3,\"children\":[...]}]" +
             "level: 1=篇/编, 2=章, 3=节\n" +
             "只返回JSON数组。\n" +
             content.substring(0, Math.min(5000, content.length()));
-        String chapterJson = llmClient.chat(chapterPrompt);
+        String chapterJson;
+        try {
+            chapterJson = llmClient.chat(chapterPrompt);
+        } catch (IOException e) {
+            throw new RuntimeException("AI分析章节结构失败: " + e.getMessage(), e);
+        }
 
         List<LawImportPreview.ArticleParse> articles = extractArticles(content);
 
