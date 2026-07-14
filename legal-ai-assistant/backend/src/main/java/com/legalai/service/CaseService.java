@@ -1,11 +1,14 @@
 package com.legalai.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.config.MilvusConfig;
 import com.legalai.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -40,6 +43,11 @@ public class CaseService {
 
     @Autowired
     private CacheService cacheService;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public CaseSimilarSearchResponse searchSimilarCases(CaseSimilarSearchRequest request) {
         log.info("类案检索请求: caseDescription={}, caseType={}",
@@ -588,24 +596,198 @@ public class CaseService {
         log.info("获取案例详情: caseId={}", caseId);
 
         if (mockEnabled) {
-            CaseSimilarSearchResponse.SimilarCaseItem item = new CaseSimilarSearchResponse.SimilarCaseItem();
-            item.setCaseId(Long.parseLong(caseId));
-            item.setCaseNo("(2023)沪01民终4567号");
-            item.setCaseName("李某与上海某装饰公司装饰装修合同纠纷案");
-            item.setCourtLevel(3);
-            item.setCourtName("上海市第一中级人民法院");
-            item.setJudgeDate("2023-08-15");
-            item.setJudgmentResult(2);
-            item.setLitigationAmount(new BigDecimal("180000"));
-            item.setSimilarityScore(0.92);
-            item.setKeyFacts("原告与被告签订装修合同，被告擅自变更材料品牌且进度滞后...");
-            item.setJudgmentSummary("法院认定被告构成违约，判决解除合同，退还已付款项并支付违约金。");
-            item.setLegalBasis(List.of("《民法典》第577条", "《建设工程施工合同司法解释》第12条"));
-            item.setSourceUrl("https://wenshu.court.gov.cn/");
-            item.setSourceName("中国裁判文书网");
-            return item;
+            return buildMockCaseDetail(caseId);
         }
 
-        return null;
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT id, case_uuid, case_no, case_name, case_type, case_cause, court_level, " +
+                "court_name, judge_date, trial_procedure, judgment_result, litigation_amount, " +
+                "plaintiff, defendant, key_facts, judgment_summary, legal_basis " +
+                "FROM tb_case WHERE case_uuid = ? OR id = ?", caseId, parseId(caseId));
+
+            if (rows.isEmpty()) {
+                log.warn("案例不存在: caseId={}", caseId);
+                return null;
+            }
+
+            return mapToCaseDetail(rows.get(0));
+        } catch (Exception e) {
+            log.warn("查询案例详情失败: caseId={}, error={}", caseId, e.getMessage());
+            if (mockEnabled) {
+                return buildMockCaseDetail(caseId);
+            }
+            return null;
+        }
     }
-}
+
+    public List<Map<String, Object>> getCaseElements(String caseId) {
+        try {
+            return jdbc.queryForList(
+                "SELECT e.id, e.element_type, e.element_key, e.element_value, e.importance " +
+                "FROM tb_case_element e JOIN tb_case c ON e.case_id = c.id " +
+                "WHERE c.case_uuid = ? OR c.id = ? " +
+                "ORDER BY e.importance DESC", caseId, parseId(caseId));
+        } catch (Exception e) {
+            log.warn("查询案例要素失败: caseId={}, error={}", caseId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public List<Map<String, Object>> getSimilarCases(String caseId, int topK) {
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT c.id, c.case_uuid, c.case_no, c.case_name, c.case_type, c.case_cause, " +
+                "c.court_level, c.court_name, c.judge_date, c.judgment_result, " +
+                "c.litigation_amount, c.key_facts, c.judgment_summary, " +
+                "s.similarity_score, s.match_features " +
+                "FROM tb_similar_case s JOIN tb_case c ON s.similar_case_id = c.id " +
+                "WHERE s.source_case_id = (SELECT id FROM tb_case WHERE case_uuid = ? OR id = ?) " +
+                "ORDER BY s.similarity_score DESC LIMIT ?", caseId, parseId(caseId), Math.max(1, Math.min(topK, 50)));
+
+            if (!rows.isEmpty()) {
+                List<Map<String, Object>> result = new ArrayList<>();
+                for (Map<String, Object> row : rows) {
+                    CaseSimilarSearchResponse.SimilarCaseItem item = mapToCaseDetail(row);
+                    Map<String, Object> entry = new LinkedHashMap<>();
+                    entry.put("case", item);
+                    entry.put("similarityScore", row.get("similarity_score"));
+                    entry.put("matchFeatures", row.get("match_features"));
+                    result.add(entry);
+                }
+                return result;
+            }
+
+            return Collections.emptyList();
+        } catch (Exception e) {
+            log.warn("查询相似案例失败: caseId={}, error={}", caseId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public List<Map<String, Object>> searchCasesByElement(String elementType, String elementValue, int page, int pageSize) {
+        try {
+            int offset = (page - 1) * pageSize;
+            return jdbc.queryForList(
+                "SELECT DISTINCT c.id, c.case_uuid, c.case_no, c.case_name, c.case_type, " +
+                "c.case_cause, c.court_level, c.court_name, c.judge_date, c.judgment_result, " +
+                "c.litigation_amount, c.key_facts, c.judgment_summary " +
+                "FROM tb_case c JOIN tb_case_element e ON c.id = e.case_id " +
+                "WHERE e.element_type = ? AND e.element_value LIKE ? " +
+                "ORDER BY c.judge_date DESC LIMIT ? OFFSET ?",
+                elementType, "%" + elementValue + "%", pageSize, offset);
+        } catch (Exception e) {
+            log.warn("按要素检索案例失败: elementType={}, error={}", elementType, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public Map<String, Object> getElementStats() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> elementTypes = jdbc.queryForList(
+                "SELECT element_type, COUNT(*) as cnt FROM tb_case_element GROUP BY element_type ORDER BY cnt DESC");
+            result.put("elementTypes", elementTypes);
+
+            Integer totalCases = jdbc.queryForObject("SELECT COUNT(*) FROM tb_case", Integer.class);
+            Integer casesWithElements = jdbc.queryForObject(
+                "SELECT COUNT(DISTINCT case_id) FROM tb_case_element", Integer.class);
+            result.put("totalCases", totalCases != null ? totalCases : 0);
+            result.put("casesWithElements", casesWithElements != null ? casesWithElements : 0);
+            return result;
+        } catch (Exception e) {
+            log.warn("查询要素统计失败: {}", e.getMessage());
+            result.put("elementTypes", Collections.emptyList());
+            result.put("totalCases", 0);
+            result.put("casesWithElements", 0);
+            return result;
+        }
+    }
+
+    private Long parseId(String id) {
+        try {
+            return Long.parseLong(id);
+        } catch (NumberFormatException e) {
+            return -1L;
+        }
+    }
+
+    private CaseSimilarSearchResponse.SimilarCaseItem buildMockCaseDetail(String caseId) {
+        CaseSimilarSearchResponse.SimilarCaseItem item = new CaseSimilarSearchResponse.SimilarCaseItem();
+        item.setCaseId(Long.parseLong(caseId));
+        item.setCaseNo("(2023)沪01民终4567号");
+        item.setCaseName("李某与上海某装饰公司装饰装修合同纠纷案");
+        item.setCourtLevel(3);
+        item.setCourtName("上海市第一中级人民法院");
+        item.setJudgeDate("2023-08-15");
+        item.setJudgmentResult(2);
+        item.setLitigationAmount(new BigDecimal("180000"));
+        item.setSimilarityScore(0.92);
+        item.setKeyFacts("原告与被告签订装修合同，被告擅自变更材料品牌且进度滞后...");
+        item.setJudgmentSummary("法院认定被告构成违约，判决解除合同，退还已付款项并支付违约金。");
+        item.setLegalBasis(List.of("《民法典》第577条", "《建设工程施工合同司法解释》第12条"));
+        item.setSourceUrl("https://wenshu.court.gov.cn/");
+        item.setSourceName("中国裁判文书网");
+        return item;
+    }
+
+    private CaseSimilarSearchResponse.SimilarCaseItem mapToCaseDetail(Map<String, Object> row) {
+        CaseSimilarSearchResponse.SimilarCaseItem item = new CaseSimilarSearchResponse.SimilarCaseItem();
+        item.setCaseId(getLong(row, "id"));
+        item.setCaseNo(getStr(row, "case_no"));
+        item.setCaseName(getStr(row, "case_name"));
+        item.setCourtLevel(getInt(row, "court_level"));
+        item.setCourtName(getStr(row, "court_name"));
+
+        Object judgeDate = row.get("judge_date");
+        if (judgeDate != null) {
+            item.setJudgeDate(judgeDate.toString());
+        }
+
+        item.setJudgmentResult(getInt(row, "judgment_result"));
+
+        Object amount = row.get("litigation_amount");
+        if (amount != null) {
+            item.setLitigationAmount(amount instanceof BigDecimal ? (BigDecimal) amount : new BigDecimal(amount.toString()));
+        }
+
+        item.setKeyFacts(getStr(row, "key_facts"));
+        item.setJudgmentSummary(getStr(row, "judgment_summary"));
+
+        try {
+            Object legalBasis = row.get("legal_basis");
+            if (legalBasis != null) {
+                String basisStr = legalBasis.toString();
+                if (basisStr.startsWith("[")) {
+                    item.setLegalBasis(objectMapper.readValue(basisStr, new TypeReference<List<String>>() {}));
+                } else {
+                    item.setLegalBasis(List.of(basisStr));
+                }
+            }
+        } catch (Exception e) {
+            log.debug("解析legal_basis JSON失败: {}", e.getMessage());
+        }
+
+        return item;
+    }
+
+    private String getStr(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        return val != null ? val.toString() : null;
+    }
+
+    private Long getLong(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        if (val == null) return null;
+        if (val instanceof Long) return (Long) val;
+        if (val instanceof Integer) return ((Integer) val).longValue();
+        if (val instanceof BigDecimal) return ((BigDecimal) val).longValue();
+        return Long.valueOf(val.toString());
+    }
+
+    private Integer getInt(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        if (val == null) return null;
+        if (val instanceof Integer) return (Integer) val;
+        return Integer.valueOf(val.toString());
+    }
