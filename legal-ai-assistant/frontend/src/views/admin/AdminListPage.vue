@@ -472,12 +472,11 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .admin-list-page {
-  animation: fadeIn 0.4s ease;
+  animation: adminFadeIn 0.4s ease;
   padding: 0 4px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+
   to { opacity: 1; transform: translateY(0); }
 }
 

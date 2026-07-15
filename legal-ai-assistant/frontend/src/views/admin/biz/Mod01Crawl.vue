@@ -129,5 +129,5 @@ watch([page,pageSize],load)
 onMounted(load)
 </script>
 <style lang="scss" scoped>
-.crawl-page{animation:fadeIn .4s ease;padding:0 4px}@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:10px}.header-content h2{margin:0 0 6px;font-size:22px;font-weight:600}.header-content p{margin:0;color:#64748b;font-size:13px}.header-actions{display:flex;gap:8px;align-items:center}.mono{font-family:'Cascadia Code','Consolas',monospace;font-size:12px}.text-success{color:#10b981;font-weight:600}.text-danger{color:#ef4444;font-weight:600}.pager{margin-top:14px;justify-content:flex-end;display:flex}
+.crawl-page{animation:fadeIn .4s ease;padding:0 4px}to{opacity:1;transform:translateY(0)}}.page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:10px}.header-content h2{margin:0 0 6px;font-size:22px;font-weight:600}.header-content p{margin:0;color:#64748b;font-size:13px}.header-actions{display:flex;gap:8px;align-items:center}.mono{font-family:'Cascadia Code','Consolas',monospace;font-size:12px}.text-success{color:#10b981;font-weight:600}.text-danger{color:#ef4444;font-weight:600}.pager{margin-top:14px;justify-content:flex-end;display:flex}
 </style>

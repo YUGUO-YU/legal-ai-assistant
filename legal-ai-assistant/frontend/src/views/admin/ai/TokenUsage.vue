@@ -255,8 +255,7 @@ onMounted(load)
 </script>
 
 <style lang="scss" scoped>
-.token-page { animation: fadeIn 0.4s ease; padding: 0 4px; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.token-page { animation: adminFadeIn 0.4s ease; padding: 0 4px; }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
 .header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }

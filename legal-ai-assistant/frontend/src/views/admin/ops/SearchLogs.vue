@@ -186,12 +186,7 @@ onMounted(load)
 </script>
 
 <style lang="scss" scoped>
-.search-logs-page { animation: fadeIn 0.4s ease; padding: 0 4px; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-.page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
-.header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
-.kpi-card { background:var(--color-bg-card); border-radius:10px; padding:16px; border:1px solid var(--color-border); .kpi-label { font-size:12px; color:var(--color-text-muted); margin-bottom:6px; } .kpi-value { font-size:22px; font-weight:700; color:var(--color-text-primary); } }
+.search-logs-page { animation: adminFadeIn 0.4s ease; }
 .intent-section {
   .bar-row { display:flex; align-items:center; gap:10px; margin-bottom:8px;
     .bar-label { width:90px; font-size:12px; color:var(--color-text-secondary); text-align:right; flex-shrink:0; }

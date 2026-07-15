@@ -187,9 +187,9 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.law-favorites-page { animation: fadeIn 0.4s ease; }
+.law-favorites-page { animation: adminFadeIn 0.4s ease; }
 
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+ to { opacity: 1; transform: translateY(0); } }
 
 .page-header {
   display: flex;

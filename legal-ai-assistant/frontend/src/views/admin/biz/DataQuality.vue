@@ -624,7 +624,7 @@ onUnmounted(() => {
 <style scoped>
 .data-quality {
   padding: 24px;
-  animation: fadeIn 0.4s ease;
+  animation: adminFadeIn 0.4s ease;
 }
 
 .page-header {
