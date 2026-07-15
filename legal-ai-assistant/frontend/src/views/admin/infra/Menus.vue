@@ -64,5 +64,5 @@ async function handleDelete(row){try{await ElMessageBox.confirm(`删除菜单「
 onMounted(load)
 </script>
 <style lang="scss" scoped>
-.menus-page{animation:fadeIn .4s ease;padding:0 4px}to{opacity:1;transform:translateY(0)}}.page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}.header-content h2{margin:0 0 6px;font-size:22px;font-weight:600}.header-content p{margin:0;color:var(--color-text-secondary);font-size:13px}.header-actions{display:flex;gap:8px;align-items:center}.mono{font-family:'Cascadia Code','Consolas',monospace;font-size:12px}.text-muted{color:var(--color-text-placeholder);font-size:12px}
+.menus-page{animation:adminFadeIn .4s ease;padding:0 4px}.page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}.header-content h2{margin:0 0 6px;font-size:22px;font-weight:600}.header-content p{margin:0;color:var(--color-text-secondary);font-size:13px}.header-actions{display:flex;gap:8px;align-items:center}.mono{font-family:'Cascadia Code','Consolas',monospace;font-size:12px}.text-muted{color:var(--color-text-placeholder);font-size:12px}
 </style>

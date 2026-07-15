@@ -298,7 +298,7 @@ onUnmounted(() => {
 .aside {
   width: 240px;
   background: var(--color-bg-secondary);
-  color: #fff;
+  color: var(--color-text-inverse);
   transition: width 0.3s ease;
   overflow: hidden;
 
@@ -313,13 +313,11 @@ onUnmounted(() => {
   .aside-header {
     height: 56px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: 8px;
     padding: 0 16px;
     font-size: 15px;
     font-weight: 600;
-    color: #fff;
+    color: var(--color-text-inverse);
     background: var(--color-bg);
     border-bottom: 1px solid var(--color-border);
     white-space: nowrap;

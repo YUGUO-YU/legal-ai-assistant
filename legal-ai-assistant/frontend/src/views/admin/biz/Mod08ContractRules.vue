@@ -99,6 +99,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../../api'
+import { getConfidenceColor } from '@/utils/adminChartPalette'
 
 const rows = ref([])
 const loading = ref(false)
@@ -108,9 +109,7 @@ const weightPct = ref(50)
 const form = reactive({ id: null, dimension: '', weight: 0.5, threshold_high: 70, threshold_low: 40, status: 1 })
 
 function weightColor(v) {
-  if (v >= 0.7) return '#6366f1'
-  if (v >= 0.4) return '#10b981'
-  return '#94a3b8'
+  return getConfidenceColor(v)
 }
 
 async function load() {
@@ -161,7 +160,6 @@ onMounted(load)
 
 <style lang="scss" scoped>
 .contract-rules-page { animation: adminFadeIn 0.4s ease; padding: 0 4px; }
- to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
 .header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }

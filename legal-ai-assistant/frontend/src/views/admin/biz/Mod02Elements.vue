@@ -89,8 +89,9 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../../api'
+import { adminChartPalette } from '@/utils/adminChartPalette'
 
-const palette = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6']
+const palette = adminChartPalette
 const rows = ref([])
 const loading = ref(false)
 const showDialog = ref(false)
@@ -162,7 +163,6 @@ onMounted(load)
 
 <style lang="scss" scoped>
 .elements-page { animation: adminFadeIn 0.4s ease; padding: 0 4px; }
- to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
 .header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }

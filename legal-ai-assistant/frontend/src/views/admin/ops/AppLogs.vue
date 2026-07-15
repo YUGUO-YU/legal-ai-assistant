@@ -116,8 +116,6 @@ onMounted(() => {
   animation: adminFadeIn 0.3s ease;
 }
 
-  to { opacity: 1; transform: translateY(0); }
-}
 .page-header {
   display: flex;
   justify-content: space-between;

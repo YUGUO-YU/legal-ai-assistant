@@ -27,6 +27,12 @@
   --color-teal: #14b8a6;
   --color-orange: #f97316;
 
+  /* Diff Colors */
+  --color-diff-old-bg: #fef2f2;
+  --color-diff-old-border: #fecaca;
+  --color-diff-new-bg: #f0fdf4;
+  --color-diff-new-border: #bbf7d0;
+
   /* Text Colors */
   --color-text-primary: #1f2937;
   --color-text-secondary: #6b7280;

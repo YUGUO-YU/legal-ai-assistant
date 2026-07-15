@@ -226,6 +226,7 @@ import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from
 import api from '../../api'
 import { useCountUp } from '@/composables/useCountUp'
 import { legalAITheme, legalAIDarkTheme } from '@/utils/echartsTheme'
+import { adminChartPalette } from '@/utils/adminChartPalette'
 
 use([CanvasRenderer, LineChart, BarChart, PieChart, RadarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
 echarts.registerTheme('legalAI', legalAITheme)
@@ -269,7 +270,7 @@ const tokenTrend = computed(() => overview.value.tokenTrend || [])
 
 const tokenTrendOption = computed(() => {
   const t = tokenTrend.value
-  const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
+  const palette = adminChartPalette
   return {
     tooltip: {
       trigger: 'axis',
@@ -315,7 +316,7 @@ const tokenTrendOption = computed(() => {
 
 const moduleTokenOption = computed(() => {
   const list = overview.value.moduleTokens || []
-  const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1']
+  const palette = adminChartPalette
   const data = list.map((x, i) => ({
     name: x.module || '未分类',
     value: Number(x.tokens) || 0,
@@ -360,7 +361,7 @@ const topLawsSearch = computed(() => lawUsage.value.topLawsSearch || [])
 
 const activeTrendOption = computed(() => {
   const trend = userActivity.value.activeTrend || []
-  const palette = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4']
+  const palette = adminChartPalette
   return {
     tooltip: { trigger: 'axis', formatter: (params) => `${params[0].name}<br/>活跃用户: ${params[0].value}` },
     grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
@@ -400,7 +401,7 @@ const activeTrendOption = computed(() => {
 
 const topUsersOption = computed(() => {
   const users = userActivity.value.topUsers || []
-  const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1']
+  const palette = adminChartPalette
   const data = users.map((x, i) => ({
     name: x.username || '未知',
     value: Number(x.count) || 0,
@@ -574,8 +575,6 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 <style lang="scss" scoped>
 .admin-dashboard { animation: adminFadeIn 0.4s ease; }
 
- to { opacity: 1; transform: translateY(0); } }
-
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -710,7 +709,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
     right: 8px;
     padding: 4px 8px;
     background: rgba(0,0,0,0.6);
-    color: #fff;
+    color: var(--color-text-inverse);
     font-size: 12px;
     border-radius: 4px;
     opacity: 0;
@@ -746,7 +745,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
     border-radius: var(--radius-sm);
     font-size: 11px;
     font-weight: 600;
-    color: #fff;
+    color: var(--color-text-inverse);
     margin-bottom: 6px;
 
     &.m01, &.m07 { background: var(--color-info); }

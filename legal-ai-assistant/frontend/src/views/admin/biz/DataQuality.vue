@@ -277,6 +277,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Download, Plus, Delete, Search, Document, Collection, Connection } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import api from '@/api'
+import { chartBorderColor } from '@/utils/adminChartPalette'
 
 const loading = ref(false)
 const exporting = ref(false)
@@ -383,7 +384,7 @@ function updateStatusChart() {
       avoidLabelOverlap: false,
       itemStyle: {
         borderRadius: 10,
-        borderColor: '#fff',
+        borderColor: chartBorderColor,
         borderWidth: 2
       },
       label: { show: true, formatter: '{b}: {c}' },

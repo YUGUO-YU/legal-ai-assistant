@@ -114,7 +114,6 @@ onMounted(load)
 
 <style lang="scss" scoped>
 .gray-page { animation: adminFadeIn 0.4s ease; padding: 0 4px; }
- to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
 .header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }

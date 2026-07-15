@@ -354,7 +354,6 @@ onMounted(load)
 
 <style lang="scss" scoped>
 .prompts-page { animation: adminFadeIn 0.4s ease; padding: 0 4px; }
- to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
 .header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
@@ -376,9 +375,9 @@ onMounted(load)
 .compare-header { display: flex; align-items: center; margin-bottom: 16px; justify-content: center; }
 .diff-content { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .diff-old pre, .diff-new pre {
-  background: #fef2f2; padding: 12px; border-radius: 6px; white-space: pre-wrap;
+  background: var(--color-diff-old-bg); padding: 12px; border-radius: 6px; white-space: pre-wrap;
   font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 12px; line-height: 1.6;
-  border: 1px solid #fecaca; height: 300px; overflow-y: auto;
+  border: 1px solid var(--color-diff-old-border); height: 300px; overflow-y: auto;
 }
-.diff-new pre { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.diff-new pre { background: var(--color-diff-new-bg); border: 1px solid var(--color-diff-new-border); }
 </style>

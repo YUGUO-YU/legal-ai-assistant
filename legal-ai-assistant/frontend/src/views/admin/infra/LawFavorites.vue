@@ -189,7 +189,6 @@ onMounted(() => {
 <style lang="scss" scoped>
 .law-favorites-page { animation: adminFadeIn 0.4s ease; }
 
- to { opacity: 1; transform: translateY(0); } }
 
 .page-header {
   display: flex;

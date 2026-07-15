@@ -101,6 +101,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '../../../api'
+import { adminChartPalette } from '@/utils/adminChartPalette'
 
 const rows = ref([])
 const loading = ref(false)
@@ -109,7 +110,7 @@ const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 
-const palette = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899']
+const palette = adminChartPalette
 
 const stats = reactive({ todayCount: 0, avgLatency: 0, zeroResultCount: 0, topKeywords: '-', lt100: 0, lt500: 0, lt2000: 0, gt2000: 0 })
 

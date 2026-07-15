@@ -114,17 +114,16 @@ onMounted(load)
 
 <style lang="scss" scoped>
 .milvus-collections-page { animation: adminFadeIn 0.4s ease; padding: 0 4px; }
- to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
 .header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .kpi-card {
-  background: #fff;
+  background: var(--color-bg-card);
   border-radius: 10px;
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   .kpi-label { font-size: 12px; color: var(--color-text-muted); margin-bottom: 6px; }
-  .kpi-value { font-size: 24px; font-weight: 700; color: #0f172a; }
+  .kpi-value { font-size: 24px; font-weight: 700; color: var(--color-text-primary); }
 }
 .text-success { color: var(--color-success); font-weight: 600; }
 .text-warning { color: var(--color-warning); font-weight: 600; }

@@ -216,6 +216,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Connection, Document, Link, Warning } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import api from '../../../api'
+import { chartBorderColor } from '@/utils/adminChartPalette'
 
 const rows = ref([])
 const total = ref(0)
@@ -331,7 +332,7 @@ function updateChart(typeCount) {
       avoidLabelOverlap: false,
       itemStyle: {
         borderRadius: 10,
-        borderColor: '#fff',
+        borderColor: chartBorderColor,
         borderWidth: 2
       },
       label: { show: true, formatter: '{b}: {c} ({d}%)' },

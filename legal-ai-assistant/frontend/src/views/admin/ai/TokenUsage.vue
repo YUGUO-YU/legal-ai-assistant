@@ -149,6 +149,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import api from '../../../api'
+import { adminChartPalette } from '@/utils/adminChartPalette'
 
 const range = ref('7')
 const loading = ref(false)
@@ -159,7 +160,7 @@ const total = ref(0)
 const rawTrendData = ref([])
 const rawModuleData = ref([])
 
-const palette = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#3b82f6']
+const palette = adminChartPalette
 
 const summary = reactive({ todayTokens: 0, todayCalls: 0, periodTokens: 0, avgDaily: 0, estimatedCost: 0, activeModels: 0, totalModels: 0 })
 
@@ -280,11 +281,11 @@ onMounted(load)
 .module-bars {
   .bar-row {
     display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
-    .bar-label { width: 90px; font-size: 12px; color: #475569; text-align: right; flex-shrink: 0; }
+    .bar-label { width: 90px; font-size: 12px; color: var(--color-text-secondary); text-align: right; flex-shrink: 0; }
     .bar-track {
-      flex: 1; height: 22px; background: #f1f5f9; border-radius: 6px; overflow: hidden;
+      flex: 1; height: 22px; background: var(--color-bg-page); border-radius: 6px; overflow: hidden;
       .bar-fill {
-        height: 100%; border-radius: 6px; font-size: 11px; color: #fff;
+        height: 100%; border-radius: 6px; font-size: 11px; color: var(--color-text-inverse);
         display: flex; align-items: center; padding: 0 8px;
         min-width: 32px; transition: width 0.5s ease;
       }
