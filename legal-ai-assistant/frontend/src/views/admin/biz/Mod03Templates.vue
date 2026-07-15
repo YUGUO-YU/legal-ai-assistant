@@ -286,11 +286,6 @@ async function copyTemplate(row) {
     else ElMessage.error(res?.error || '复制失败')
   } catch (e) { ElMessage.error('复制失败') }
 }
-    const res = await api.post('/admin/doc_template/create', payload)
-    if (res?.ok) { ElMessage.success('已复制为新模板'); load() }
-    else ElMessage.error(res?.error || '复制失败')
-  } catch (e) { ElMessage.error('复制失败') }
-}
 
 function previewTemplate(row) {
   previewTpl.value = row

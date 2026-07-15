@@ -267,13 +267,6 @@ async function handleDelete(row) {
 
 async function toggleRule(row) {
   try {
-    await api.post(`/admin/monitor/alert-rules/${row.id}/toggle`)
-    row.status = row.status === 1 ? 0 : 1
-  } catch (e) { ElMessage.error('切换失败') }
-}
-
-async function toggleRule(row) {
-  try {
     await api.post(`/admin/monitor/alert-rules/${row.id}/toggle?column=status`)
     row.status = row.status === 1 ? 0 : 1
   } catch (e) { ElMessage.error('切换失败') }

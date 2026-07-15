@@ -205,8 +205,6 @@ async function load() {
   }
   finally { loading.value = false }
 }
-  finally { loading.value = false }
-}
 
 function openCreate() {
   Object.assign(form, { id: null, title: '', content: '', type: 1, priority: 0, status: 1, published_at: '', expired_at: '', created_by: 'admin' })
