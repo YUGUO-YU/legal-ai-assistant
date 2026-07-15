@@ -500,19 +500,28 @@ async function loadLawUsage() {
 }
 
 async function loadAll() {
+  console.log('[AdminDashboard] loadAll started')
   loading.value = true
-  await Promise.all([checkDbStatus(), loadStats(), loadOverview(), loadAiStatus(), loadUserActivity(), loadLawUsage()])
+  try {
+    await Promise.all([checkDbStatus(), loadStats(), loadOverview(), loadAiStatus(), loadUserActivity(), loadLawUsage()])
+    console.log('[AdminDashboard] loadAll completed')
+  } catch (e) {
+    console.error('[AdminDashboard] loadAll error:', e)
+  }
   loading.value = false
 }
 
 async function checkDbStatus() {
+  console.log('[AdminDashboard] checkDbStatus calling /admin/db/health')
   try {
     const res = await api.get('/admin/db/health')
+    console.log('[AdminDashboard] checkDbStatus response:', res.data)
     dbStatus.value = {
       connected: res.data?.connected || false,
       message: res.data?.message || ''
     }
   } catch (e) {
+    console.error('[AdminDashboard] checkDbStatus error:', e.message, e.response?.status)
     dbStatus.value = { connected: false, message: '无法连接后端服务' }
   }
 }
@@ -538,6 +547,9 @@ async function loadAiStatus() {
 }
 
 onMounted(() => {
+  console.log('[AdminDashboard] mounted, calling loadAll')
+  console.log('[AdminDashboard] admin_token:', localStorage.getItem('admin_token') ? 'exists' : 'MISSING')
+  console.log('[AdminDashboard] api baseURL:', '/api/v1')
   loadAll()
   timer = setInterval(loadOverview, 30000)
 })
