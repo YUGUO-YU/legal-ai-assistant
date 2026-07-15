@@ -128,164 +128,170 @@ export const requestWithRetry = (method, url, data, options = {}) => {
   return withRetry(() => api({ method, url, data }), retries, delay)
 }
 
+const apiClient = api
+
 export default {
+  get: (url, config) => apiClient.get(url, config),
+  post: (url, data, config) => apiClient.post(url, data, config),
+  put: (url, data, config) => apiClient.put(url, data, config),
+  delete: (url, config) => apiClient.delete(url, config),
   v2: {
-    laws: (params) => withRetry(() => api.get('/v2/laws', { params })),
-    law: (id, params) => withRetry(() => api.get(`/v2/laws/${id}`, { params })),
-    lawArticles: (id, params) => withRetry(() => api.get(`/v2/laws/${id}/articles`, { params })),
-    categories: (type) => withRetry(() => api.get('/v2/laws/categories', { params: { type } })),
-    stats: () => withRetry(() => api.get('/v2/laws/stats'))
+    laws: (params) => withRetry(() => apiClient.get('/v2/laws', { params })),
+    law: (id, params) => withRetry(() => apiClient.get(`/v2/laws/${id}`, { params })),
+    lawArticles: (id, params) => withRetry(() => apiClient.get(`/v2/laws/${id}/articles`, { params })),
+    categories: (type) => withRetry(() => apiClient.get('/v2/laws/categories', { params: { type } })),
+    stats: () => withRetry(() => apiClient.get('/v2/laws/stats'))
   },
   legalSearch: {
-    search: (data) => withRetry(() => api.post('/legal-search/search', data)),
-    getArticle: (id) => withRetry(() => api.get(`/legal-search/articles/${id}`)),
-    feedback: (data) => withRetry(() => api.post('/legal-search/feedback', data)),
-    getSuggestedQueries: (query) => withRetry(() => api.get('/legal-search/suggested-queries', { params: { query } }))
+    search: (data) => withRetry(() => apiClient.post('/legal-search/search', data)),
+    getArticle: (id) => withRetry(() => apiClient.get(`/legal-search/articles/${id}`)),
+    feedback: (data) => withRetry(() => apiClient.post('/legal-search/feedback', data)),
+    getSuggestedQueries: (query) => withRetry(() => apiClient.get('/legal-search/suggested-queries', { params: { query } }))
   },
   caseSimilar: {
-    search: (data) => withRetry(() => api.post('/case-similar/search', data))
+    search: (data) => withRetry(() => apiClient.post('/case-similar/search', data))
   },
   caseSearch: {
-    search: (data) => withRetry(() => api.post('/case-search/search', data)),
-    getCaseDetail: (uuid) => withRetry(() => api.get(`/case-search/cases/${uuid}`)),
-    analyzeCase: (uuid) => withRetry(() => api.get(`/case-search/cases/${uuid}/analysis`))
+    search: (data) => withRetry(() => apiClient.post('/case-search/search', data)),
+    getCaseDetail: (uuid) => withRetry(() => apiClient.get(`/case-search/cases/${uuid}`)),
+    analyzeCase: (uuid) => withRetry(() => apiClient.get(`/case-search/cases/${uuid}/analysis`))
   },
   lawSearch: {
-    search: (data) => withRetry(() => api.post('/law-search/search', data)),
-    getCategories: () => withRetry(() => api.get('/law-search/categories')),
-    getLawDetail: (uuid) => withRetry(() => api.get(`/law-search/laws/${uuid}`)),
-    getLawArticles: (uuid) => withRetry(() => api.get(`/law-search/laws/${uuid}/articles`))
+    search: (data) => withRetry(() => apiClient.post('/law-search/search', data)),
+    getCategories: () => withRetry(() => apiClient.get('/law-search/categories')),
+    getLawDetail: (uuid) => withRetry(() => apiClient.get(`/law-search/laws/${uuid}`)),
+    getLawArticles: (uuid) => withRetry(() => apiClient.get(`/law-search/laws/${uuid}/articles`))
   },
   lawFavorite: {
-    add: (lawUuid, lawTitle) => withRetry(() => api.post('/law-favorite/add', { lawUuid, lawTitle })),
-    remove: (lawUuid) => withRetry(() => api.delete(`/law-favorite/remove/${lawUuid}`)),
-    list: () => withRetry(() => api.get('/law-favorite/list')),
-    check: (lawUuid) => withRetry(() => api.get(`/law-favorite/check/${lawUuid}`))
+    add: (lawUuid, lawTitle) => withRetry(() => apiClient.post('/law-favorite/add', { lawUuid, lawTitle })),
+    remove: (lawUuid) => withRetry(() => apiClient.delete(`/law-favorite/remove/${lawUuid}`)),
+    list: () => withRetry(() => apiClient.get('/law-favorite/list')),
+    check: (lawUuid) => withRetry(() => apiClient.get(`/law-favorite/check/${lawUuid}`))
   },
   lawAnalysis: {
-    analyze: (lawUuid, lawTitle, articles) => withRetry(() => api.post('/law-analysis/analyze', { lawUuid, lawTitle, articles }))
+    analyze: (lawUuid, lawTitle, articles) => withRetry(() => apiClient.post('/law-analysis/analyze', { lawUuid, lawTitle, articles }))
   },
   legalResearch: {
-    createTask: (data) => withRetry(() => api.post('/legal-research/tasks', data)),
-    getReport: (taskId) => withRetry(() => api.get(`/legal-research/tasks/${taskId}/report`)),
-    generateReport: (data) => withRetry(() => api.post('/legal-research/generate', data))
+    createTask: (data) => withRetry(() => apiClient.post('/legal-research/tasks', data)),
+    getReport: (taskId) => withRetry(() => apiClient.get(`/legal-research/tasks/${taskId}/report`)),
+    generateReport: (data) => withRetry(() => apiClient.post('/legal-research/generate', data))
   },
   document: {
-    draft: (data) => withRetry(() => api.post('/document/draft', data)),
-    getTemplates: () => withRetry(() => api.get('/document/templates')),
-    getTemplate: (code) => withRetry(() => api.get(`/document/templates/${code}`)),
-    extractInfo: (text, templateCode) => withRetry(() => api.post('/document/extract-info', { text, templateCode }))
+    draft: (data) => withRetry(() => apiClient.post('/document/draft', data)),
+    getTemplates: () => withRetry(() => apiClient.get('/document/templates')),
+    getTemplate: (code) => withRetry(() => apiClient.get(`/document/templates/${code}`)),
+    extractInfo: (text, templateCode) => withRetry(() => apiClient.post('/document/extract-info', { text, templateCode }))
   },
   company: {
-    query: (data) => withRetry(() => api.post('/company/query', data)),
-    getRiskLevels: () => withRetry(() => api.get('/company/risk-levels')),
-    getQuery: (uuid) => withRetry(() => api.get(`/company/queries/${uuid}`)),
-    listQueries: (limit = 20) => withRetry(() => api.get('/company/queries', { params: { limit } }))
+    query: (data) => withRetry(() => apiClient.post('/company/query', data)),
+    getRiskLevels: () => withRetry(() => apiClient.get('/company/risk-levels')),
+    getQuery: (uuid) => withRetry(() => apiClient.get(`/company/queries/${uuid}`)),
+    listQueries: (limit = 20) => withRetry(() => apiClient.get('/company/queries', { params: { limit } }))
   },
   contract: {
-    review: (data) => withRetry(() => api.post('/contract/review', data)),
-    getDimensions: () => withRetry(() => api.get('/contract/dimensions')),
-    getReview: (uuid) => withRetry(() => api.get(`/contract/reviews/${uuid}`)),
-    listReviews: (limit = 20) => withRetry(() => api.get('/contract/reviews', { params: { limit } }))
+    review: (data) => withRetry(() => apiClient.post('/contract/review', data)),
+    getDimensions: () => withRetry(() => apiClient.get('/contract/dimensions')),
+    getReview: (uuid) => withRetry(() => apiClient.get(`/contract/reviews/${uuid}`)),
+    listReviews: (limit = 20) => withRetry(() => apiClient.get('/contract/reviews', { params: { limit } }))
   },
   docQa: {
-    ask: (data) => withRetry(() => api.post('/doc-qa/ask', data)),
-    getSessionHistory: (sessionId) => withRetry(() => api.get(`/doc-qa/sessions/${sessionId}/history`)),
-    clearSession: (sessionId) => withRetry(() => api.delete(`/doc-qa/sessions/${sessionId}`)),
-    getSessionList: () => withRetry(() => api.get('/doc-qa/sessions')),
-    createSession: (data) => withRetry(() => api.post('/doc-qa/sessions', data))
+    ask: (data) => withRetry(() => apiClient.post('/doc-qa/ask', data)),
+    getSessionHistory: (sessionId) => withRetry(() => apiClient.get(`/doc-qa/sessions/${sessionId}/history`)),
+    clearSession: (sessionId) => withRetry(() => apiClient.delete(`/doc-qa/sessions/${sessionId}`)),
+    getSessionList: () => withRetry(() => apiClient.get('/doc-qa/sessions')),
+    createSession: (data) => withRetry(() => apiClient.post('/doc-qa/sessions', data))
   },
   knowledgeBase: {
-    list: (params) => withRetry(() => api.get('/knowledge-base/list', { params })),
-    create: (data) => withRetry(() => api.post('/knowledge-base/create', data)),
-    delete: (id) => withRetry(() => api.delete(`/knowledge-base/${id}`)),
-    upload: (data) => withRetry(() => api.post('/knowledge-base/upload', data)),
-    detail: (id) => withRetry(() => api.get(`/knowledge-base/${id}`)),
-    chunks: (id) => withRetry(() => api.get(`/knowledge-base/${id}/chunks`))
+    list: (params) => withRetry(() => apiClient.get('/knowledge-base/list', { params })),
+    create: (data) => withRetry(() => apiClient.post('/knowledge-base/create', data)),
+    delete: (id) => withRetry(() => apiClient.delete(`/knowledge-base/${id}`)),
+    upload: (data) => withRetry(() => apiClient.post('/knowledge-base/upload', data)),
+    detail: (id) => withRetry(() => apiClient.get(`/knowledge-base/${id}`)),
+    chunks: (id) => withRetry(() => apiClient.get(`/knowledge-base/${id}/chunks`))
   },
   ppt: {
-    generate: (data) => withRetry(() => api.post('/ppt/generate', data)),
-    getById: (id) => withRetry(() => api.get(`/ppt/${id}`)),
-    getByUuid: (uuid) => withRetry(() => api.get(`/ppt/uuid/${uuid}`)),
-    update: (id, data) => withRetry(() => api.put(`/ppt/${id}`, data)),
-    delete: (id) => withRetry(() => api.delete(`/ppt/${id}`)),
-    list: (userId) => withRetry(() => api.get('/ppt/list', { params: { userId } })),
-    getTemplates: () => withRetry(() => api.get('/ppt/templates')),
-    recommendTemplates: (scenario) => withRetry(() => api.post('/ppt/templates/recommend', { scenario })),
-    enhanceSlide: (data) => withRetry(() => api.post('/ppt/ai-enhance-slide', data))
+    generate: (data) => withRetry(() => apiClient.post('/ppt/generate', data)),
+    getById: (id) => withRetry(() => apiClient.get(`/ppt/${id}`)),
+    getByUuid: (uuid) => withRetry(() => apiClient.get(`/ppt/uuid/${uuid}`)),
+    update: (id, data) => withRetry(() => apiClient.put(`/ppt/${id}`, data)),
+    delete: (id) => withRetry(() => apiClient.delete(`/ppt/${id}`)),
+    list: (userId) => withRetry(() => apiClient.get('/ppt/list', { params: { userId } })),
+    getTemplates: () => withRetry(() => apiClient.get('/ppt/templates')),
+    recommendTemplates: (scenario) => withRetry(() => apiClient.post('/ppt/templates/recommend', { scenario })),
+    enhanceSlide: (data) => withRetry(() => apiClient.post('/ppt/ai-enhance-slide', data))
   },
   auth: {
-    login: (data) => withRetry(() => api.post('/auth/login', data)),
-    adminLogin: (data) => withRetry(() => api.post('/auth/admin/login', data)),
-    logout: () => withRetry(() => api.post('/auth/logout')),
-    register: (data) => withRetry(() => api.post('/auth/register', data)),
-    sendVerifyCode: (username) => withRetry(() => api.post('/auth/forgot-password', { username })),
-    resetPassword: (data) => withRetry(() => api.post('/auth/reset-password', data)),
-    getUserInfo: () => withRetry(() => api.get('/auth/user-info')),
-    changePassword: (data) => withRetry(() => api.put('/auth/password', data)),
-    updateProfile: (data) => withRetry(() => api.put('/auth/profile', data))
+    login: (data) => withRetry(() => apiClient.post('/auth/login', data)),
+    adminLogin: (data) => withRetry(() => apiClient.post('/auth/admin/login', data)),
+    logout: () => withRetry(() => apiClient.post('/auth/logout')),
+    register: (data) => withRetry(() => apiClient.post('/auth/register', data)),
+    sendVerifyCode: (username) => withRetry(() => apiClient.post('/auth/forgot-password', { username })),
+    resetPassword: (data) => withRetry(() => apiClient.post('/auth/reset-password', data)),
+    getUserInfo: () => withRetry(() => apiClient.get('/auth/user-info')),
+    changePassword: (data) => withRetry(() => apiClient.put('/auth/password', data)),
+    updateProfile: (data) => withRetry(() => apiClient.put('/auth/profile', data))
   },
   usage: {
-    addRecord: (data) => api.post('/usage/records', data),
-    getRecords: (userId, limit = 50) => api.get('/usage/records', { params: { userId, limit } }),
-    deleteRecord: (recordId, userId) => api.delete('/usage/records/' + recordId, { params: { userId } }),
-    clearAll: (userId) => api.delete('/usage/records', { params: { userId } })
+    addRecord: (data) => apiClient.post('/usage/records', data),
+    getRecords: (userId, limit = 50) => apiClient.get('/usage/records', { params: { userId, limit } }),
+    deleteRecord: (recordId, userId) => apiClient.delete('/usage/records/' + recordId, { params: { userId } }),
+    clearAll: (userId) => apiClient.delete('/usage/records', { params: { userId } })
   },
-  health: () => api.get('/health'),
+  health: () => apiClient.get('/health'),
   dataImport: {
-    importCivilLaw: (data) => withRetry(() => api.post('/admin/data/import-civil-law', data)),
-    importLaborLaw: (data) => withRetry(() => api.post('/admin/data/import-labor-law', data)),
-    importConstructionLaw: (data) => withRetry(() => api.post('/admin/data/import-construction-law', data)),
-    vectorize: (data) => withRetry(() => api.post('/admin/data/vectorize', data)),
-    importAll: (data) => withRetry(() => api.post('/admin/data/import-all', data))
+    importCivilLaw: (data) => withRetry(() => apiClient.post('/admin/data/import-civil-law', data)),
+    importLaborLaw: (data) => withRetry(() => apiClient.post('/admin/data/import-labor-law', data)),
+    importConstructionLaw: (data) => withRetry(() => apiClient.post('/admin/data/import-construction-law', data)),
+    vectorize: (data) => withRetry(() => apiClient.post('/admin/data/vectorize', data)),
+    importAll: (data) => withRetry(() => apiClient.post('/admin/data/import-all', data))
   },
   judgmentImport: {
-    preview: (formData) => withRetry(() => api.post('/admin/data-import/judgments/preview', formData, {
+    preview: (formData) => withRetry(() => apiClient.post('/admin/data-import/judgments/preview', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })),
-    confirm: (data) => withRetry(() => api.post('/admin/data-import/judgments/confirm', data))
+    confirm: (data) => withRetry(() => apiClient.post('/admin/data-import/judgments/confirm', data))
   },
   lawImport: {
-    webSearch: (data) => withRetry(() => api.post('/admin/law-import/web-search', data)),
-    upload: (data) => withRetry(() => api.post('/admin/law-import/upload', data)),
-    uploadFile: (formData) => withRetry(() => api.post('/admin/law-import/upload-file', formData, {
+    webSearch: (data) => withRetry(() => apiClient.post('/admin/law-import/web-search', data)),
+    upload: (data) => withRetry(() => apiClient.post('/admin/law-import/upload', data)),
+    uploadFile: (formData) => withRetry(() => apiClient.post('/admin/law-import/upload-file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })),
-    preset: (presetKey, operator) => withRetry(() => api.post(`/admin/law-import/preset/${presetKey}`, null, { params: { operator } })),
-    presets: () => withRetry(() => api.get('/admin/law-import/presets')),
-    history: (page = 1, pageSize = 20) => withRetry(() => api.get('/admin/law-import/history', { params: { page, pageSize } })),
-    historyById: (id) => withRetry(() => api.get(`/admin/law-import/history/${id}`)),
-    stats: () => withRetry(() => api.get('/admin/law-import/stats'))
+    preset: (presetKey, operator) => withRetry(() => apiClient.post(`/admin/law-import/preset/${presetKey}`, null, { params: { operator } })),
+    presets: () => withRetry(() => apiClient.get('/admin/law-import/presets')),
+    history: (page = 1, pageSize = 20) => withRetry(() => apiClient.get('/admin/law-import/history', { params: { page, pageSize } })),
+    historyById: (id) => withRetry(() => apiClient.get(`/admin/law-import/history/${id}`)),
+    stats: () => withRetry(() => apiClient.get('/admin/law-import/stats'))
   },
-  categoryTypes: () => withRetry(() => api.get('/admin/law/category-types')),
-  getCategoryType: (id) => withRetry(() => api.get(`/admin/law/category-types/${id}`)),
-  createCategoryType: (data) => withRetry(() => api.post('/admin/law/category-types', data)),
-  updateCategoryType: (id, data) => withRetry(() => api.put(`/admin/law/category-types/${id}`, data)),
-  deleteCategoryType: (id) => withRetry(() => api.delete(`/admin/law/category-types/${id}`)),
-  categories: (typeId) => withRetry(() => api.get('/admin/law/categories', { params: { typeId } })),
-  createCategory: (data) => withRetry(() => api.post('/admin/law/categories', data)),
-  updateCategory: (id, data) => withRetry(() => api.put(`/admin/law/categories/${id}`, data)),
-  deleteCategory: (id) => withRetry(() => api.delete(`/admin/law/categories/${id}`)),
-  getDocumentCategories: (lawId) => withRetry(() => api.get(`/admin/law/document-categories/${lawId}`)),
-  setDocumentCategories: (lawId, categoryIds) => withRetry(() => api.post(`/admin/law/document-categories/${lawId}`, { categoryIds })),
-  importPreview: (formData) => withRetry(() => api.post('/admin/law-import/preview', formData, {
+  categoryTypes: () => withRetry(() => apiClient.get('/admin/law/category-types')),
+  getCategoryType: (id) => withRetry(() => apiClient.get(`/admin/law/category-types/${id}`)),
+  createCategoryType: (data) => withRetry(() => apiClient.post('/admin/law/category-types', data)),
+  updateCategoryType: (id, data) => withRetry(() => apiClient.put(`/admin/law/category-types/${id}`, data)),
+  deleteCategoryType: (id) => withRetry(() => apiClient.delete(`/admin/law/category-types/${id}`)),
+  categories: (typeId) => withRetry(() => apiClient.get('/admin/law/categories', { params: { typeId } })),
+  createCategory: (data) => withRetry(() => apiClient.post('/admin/law/categories', data)),
+  updateCategory: (id, data) => withRetry(() => apiClient.put(`/admin/law/categories/${id}`, data)),
+  deleteCategory: (id) => withRetry(() => apiClient.delete(`/admin/law/categories/${id}`)),
+  getDocumentCategories: (lawId) => withRetry(() => apiClient.get(`/admin/law/document-categories/${lawId}`)),
+  setDocumentCategories: (lawId, categoryIds) => withRetry(() => apiClient.post(`/admin/law/document-categories/${lawId}`, { categoryIds })),
+  importPreview: (formData) => withRetry(() => apiClient.post('/admin/law-import/preview', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })),
-  importConfirm: (data) => withRetry(() => api.post('/admin/law-import/confirm', data)),
-  lawImportHistory: () => withRetry(() => api.get('/admin/law-import/history')),
+  importConfirm: (data) => withRetry(() => apiClient.post('/admin/law-import/confirm', data)),
+  lawImportHistory: () => withRetry(() => apiClient.get('/admin/law-import/history')),
   lawDocument: {
-    create: (data) => withRetry(() => api.post('/admin/law-document/create', data)),
-    update: (id, data) => withRetry(() => api.post(`/admin/law-document/${id}/update`, data)),
-    delete: (id) => withRetry(() => api.post(`/admin/law-document/${id}/delete`)),
-    batchDelete: (ids) => withRetry(() => api.post('/admin/law-document/batch-delete', { ids })),
-    addArticle: (lawId, data) => withRetry(() => api.post(`/admin/law-document/${lawId}/articles/add`, data)),
-    updateArticle: (lawId, articleId, data) => withRetry(() => api.post(`/admin/law-document/${lawId}/articles/${articleId}/update`, data)),
-    deleteArticle: (lawId, articleId) => withRetry(() => api.post(`/admin/law-document/${lawId}/articles/${articleId}/delete`)),
-    export: (params) => withRetry(() => api.get('/admin/law-document/export', { params })),
-    dataQuality: () => withRetry(() => api.get('/admin/law-document/data-quality'))
+    create: (data) => withRetry(() => apiClient.post('/admin/law-document/create', data)),
+    update: (id, data) => withRetry(() => apiClient.post(`/admin/law-document/${id}/update`, data)),
+    delete: (id) => withRetry(() => apiClient.post(`/admin/law-document/${id}/delete`)),
+    batchDelete: (ids) => withRetry(() => apiClient.post('/admin/law-document/batch-delete', { ids })),
+    addArticle: (lawId, data) => withRetry(() => apiClient.post(`/admin/law-document/${lawId}/articles/add`, data)),
+    updateArticle: (lawId, articleId, data) => withRetry(() => apiClient.post(`/admin/law-document/${lawId}/articles/${articleId}/update`, data)),
+    deleteArticle: (lawId, articleId) => withRetry(() => apiClient.post(`/admin/law-document/${lawId}/articles/${articleId}/delete`)),
+    export: (params) => withRetry(() => apiClient.get('/admin/law-document/export', { params })),
+    dataQuality: () => withRetry(() => apiClient.get('/admin/law-document/data-quality'))
   },
   stats: {
-    userActivity: (params) => withRetry(() => api.get('/admin/stats/user-activity', { params })),
-    lawUsage: (params) => withRetry(() => api.get('/admin/stats/law-usage', { params }))
+    userActivity: (params) => withRetry(() => apiClient.get('/admin/stats/user-activity', { params })),
+    lawUsage: (params) => withRetry(() => apiClient.get('/admin/stats/law-usage', { params }))
   }
 }

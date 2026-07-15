@@ -466,14 +466,14 @@ function levelLabel(l) {
 async function loadStats() {
   try {
     const res = await api.get('/admin/stats')
-    counts.value = res.data?.counts || {}
+    counts.value = res?.counts || {}
   } catch (e) { counts.value = {} }
 }
 
 async function loadOverview() {
   try {
     const res = await api.get('/admin/monitor/overview')
-    overview.value = res.data || {}
+    overview.value = res || {}
     recentAlerts.value = overview.value.recentAlerts || []
   } catch (e) {
     overview.value = {}
@@ -484,7 +484,7 @@ async function loadOverview() {
 async function loadUserActivity() {
   try {
     const res = await api.stats.userActivity()
-    userActivity.value = res.data || {}
+    userActivity.value = res || {}
   } catch (e) {
     userActivity.value = {}
   }
@@ -493,35 +493,26 @@ async function loadUserActivity() {
 async function loadLawUsage() {
   try {
     const res = await api.stats.lawUsage({ topN: 10 })
-    lawUsage.value = res.data || {}
+    lawUsage.value = res || {}
   } catch (e) {
     lawUsage.value = {}
   }
 }
 
 async function loadAll() {
-  console.log('[AdminDashboard] loadAll started')
   loading.value = true
-  try {
-    await Promise.all([checkDbStatus(), loadStats(), loadOverview(), loadAiStatus(), loadUserActivity(), loadLawUsage()])
-    console.log('[AdminDashboard] loadAll completed')
-  } catch (e) {
-    console.error('[AdminDashboard] loadAll error:', e)
-  }
+  await Promise.all([checkDbStatus(), loadStats(), loadOverview(), loadAiStatus(), loadUserActivity(), loadLawUsage()])
   loading.value = false
 }
 
 async function checkDbStatus() {
-  console.log('[AdminDashboard] checkDbStatus calling /admin/db/health')
   try {
     const res = await api.get('/admin/db/health')
-    console.log('[AdminDashboard] checkDbStatus response:', res.data)
     dbStatus.value = {
-      connected: res.data?.connected || false,
-      message: res.data?.message || ''
+      connected: res?.connected || false,
+      message: res?.message || ''
     }
   } catch (e) {
-    console.error('[AdminDashboard] checkDbStatus error:', e.message, e.response?.status)
     dbStatus.value = { connected: false, message: '无法连接后端服务' }
   }
 }
@@ -547,9 +538,6 @@ async function loadAiStatus() {
 }
 
 onMounted(() => {
-  console.log('[AdminDashboard] mounted, calling loadAll')
-  console.log('[AdminDashboard] admin_token:', localStorage.getItem('admin_token') ? 'exists' : 'MISSING')
-  console.log('[AdminDashboard] api baseURL:', '/api/v1')
   loadAll()
   timer = setInterval(loadOverview, 30000)
 })
