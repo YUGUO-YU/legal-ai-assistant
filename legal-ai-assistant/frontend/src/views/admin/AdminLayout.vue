@@ -14,7 +14,7 @@
         <span v-if="!sidebarCollapsed">法律AI助手</span>
         <el-icon @click="toggleSidebar" class="collapse-icon"><component :is="sidebarCollapsed ? Expand : Fold" /></el-icon>
       </div>
-      <el-menu :default-active="activeMenu" :collapse="sidebarCollapsed" router class="aside-menu" background-color="#1e293b" text-color="#cbd5e1" active-text-color="#60a5fa">
+      <el-menu :default-active="activeMenu" :collapse="sidebarCollapsed" router class="aside-menu" background-color="var(--color-bg-dark)" text-color="var(--color-text-muted)" active-text-color="var(--color-primary)">
         <el-menu-item index="/admin">
           <el-icon><Odometer /></el-icon>
           <span>概览</span>
@@ -406,7 +406,7 @@ onUnmounted(() => {
 .mobile-header {
   display: none;
   height: 56px;
-  background: #fff;
+  background: var(--color-bg);
   border-bottom: 1px solid var(--color-border-light);
   padding: 0 16px;
   align-items: center;
@@ -482,43 +482,43 @@ onUnmounted(() => {
 </style>
 
 <style>
-html.dark .aside {
-  background: var(--color-bg-secondary) !important;
+[data-theme="dark"] .aside {
+  background: var(--color-bg-dark) !important;
 }
-html.dark .aside-header {
+[data-theme="dark"] .aside-header {
   background: var(--color-bg) !important;
   border-bottom-color: var(--color-border) !important;
 }
-html.dark .top-bar {
+[data-theme="dark"] .top-bar {
   background: var(--color-bg-secondary) !important;
   border-bottom-color: var(--color-border) !important;
 }
-html.dark .top-bar-title {
+[data-theme="dark"] .top-bar-title {
   color: var(--color-text-placeholder) !important;
 }
-html.dark .user-name {
+[data-theme="dark"] .user-name {
   color: var(--color-border-light) !important;
 }
-html.dark .main {
+[data-theme="dark"] .main {
   background: var(--color-bg) !important;
 }
-html.dark .right-area {
+[data-theme="dark"] .right-area {
   background: var(--color-bg) !important;
 }
-html.dark .el-menu {
+[data-theme="dark"] .el-menu {
   background: transparent !important;
 }
-html.dark .el-menu-item {
+[data-theme="dark"] .el-menu-item {
   color: var(--color-border-dark) !important;
 }
-html.dark .el-menu-item:hover {
+[data-theme="dark"] .el-menu-item:hover {
   background: rgba(255, 255, 255, 0.08) !important;
 }
-html.dark .el-menu-item.is-active {
+[data-theme="dark"] .el-menu-item.is-active {
   background: rgba(99, 102, 241, 0.2) !important;
-  color: #818cf8 !important;
+  color: var(--color-primary-light) !important;
 }
-html.dark .el-sub-menu__title {
+[data-theme="dark"] .el-sub-menu__title {
   color: var(--color-border-dark) !important;
 }
 </style>

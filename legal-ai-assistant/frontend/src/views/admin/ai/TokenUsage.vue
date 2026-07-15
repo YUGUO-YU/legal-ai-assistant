@@ -17,28 +17,28 @@
 
     <el-row :gutter="16">
       <el-col :span="6">
-        <div class="kpi-card" style="border-left: 4px solid #6366f1">
+        <div class="kpi-card" style="border-left: 4px solid var(--color-primary)">
           <div class="kpi-label">今日 Token</div>
           <div class="kpi-value">{{ summary.todayTokens.toLocaleString() }}</div>
           <div class="kpi-sub">调用 {{ summary.todayCalls.toLocaleString() }} 次</div>
         </div>
       </el-col>
       <el-col :span="6">
-        <div class="kpi-card" style="border-left: 4px solid #10b981">
+        <div class="kpi-card" style="border-left: 4px solid var(--color-success)">
           <div class="kpi-label">{{ range }} 日总量</div>
           <div class="kpi-value">{{ summary.periodTokens.toLocaleString() }}</div>
           <div class="kpi-sub">日均 {{ summary.avgDaily.toLocaleString() }}</div>
         </div>
       </el-col>
       <el-col :span="6">
-        <div class="kpi-card" style="border-left: 4px solid #f59e0b">
+        <div class="kpi-card" style="border-left: 4px solid var(--color-warning)">
           <div class="kpi-label">预估月成本</div>
           <div class="kpi-value">¥{{ summary.estimatedCost.toLocaleString() }}</div>
           <div class="kpi-sub">≈ ${{ (summary.estimatedCost / 7.2).toFixed(0) }}</div>
         </div>
       </el-col>
       <el-col :span="6">
-        <div class="kpi-card" style="border-left: 4px solid #06b6d4">
+        <div class="kpi-card" style="border-left: 4px solid var(--color-info)">
           <div class="kpi-label">活跃模型</div>
           <div class="kpi-value">{{ summary.activeModels }}</div>
           <div class="kpi-sub">共 {{ summary.totalModels }} 个注册</div>
@@ -259,16 +259,16 @@ onMounted(load)
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .header-actions { display:flex; gap:8px; align-items:center; }
 .kpi-card {
-  background: #fff;
+  background: var(--color-bg-card);
   border-radius: 10px;
   padding: 16px;
-  border: 1px solid #e2e8f0;
-  .kpi-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
-  .kpi-value { font-size: 24px; font-weight: 700; color: #0f172a; }
-  .kpi-sub { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+  border: 1px solid var(--color-border);
+  .kpi-label { font-size: 12px; color: var(--color-text-muted); margin-bottom: 6px; }
+  .kpi-value { font-size: 24px; font-weight: 700; color: var(--color-text-primary); }
+  .kpi-sub { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; }
 }
 .trend-chart {
   width: 100%; height: auto;
@@ -276,7 +276,7 @@ onMounted(load)
 .empty-hint {
   height: 200px;
   display: flex; align-items: center; justify-content: center;
-  color: #94a3b8; font-size: 13px;
+  color: var(--color-text-muted); font-size: 13px;
 }
 .module-bars {
   .bar-row {

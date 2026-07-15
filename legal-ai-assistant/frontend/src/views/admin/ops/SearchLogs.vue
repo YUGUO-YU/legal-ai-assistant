@@ -13,25 +13,25 @@
 
     <el-row :gutter="16">
       <el-col :span="5">
-        <div class="kpi-card" style="border-left:4px solid #6366f1">
+        <div class="kpi-card" style="border-left:4px solid var(--color-primary)">
           <div class="kpi-label">今日搜索</div>
           <div class="kpi-value">{{ stats.todayCount }}</div>
         </div>
       </el-col>
       <el-col :span="5">
-        <div class="kpi-card" style="border-left:4px solid #10b981">
+        <div class="kpi-card" style="border-left:4px solid var(--color-success)">
           <div class="kpi-label">平均耗时</div>
           <div class="kpi-value">{{ stats.avgLatency }} ms</div>
         </div>
       </el-col>
       <el-col :span="5">
-        <div class="kpi-card" style="border-left:4px solid #f59e0b">
+        <div class="kpi-card" style="border-left:4px solid var(--color-warning)">
           <div class="kpi-label">零结果查询</div>
           <div class="kpi-value">{{ stats.zeroResultCount }}</div>
         </div>
       </el-col>
       <el-col :span="9">
-        <div class="kpi-card" style="border-left:4px solid #06b6d4">
+        <div class="kpi-card" style="border-left:4px solid var(--color-info)">
           <div class="kpi-label">热门关键词</div>
           <div class="kpi-value" style="font-size:14px">{{ stats.topKeywords }}</div>
         </div>
@@ -58,7 +58,7 @@
             <div class="lat-item"><span class="lat-label">&lt; 100ms</span><span class="lat-value">{{ stats.lt100 }}</span><el-progress :percentage="latPct(stats.lt100)" :stroke-width="8" /></div>
             <div class="lat-item"><span class="lat-label">100-500ms</span><span class="lat-value">{{ stats.lt500 }}</span><el-progress :percentage="latPct(stats.lt500)" :stroke-width="8" status="warning" /></div>
             <div class="lat-item"><span class="lat-label">500-2000ms</span><span class="lat-value">{{ stats.lt2000 }}</span><el-progress :percentage="latPct(stats.lt2000)" :stroke-width="8" status="exception" /></div>
-            <div class="lat-item"><span class="lat-label">&gt; 2000ms</span><span class="lat-value">{{ stats.gt2000 }}</span><el-progress :percentage="latPct(stats.gt2000)" :stroke-width="8" color="#ef4444" /></div>
+            <div class="lat-item"><span class="lat-label">&gt; 2000ms</span><span class="lat-value">{{ stats.gt2000 }}</span><el-progress :percentage="latPct(stats.gt2000)" :stroke-width="8" color="var(--color-danger)" /></div>
           </div>
         </el-card>
       </el-col>
@@ -136,7 +136,7 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/ops/search-logs', { params: { page: page.value, pageSize: pageSize.value } })
-    const list = res.data?.list || []
+    const list = res?.data?.list || []
     rows.value = list
     total.value = res.data?.total || 0
 
@@ -190,26 +190,26 @@ onMounted(load)
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
-.kpi-card { background:#fff; border-radius:10px; padding:16px; border:1px solid #e2e8f0; .kpi-label { font-size:12px; color:#64748b; margin-bottom:6px; } .kpi-value { font-size:22px; font-weight:700; color:#0f172a; } }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
+.kpi-card { background:var(--color-bg-card); border-radius:10px; padding:16px; border:1px solid var(--color-border); .kpi-label { font-size:12px; color:var(--color-text-muted); margin-bottom:6px; } .kpi-value { font-size:22px; font-weight:700; color:var(--color-text-primary); } }
 .intent-section {
   .bar-row { display:flex; align-items:center; gap:10px; margin-bottom:8px;
-    .bar-label { width:90px; font-size:12px; color:#475569; text-align:right; flex-shrink:0; }
-    .bar-track { flex:1; height:24px; background:#f1f5f9; border-radius:6px; overflow:hidden;
-      .bar-fill { height:100%; border-radius:6px; font-size:11px; color:#fff; display:flex; align-items:center; padding:0 8px; min-width:28px; transition:width 0.5s; }
+    .bar-label { width:90px; font-size:12px; color:var(--color-text-secondary); text-align:right; flex-shrink:0; }
+    .bar-track { flex:1; height:24px; background:var(--color-bg-page); border-radius:6px; overflow:hidden;
+      .bar-fill { height:100%; border-radius:6px; font-size:11px; color:var(--color-text-inverse); display:flex; align-items:center; padding:0 8px; min-width:28px; transition:width 0.5s; }
     }
   }
 }
 .latency-dist {
   .lat-item { display:flex; align-items:center; gap:8px; margin-bottom:12px;
-    .lat-label { width:80px; font-size:12px; color:#475569; flex-shrink:0; }
-    .lat-value { width:30px; font-size:13px; font-weight:600; color:#0f172a; flex-shrink:0; }
+    .lat-label { width:80px; font-size:12px; color:var(--color-text-secondary); flex-shrink:0; }
+    .lat-value { width:30px; font-size:13px; font-weight:600; color:var(--color-text-primary); flex-shrink:0; }
     .el-progress { flex:1; }
   }
 }
-.text-success { color:#10b981; font-weight:600; }
-.text-warning { color:#f59e0b; font-weight:600; }
-.text-danger { color:#ef4444; font-weight:600; }
-.empty-hint { height:120px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:13px; }
+.text-success { color:var(--color-success); font-weight:600; }
+.text-warning { color:var(--color-warning); font-weight:600; }
+.text-danger { color:var(--color-danger); font-weight:600; }
+.empty-hint { height:120px; display:flex; align-items:center; justify-content:center; color:var(--color-text-muted); font-size:13px; }
 
 </style>

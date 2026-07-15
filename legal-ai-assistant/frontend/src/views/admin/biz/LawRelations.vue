@@ -17,7 +17,7 @@
       <el-col :span="6">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+            <div class="stat-icon" style="background: var(--gradient-purple)">
               <el-icon :size="20"><Connection /></el-icon>
             </div>
             <div class="stat-info">
@@ -30,7 +30,7 @@
       <el-col :span="6">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)">
+            <div class="stat-icon" style="background: var(--gradient-pink)">
               <el-icon :size="20"><Document /></el-icon>
             </div>
             <div class="stat-info">
@@ -43,7 +43,7 @@
       <el-col :span="6">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)">
+            <div class="stat-icon" style="background: var(--gradient-blue)">
               <el-icon :size="20"><Link /></el-icon>
             </div>
             <div class="stat-info">
@@ -56,7 +56,7 @@
       <el-col :span="6">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)">
+            <div class="stat-icon" style="background: var(--gradient-mint)">
               <el-icon :size="20"><Warning /></el-icon>
             </div>
             <div class="stat-info">
@@ -458,7 +458,7 @@ onUnmounted(() => {
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap: wrap; gap: 10px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .header-actions { display:flex; gap:8px; flex-wrap: wrap; }
 .filter-card { margin-bottom: 16px; }
 .pager { margin-top: 16px; justify-content: flex-end; display: flex; }
@@ -469,11 +469,11 @@ onUnmounted(() => {
   .stat-icon {
     width: 48px; height: 48px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    color: #fff;
+    color: var(--color-text-inverse);
   }
   .stat-info { display: flex; flex-direction: column; }
   .stat-value { font-size: 24px; font-weight: 600; line-height: 1.2; }
-  .stat-label { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .stat-label { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
 }
 
 .chart-card { margin-bottom: 16px; }

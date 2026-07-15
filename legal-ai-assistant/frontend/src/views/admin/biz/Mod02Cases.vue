@@ -41,16 +41,16 @@
 
     <el-row :gutter="16" style="margin-bottom:16px">
       <el-col :span="6">
-        <div class="kpi-card" style="border-left:4px solid #6366f1"><div class="kpi-label">案件总数</div><div class="kpi-value">{{ stats.total }}</div></div>
+        <div class="kpi-card" style="border-left:4px solid var(--color-primary)"><div class="kpi-label">案件总数</div><div class="kpi-value">{{ stats.total }}</div></div>
       </el-col>
       <el-col :span="6">
-        <div class="kpi-card" style="border-left:4px solid #10b981"><div class="kpi-label">民事</div><div class="kpi-value">{{ stats.civil }}</div></div>
+        <div class="kpi-card" style="border-left:4px solid var(--color-success)"><div class="kpi-label">民事</div><div class="kpi-value">{{ stats.civil }}</div></div>
       </el-col>
       <el-col :span="6">
-        <div class="kpi-card" style="border-left:4px solid #f59e0b"><div class="kpi-label">刑事</div><div class="kpi-value">{{ stats.criminal }}</div></div>
+        <div class="kpi-card" style="border-left:4px solid var(--color-warning)"><div class="kpi-label">刑事</div><div class="kpi-value">{{ stats.criminal }}</div></div>
       </el-col>
       <el-col :span="6">
-        <div class="kpi-card" style="border-left:4px solid #06b6d4"><div class="kpi-label">行政</div><div class="kpi-value">{{ stats.admin }}</div></div>
+        <div class="kpi-card" style="border-left:4px solid var(--color-info)"><div class="kpi-label">行政</div><div class="kpi-value">{{ stats.admin }}</div></div>
       </el-col>
     </el-row>
 
@@ -336,13 +336,13 @@ async function handleConfirm() {
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .header-actions { display:flex; gap:8px; align-items:center; }
 .filter-card { margin-bottom:16px; }
-.kpi-card { background:#fff; border-radius:10px; padding:16px; border:1px solid #e2e8f0; .kpi-label { font-size:12px; color:#64748b; margin-bottom:6px; } .kpi-value { font-size:22px; font-weight:700; color:#0f172a; } }
+.kpi-card { background:var(--color-bg-card); border-radius:10px; padding:16px; border:1px solid var(--color-border); .kpi-label { font-size:12px; color:var(--color-text-muted); margin-bottom:6px; } .kpi-value { font-size:22px; font-weight:700; color:var(--color-text-primary); } }
 .mono { font-family:'Cascadia Code','Consolas',monospace; font-size:13px; }
 
-.content-preview { background:#f8fafc; padding:16px; border-radius:8px; white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.6; border:1px solid #e2e8f0; max-height:30vh; overflow-y:auto; }
+.content-preview { background:var(--color-bg-page); padding:16px; border-radius:8px; white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.6; border:1px solid var(--color-border); max-height:30vh; overflow-y:auto; }
 .import-layout { display: flex; gap: 20px; }
 .left-upload { width: 260px; flex-shrink: 0; }
 .right-preview { flex: 1; }

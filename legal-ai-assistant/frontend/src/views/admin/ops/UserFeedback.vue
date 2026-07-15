@@ -207,16 +207,16 @@ onUnmounted(() => {
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap: wrap; gap: 10px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .header-actions { display:flex; gap:8px; flex-wrap: wrap; align-items: center; }
 .sla-cell {
   .sla-timer { font-size: 12px; font-weight: 600; }
-  .sla-due { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-  .sla-overtime { color: #ef4444; }
-  .sla-urgent { color: #f97316; }
-  .sla-warning { color: #f59e0b; }
-  .sla-ok { color: #10b981; }
-  .sla-done { color: #6366f1; }
+  .sla-due { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+  .sla-overtime { color: var(--color-danger); }
+  .sla-urgent { color: var(--color-danger); }
+  .sla-warning { color: var(--color-warning); }
+  .sla-ok { color: var(--color-success); }
+  .sla-done { color: var(--color-primary); }
 }
 
 </style>

@@ -15,7 +15,7 @@
       <el-col :span="8">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+            <div class="stat-icon" style="background: var(--gradient-purple)">
               <el-icon :size="24"><Document /></el-icon>
             </div>
             <div class="stat-info">
@@ -28,7 +28,7 @@
       <el-col :span="8">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)">
+            <div class="stat-icon" style="background: var(--gradient-pink)">
               <el-icon :size="24"><Collection /></el-icon>
             </div>
             <div class="stat-info">
@@ -41,7 +41,7 @@
       <el-col :span="8">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
-            <div class="stat-icon" :style="esAvailable ? 'background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' : 'background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'">
+            <div class="stat-icon" :style="esAvailable ? 'background: var(--gradient-blue)' : 'background: var(--gradient-pink)'">
               <el-icon :size="24"><Connection /></el-icon>
             </div>
             <div class="stat-info">
@@ -262,7 +262,7 @@
     </el-dialog>
 
     <el-dialog v-model="showBatchDeleteDialog" title="批量删除确认" width="400px">
-      <p style="color: #f56c6c;">确定要删除选中的 {{ selectedLaws.length }} 条法规吗？此操作不可恢复。</p>
+      <p style="color: var(--color-danger);">确定要删除选中的 {{ selectedLaws.length }} 条法规吗？此操作不可恢复。</p>
       <template #footer>
         <el-button @click="showBatchDeleteDialog = false">取消</el-button>
         <el-button type="danger" @click="handleBatchDelete" :loading="batchDeleting">确认删除</el-button>
@@ -637,11 +637,11 @@ onUnmounted(() => {
     margin: 0 0 4px;
     font-size: 22px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
   }
   p {
     margin: 0;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     font-size: 14px;
   }
 }
@@ -681,7 +681,7 @@ onUnmounted(() => {
     width: 56px;
     height: 56px;
     border-radius: 14px;
-    color: #fff;
+    color: var(--color-text-inverse);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -695,12 +695,12 @@ onUnmounted(() => {
   .stat-value {
     font-size: 24px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
   }
 
   .stat-label {
     font-size: 13px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     margin-top: 2px;
   }
 }
