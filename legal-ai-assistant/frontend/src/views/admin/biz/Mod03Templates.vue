@@ -300,20 +300,20 @@ onMounted(load)
  to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .header-actions { display:flex; gap:8px; align-items:center; }
 .filter-card { margin-bottom: 16px; }
 .var-editor { width:100%; .var-tags { display:flex; flex-wrap:wrap; gap:4px; align-items:center; } }
-.var-helper { font-size:12px; color:#64748b; .helper-title { font-weight:600; color:#475569; } code { background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:12px; } }
+.var-helper { font-size:12px; color: var(--color-text-muted); .helper-title { font-weight:600; color:var(--color-text-secondary); } code { background:var(--color-bg-page); padding:1px 5px; border-radius:4px; font-size:12px; } }
 .preview-meta { margin-bottom:16px; }
 .content-preview {
-  background: #f8fafc;
+  background: var(--color-bg-page);
   padding: 16px;
   border-radius: 8px;
   white-space: pre-wrap; word-break: break-word;
   font-family: 'Cascadia Code', 'Consolas', monospace;
   font-size: 13px; line-height: 1.7;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   max-height: 40vh; overflow-y: auto;
 }
 </style>

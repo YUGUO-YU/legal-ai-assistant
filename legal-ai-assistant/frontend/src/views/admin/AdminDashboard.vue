@@ -752,11 +752,11 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
     &.m01, &.m07 { background: var(--color-info); }
     &.m02, &.m06 { background: var(--color-success); }
     &.m03, &.m08 { background: var(--color-warning); }
-    &.m04 { background: #8b5cf6; }
-    &.m05 { background: #ec4899; }
-    &.m09 { background: #06b6d4; }
-    &.m10 { background: #84cc16; }
-    &.ai { background: #6366f1; }
+    &.m04 { background: var(--color-purple); }
+    &.m05 { background: var(--color-pink); }
+    &.m09 { background: var(--color-cyan); }
+    &.m10 { background: var(--color-lime); }
+    &.ai { background: var(--color-indigo); }
     &.mon { background: var(--color-danger); }
   }
 

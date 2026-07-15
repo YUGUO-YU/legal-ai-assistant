@@ -144,9 +144,9 @@
         </el-table-column>
         <el-table-column label="结果" min-width="160">
           <template #default="{ row }">
-            <span v-if="row.successCount" style="color: #67c23a;">成功: {{ row.successCount }}</span>
-            <span v-if="row.failCount" style="color: #f56c6c; margin-left: 8px;">失败: {{ row.failCount }}</span>
-            <span v-if="!row.successCount && !row.failCount && row.totalArticles" style="color: #909399;">共 {{ row.totalArticles }} 条</span>
+            <span v-if="row.successCount" style="color: var(--color-success);">成功: {{ row.successCount }}</span>
+            <span v-if="row.failCount" style="color: var(--color-danger); margin-left: 8px;">失败: {{ row.failCount }}</span>
+            <span v-if="!row.successCount && !row.failCount && row.totalArticles" style="color: var(--color-text-muted);">共 {{ row.totalArticles }} 条</span>
           </template>
         </el-table-column>
         <el-table-column prop="startedAt" label="开始时间" width="170" />

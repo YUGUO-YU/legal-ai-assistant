@@ -304,22 +304,23 @@ onMounted(load)
  to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .header-actions { display:flex; gap:8px; align-items:center; }
 .filter-card { margin-bottom: 16px; }
-.mono { font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 12px; color: #475569; }
+.mono { font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 12px; color: var(--color-text-secondary); }
 
 .batch-actions {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: var(--color-primary-light);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   margin-bottom: 12px;
 
   span {
-    color: var(--color-primary);
+    color: var(--color-text-primary);
     font-weight: 500;
   }
 }

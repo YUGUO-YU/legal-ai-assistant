@@ -281,10 +281,10 @@ onMounted(loadAll)
   display: inline-block;
   width: 10px; height: 10px;
   border-radius: 50%;
-  &.dot-success { background: #10b981; box-shadow: 0 0 0 4px rgba(16,185,129,0.18); animation: pulse 1.6s infinite; }
-  &.dot-warning { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,0.18); }
-  &.dot-danger { background: #ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,0.18); }
-  &.dot-idle { background: #cbd5e1; }
+  &.dot-success { background: var(--color-success); box-shadow: 0 0 0 4px rgba(16,185,129,0.18); animation: pulse 1.6s infinite; }
+  &.dot-warning { background: var(--color-warning); box-shadow: 0 0 0 4px rgba(245,158,11,0.18); }
+  &.dot-danger { background: var(--color-danger); box-shadow: 0 0 0 4px rgba(239,68,68,0.18); }
+  &.dot-idle { background: var(--color-border); }
 }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(16,185,129,0.18); } 50% { box-shadow: 0 0 0 8px rgba(16,185,129,0); } }
 .health-actions { margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end; }

@@ -165,8 +165,8 @@ onMounted(load)
  to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .header-actions { display:flex; gap:8px; align-items:center; }
-.kpi-card { background:#fff; border-radius:10px; padding:12px 16px; border:1px solid #e2e8f0; .kpi-label { font-size:12px; color:#64748b; margin-bottom:4px; } .kpi-value { font-size:20px; font-weight:700; color:#0f172a; } }
-.group-head { display:flex; align-items:center; gap:10px; .group-num { font-size:13px; color:#64748b; } }
+.kpi-card { background:var(--color-bg-card); border-radius:10px; padding:12px 16px; border:1px solid var(--color-border); .kpi-label { font-size:12px; color:var(--color-text-muted); margin-bottom:4px; } .kpi-value { font-size:20px; font-weight:700; color:var(--color-text-primary); } }
+.group-head { display:flex; align-items:center; gap:10px; .group-num { font-size:13px; color: var(--color-text-muted); } }
 </style>

@@ -154,8 +154,8 @@
               <template v-else-if="importProgress.status === 'success'">
                 <el-tag type="success">导入完成</el-tag>
                 <div style="margin-top: 8px;">
-                  <span style="color: #67c23a;">成功: {{ importProgress.imported }}</span>
-                  <span style="margin-left: 12px; color: #f56c6c;">跳过: {{ importProgress.skipped }}</span>
+                  <span style="color: var(--color-success);">成功: {{ importProgress.imported }}</span>
+                  <span style="margin-left: 12px; color: var(--color-danger);">跳过: {{ importProgress.skipped }}</span>
                 </div>
               </template>
               <template v-else-if="importProgress.status === 'failed'">
@@ -180,8 +180,8 @@
               <el-table-column prop="error" label="错误" width="100" show-overflow-tooltip />
             </el-table>
             <div style="margin-top: 12px; text-align: right;">
-              <span style="color: #67c23a;">成功: {{ importPreview.totalRows - importPreview.errors }}</span>
-              <span style="margin-left: 12px; color: #f56c6c;">失败: {{ importPreview.errors }}</span>
+              <span style="color: var(--color-success);">成功: {{ importPreview.totalRows - importPreview.errors }}</span>
+              <span style="margin-left: 12px; color: var(--color-danger);">失败: {{ importPreview.errors }}</span>
               <span style="margin-left: 12px;">共 {{ importPreview.totalRows }} 条</span>
             </div>
             <div style="margin-top: 16px; text-align: right;">

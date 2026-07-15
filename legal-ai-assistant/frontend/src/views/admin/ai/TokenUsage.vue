@@ -292,9 +292,9 @@ onMounted(load)
     .bar-value { width: 70px; font-size: 12px; color: #334155; text-align: right; flex-shrink: 0; }
   }
 }
-.text-success { color: #10b981; font-weight: 600; }
-.text-warning { color: #f59e0b; font-weight: 600; }
-.text-danger { color: #ef4444; font-weight: 600; }
+.text-success { color: var(--color-success); font-weight: 600; }
+.text-warning { color: var(--color-warning); font-weight: 600; }
+.text-danger { color: var(--color-danger); font-weight: 600; }
 .mono { font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 13px; }
 .pager { margin-top: 14px; justify-content: flex-end; display: flex; }
 </style>

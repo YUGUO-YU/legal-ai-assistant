@@ -75,7 +75,7 @@
             :props="{ label: 'nodeLabel' }"
             :default-expand-all="true"
             :check-strictly="false"
-            style="max-height:300px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px"
+            style="max-height:300px;overflow-y:auto;border:1px solid var(--color-border);border-radius:6px;padding:8px"
           />
         </el-form-item>
         <el-form-item label="备注">

@@ -175,7 +175,7 @@
       <div v-if="compareData" class="compare-container">
         <div class="compare-header">
           <el-tag type="info">{{ compareData.old?.version || '旧版本' }}</el-tag>
-          <span style="margin:0 12px;color:#64748b">VS</span>
+          <span style="margin:0 12px;color: var(--color-text-muted)">VS</span>
           <el-tag type="success">{{ compareData.new?.version || '新版本' }}</el-tag>
         </div>
         <el-tabs>
@@ -190,13 +190,9 @@
               <div class="diff-old">
                 <div class="var-tags">
                   <el-tag v-for="v in parseVars(compareData.old?.variables)" :key="v" size="small" style="margin:2px">{{ v }}</el-tag>
-                  <span v-if="!parseVars(compareData.old?.variables).length" style="color:#9ca3af">无变量</span>
-                </div>
-              </div>
-              <div class="diff-new">
-                <div class="var-tags">
-                  <el-tag v-for="v in parseVars(compareData.new?.variables)" :key="v" size="small" style="margin:2px">{{ v }}</el-tag>
-                  <span v-if="!parseVars(compareData.new?.variables).length" style="color:#9ca3af">无变量</span>
+                  <span v-if="!parseVars(compareData.old?.variables).length" style="color:var(--color-text-muted)">无变量</span>
+
+                  <span v-if="!parseVars(compareData.new?.variables).length" style="color:var(--color-text-muted)">无变量</span>
                 </div>
               </div>
             </div>
@@ -361,11 +357,11 @@ onMounted(load)
  to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .header-actions { display:flex; gap:8px; align-items:center; }
 .filter-card { margin-bottom: 16px; }
 .prompt-content {
-  background: #f8fafc;
+  background: var(--color-bg-page);
   padding: 16px;
   border-radius: 8px;
   white-space: pre-wrap;
@@ -373,7 +369,7 @@ onMounted(load)
   font-family: 'Cascadia Code', 'Consolas', monospace;
   font-size: 13px;
   line-height: 1.6;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 }
 .var-tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .compare-container { padding: 0 8px; }

@@ -127,7 +127,7 @@ onMounted(() => {
   gap: 10px;
   .header-content {
     h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-    p { margin: 0; color: #64748b; font-size: 13px; }
+    p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
   }
   .header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 }
@@ -147,10 +147,10 @@ onMounted(() => {
   border-radius: 2px;
   white-space: pre-wrap;
   word-break: break-all;
-  &.log-error { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
-  &.log-warn { background: rgba(245, 158, 11, 0.12); color: #fcd34d; }
-  &.log-info { color: #d1d5db; }
-  &.log-debug { color: #6b7280; }
+  &.log-error { background: rgba(239, 68, 68, 0.15); color: var(--color-danger); }
+  &.log-warn { background: rgba(245, 158, 11, 0.12); color: var(--color-warning); }
+  &.log-info { color: var(--color-text-muted); }
+  &.log-debug { color: var(--color-text-muted); }
 }
 .error-tip, .empty-tip {
   padding: 16px;

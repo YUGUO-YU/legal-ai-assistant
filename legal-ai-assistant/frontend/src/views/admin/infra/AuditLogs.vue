@@ -78,7 +78,7 @@
           <pre class="json-pre">{{ currentRow.response_result || '-' }}</pre>
         </el-descriptions-item>
         <el-descriptions-item label="错误信息" :span="2" v-if="currentRow.error_msg">
-          <span style="color: #ef4444">{{ currentRow.error_msg }}</span>
+          <span style="color: var(--color-danger)">{{ currentRow.error_msg }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="Trace ID">{{ currentRow.trace_id || '-' }}</el-descriptions-item>
         <el-descriptions-item label="时间">{{ currentRow.created_at }}</el-descriptions-item>

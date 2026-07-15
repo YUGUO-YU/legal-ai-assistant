@@ -117,7 +117,7 @@ onMounted(load)
  to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
-.text-muted { color: #94a3b8; font-size: 12px; }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
+.text-muted { color: var(--color-text-muted); font-size: 12px; }
 .pager { margin-top: 14px; justify-content: flex-end; display: flex; }
 </style>

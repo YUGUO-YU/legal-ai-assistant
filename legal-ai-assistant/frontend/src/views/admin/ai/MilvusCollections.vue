@@ -117,25 +117,25 @@ onMounted(load)
  to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .kpi-card {
   background: #fff;
   border-radius: 10px;
   padding: 16px;
   border: 1px solid #e2e8f0;
-  .kpi-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+  .kpi-label { font-size: 12px; color: var(--color-text-muted); margin-bottom: 6px; }
   .kpi-value { font-size: 24px; font-weight: 700; color: #0f172a; }
 }
-.text-success { color: #10b981; font-weight: 600; }
-.text-warning { color: #f59e0b; font-weight: 600; }
-.text-danger { color: #ef4444; font-weight: 600; }
+.text-success { color: var(--color-success); font-weight: 600; }
+.text-warning { color: var(--color-warning); font-weight: 600; }
+.text-danger { color: var(--color-danger); font-weight: 600; }
 .mono { font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 13px; }
 .dot {
   display: inline-block;
   width: 10px; height: 10px;
   border-radius: 50%;
-  &.dot-success { background: #10b981; box-shadow: 0 0 0 4px rgba(16,185,129,0.18); animation: pulse 1.6s infinite; }
-  &.dot-danger { background: #ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,0.18); }
+  &.dot-success { background: var(--color-success); box-shadow: 0 0 0 4px rgba(16,185,129,0.18); animation: pulse 1.6s infinite; }
+  &.dot-danger { background: var(--color-danger); box-shadow: 0 0 0 4px rgba(239,68,68,0.18); }
 }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(16,185,129,0.18); } 50% { box-shadow: 0 0 0 8px rgba(16,185,129,0); } }
 </style>

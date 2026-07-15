@@ -125,12 +125,12 @@ onMounted(load)
  to { opacity: 1; transform: translateY(0); } }
 .page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
 .header-content h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
-.header-content p { margin: 0; color: #64748b; font-size: 13px; }
+.header-content p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
 .header-actions { display:flex; gap:8px; align-items:center; }
 .mono { font-family:'Cascadia Code','Consolas',monospace; font-size:12px; }
 .pager { margin-top:14px; justify-content:flex-end; display:flex; }
-.content-preview { background:#f8fafc; padding:16px; border-radius:8px; white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.6; border:1px solid #e2e8f0; max-height:50vh; overflow-y:auto; }
+.content-preview { background:var(--color-bg-page); padding:16px; border-radius:8px; white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.6; border:1px solid var(--color-border); max-height:50vh; overflow-y:auto; }
 .report-content :deep(p) { margin:0 0 8px; }
 .report-content :deep(h1), .report-content :deep(h2), .report-content :deep(h3) { margin:12px 0 8px; font-size:15px; }
-.empty-hint { height:100px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:13px; }
+.empty-hint { height:100px; display:flex; align-items:center; justify-content:center; color: var(--color-text-muted); font-size:13px; }
 </style>

@@ -314,12 +314,13 @@ onMounted(load)
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: var(--color-primary-light);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   margin-bottom: 12px;
 
   span {
-    color: var(--color-primary);
+    color: var(--color-text-primary);
     font-weight: 500;
   }
 }
