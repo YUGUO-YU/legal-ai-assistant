@@ -98,6 +98,16 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* 统计卡片悬停上浮 */
+.stat-card-hover {
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  cursor: pointer;
+}
+.stat-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
 /* 卡片悬停上浮 */
 .card-hover {
   transition: transform var(--transition-base), box-shadow var(--transition-base);

@@ -2,9 +2,13 @@
   <div class="table-empty-state">
     <el-empty :image-size="100" :description="text">
       <template #image>
-        <svg class="empty-icon" viewBox="0 0 64 64" fill="none">
-          <path d="M8 16C8 12.686 10.686 10 14 10H26L32 16H50C53.314 16 56 18.686 56 22V48C56 51.314 53.314 54 50 54H14C10.686 54 8 51.314 8 48V16Z" stroke="currentColor" stroke-width="2" fill="none"/>
-          <path d="M8 22H56" stroke="currentColor" stroke-width="2"/>
+        <svg class="empty-icon" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="20" width="100" height="70" rx="8" stroke="currentColor" stroke-width="2" fill="none" opacity="0.3"/>
+          <rect x="20" y="35" width="80" height="8" rx="4" fill="currentColor" opacity="0.2"/>
+          <rect x="20" y="50" width="60" height="8" rx="4" fill="currentColor" opacity="0.15"/>
+          <rect x="20" y="65" width="40" height="8" rx="4" fill="currentColor" opacity="0.1"/>
+          <circle cx="85" cy="25" r="15" fill="var(--color-bg-page)" stroke="currentColor" stroke-width="2"/>
+          <path d="M80 25L83 28L90 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
         </svg>
       </template>
       <slot />
@@ -26,11 +30,11 @@ defineProps({
   padding: 40px 0;
   display: flex;
   justify-content: center;
-  
-  .empty-icon {
-    width: 64px;
-    height: 64px;
-    color: var(--color-text-placeholder, #9ca3af);
-  }
+  animation: adminFadeIn 0.5s ease both;
+}
+.empty-icon {
+  width: 120px;
+  height: 100px;
+  color: var(--color-text-placeholder);
 }
 </style>
