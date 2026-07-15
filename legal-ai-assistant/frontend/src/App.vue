@@ -5,15 +5,20 @@
     <SRAnnouncer />
 
     <el-container v-if="isLoggedIn" class="main-layout">
-      <el-aside width="260px" class="sidebar">
-        <div class="logo">
-          <div class="logo-icon">
-            <el-icon :size="28"><Sunny /></el-icon>
+      <el-aside :width="sidebarCollapsed ? '64px' : '260px'" class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <div class="logo-icon">
+              <el-icon :size="28"><Sunny /></el-icon>
+            </div>
+            <div class="logo-text" v-show="!sidebarCollapsed">
+              <h2>法律AI助手</h2>
+              <span>Legal AI Assistant</span>
+            </div>
           </div>
-          <div class="logo-text">
-            <h2>法律AI助手</h2>
-            <span>Legal AI Assistant</span>
-          </div>
+          <el-icon class="collapse-btn" @click="toggleSidebar">
+            <component :is="sidebarCollapsed ? Expand : Fold" />
+          </el-icon>
         </div>
 
         <div class="menu-container">
@@ -21,7 +26,7 @@
             :default-active="activeMenu"
             router
             class="sidebar-menu"
-            :collapse="false"
+            :collapse="sidebarCollapsed"
           >
             <el-menu-item index="/dashboard">
               <el-icon><HomeFilled /></el-icon>
@@ -133,7 +138,11 @@
         </div>
 
         <div class="sidebar-footer">
-          <div class="ai-badge">
+          <div class="sidebar-footer-toggle" @click="toggleTheme" :title="isDark ? '切换亮色模式' : '切换深色模式'">
+            <el-icon><component :is="isDark ? Sunny : Moon" /></el-icon>
+            <span v-show="!sidebarCollapsed">{{ isDark ? '深色' : '浅色' }}</span>
+          </div>
+          <div class="ai-badge" v-show="!sidebarCollapsed">
             <div class="ai-badge-icon">
               <el-icon><MagicStick /></el-icon>
             </div>
@@ -160,7 +169,6 @@
 
             <div class="header-actions">
               <el-button :icon="Bell" circle class="header-btn" />
-              <el-button :icon="isDark ? Sunny : Moon" circle class="header-btn" @click="toggleTheme" />
               <el-button :icon="Setting" circle class="header-btn" />
 
               <el-dropdown @command="handleCommand" trigger="click">
@@ -238,7 +246,9 @@ import {
   Sunny,
   Moon,
   TrendCharts,
-  MagicStick
+  MagicStick,
+  Fold,
+  Expand
 } from '@element-plus/icons-vue'
 import { useKeyboardShortcuts, isInputFocused } from './composables/useKeyboardShortcuts'
 import NotificationToast from '@/components/common/NotificationToast.vue'
@@ -254,6 +264,7 @@ const router = useRouter()
 
 const isDark = ref(false)
 const showReplay = ref(false)
+const sidebarCollapsed = ref(false)
 const isDev = import.meta.env.DEV
 let themeTimer = null
 const quickActionsRef = ref(null)
@@ -279,6 +290,11 @@ const toggleTheme = () => {
   const newTheme = isDark.value ? 'light' : 'dark'
   applyTheme(newTheme)
   isDark.value = !isDark.value
+}
+
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+  localStorage.setItem('sidebar_collapsed', sidebarCollapsed.value)
 }
 
 const getInitialTheme = () => {
@@ -319,6 +335,11 @@ onMounted(() => {
   applyTheme(theme)
   isDark.value = theme === 'dark'
   scheduleNextThemeSwitch()
+
+  const savedCollapsed = localStorage.getItem('sidebar_collapsed')
+  if (savedCollapsed === 'true') {
+    sidebarCollapsed.value = true
+  }
 
   if (isLoggedIn.value) {
     initializeApp()
@@ -455,6 +476,7 @@ useKeyboardShortcuts([
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  transition: width 0.3s ease;
 
   &::before {
     content: '';
@@ -467,38 +489,64 @@ useKeyboardShortcuts([
     pointer-events: none;
   }
 
-  .logo {
-    padding: 24px 20px;
+  .sidebar-header {
     display: flex;
     align-items: center;
-    gap: 14px;
+    justify-content: space-between;
+    padding: 16px;
     position: relative;
     z-index: 1;
 
-    .logo-icon {
-      width: 52px;
-      height: 52px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      border-radius: 14px;
+    .logo {
       display: flex;
       align-items: center;
-      justify-content: center;
-      color: #fff;
-      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-    }
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
 
-    .logo-text {
-      h2 {
+      .logo-icon {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         color: #fff;
-        font-size: 18px;
-        font-weight: 600;
-        margin: 0 0 4px 0;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        flex-shrink: 0;
       }
 
-      span {
-        color: rgba(255, 255, 255, 0.5);
-        font-size: 11px;
-        letter-spacing: 1px;
+      .logo-text {
+        h2 {
+          color: #fff;
+          font-size: 16px;
+          font-weight: 600;
+          margin: 0 0 2px 0;
+          white-space: nowrap;
+        }
+
+        span {
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 10px;
+          letter-spacing: 1px;
+          white-space: nowrap;
+        }
+      }
+    }
+
+    .collapse-btn {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
       }
     }
   }
@@ -576,52 +624,79 @@ useKeyboardShortcuts([
 }
 
 .sidebar-footer {
-  padding: 16px 20px;
+  padding: 12px 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .sidebar-footer-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 13px;
+    transition: all 0.2s;
+
+    .el-icon {
+      font-size: 16px;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+  }
 
   .ai-badge {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: 10px;
+    padding: 10px 12px;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.1);
 
     .ai-badge-icon {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       background: linear-gradient(135deg, #10b981, #059669);
-      border-radius: 10px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #fff;
-      font-size: 18px;
+      font-size: 16px;
+      flex-shrink: 0;
     }
 
     .ai-badge-info {
       display: flex;
       flex-direction: column;
+      min-width: 0;
 
       .ai-badge-title {
         color: #fff;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 500;
+        white-space: nowrap;
       }
 
       .ai-badge-status {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
         color: rgba(255, 255, 255, 0.5);
-        font-size: 11px;
+        font-size: 10px;
 
         .status-dot {
-          width: 6px;
-          height: 6px;
+          width: 5px;
+          height: 5px;
           background: #10b981;
           border-radius: 50%;
           animation: pulse 2s infinite;

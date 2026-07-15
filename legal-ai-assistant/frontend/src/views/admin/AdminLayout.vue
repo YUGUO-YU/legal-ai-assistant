@@ -110,6 +110,17 @@
           <el-menu-item index="/admin/sys/announcements">系统公告</el-menu-item>
         </el-sub-menu>
       </el-menu>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-toggle" @click="toggleSidebar" :title="sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'">
+          <el-icon><component :is="sidebarCollapsed ? Expand : Fold" /></el-icon>
+          <span v-if="!sidebarCollapsed">收起</span>
+        </div>
+        <div class="sidebar-footer-toggle" @click="toggleDark" :title="isDark ? '切换亮色模式' : '切换深色模式'">
+          <el-icon><component :is="isDark ? Sunny : Moon" /></el-icon>
+          <span v-if="!sidebarCollapsed">{{ isDark ? '深色' : '浅色' }}</span>
+        </div>
+      </div>
     </el-aside>
 
     <!-- 遮罩层 -->
@@ -254,7 +265,7 @@ onMounted(() => {
   const savedDark = localStorage.getItem('darkMode')
   if (savedDark === 'true') {
     isDark.value = true
-    document.documentElement.classList.add('dark')
+    document.documentElement.setAttribute('data-theme', 'dark')
   }
   const savedCollapsed = localStorage.getItem('sidebar_collapsed')
   if (savedCollapsed === 'true') {
@@ -267,10 +278,10 @@ onMounted(() => {
 const toggleDark = () => {
   isDark.value = !isDark.value
   if (isDark.value) {
-    document.documentElement.classList.add('dark')
+    document.documentElement.setAttribute('data-theme', 'dark')
     localStorage.setItem('darkMode', 'true')
   } else {
-    document.documentElement.classList.remove('dark')
+    document.documentElement.removeAttribute('data-theme')
     localStorage.setItem('darkMode', 'false')
   }
 }
@@ -475,6 +486,48 @@ onUnmounted(() => {
     .main {
       padding-top: 56px;
     }
+  }
+}
+
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-dark);
+
+  .sidebar-footer-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    transition: all 0.2s;
+
+    .el-icon {
+      font-size: 16px;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--color-text-inverse);
+    }
+  }
+}
+
+.aside--collapsed .sidebar-footer {
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 8px;
+
+  .sidebar-footer-toggle {
+    justify-content: center;
+    width: 100%;
+    padding: 8px;
   }
 }
 </style>
