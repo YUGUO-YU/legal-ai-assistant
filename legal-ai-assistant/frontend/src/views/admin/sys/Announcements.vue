@@ -158,7 +158,7 @@ const handleBatchDelete = async () => {
   try {
     await ElMessageBox.confirm(`确定删除选中的 ${selectedRows.value.length} 项？`, '批量删除', { type: 'warning' })
     const ids = selectedRows.value.map(r => r.id)
-    await api.post('/admin/announcement/batch-delete', { ids })
+    await api.post('/admin/announcements/batch-delete', { ids })
     ElMessage.success('删除成功')
     selectedRows.value = []
     load()
@@ -168,7 +168,7 @@ const handleBatchDelete = async () => {
 const handleBatchToggle = async (status) => {
   if (!selectedRows.value.length) return
   const ids = selectedRows.value.map(r => r.id)
-  await api.post('/admin/announcement/batch-toggle', { ids, status })
+    await api.post('/admin/announcements/batch-toggle', { ids, status })
   ElMessage.success('操作成功')
   selectedRows.value = []
   load()
@@ -196,13 +196,15 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/infra/announcements', { params: { page: currentPage.value, pageSize: pageSize.value, keyword: filter.keyword } })
-    rows.value = res.data?.list || []
-    total.value = res.data?.total || 0
+    rows.value = res?.list || []
+    total.value = res?.total || 0
   } catch (e) {
     rows.value = []
     total.value = 0
     ElMessage.error('加载失败')
   }
+  finally { loading.value = false }
+}
   finally { loading.value = false }
 }
 
@@ -228,8 +230,8 @@ async function handleSave() {
     } else {
       res = await api.post('/admin/infra/announcements', payload)
     }
-    if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
-    else ElMessage.error(res.data?.error || '保存失败')
+    if (res?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
+    else ElMessage.error(res?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
 }
 

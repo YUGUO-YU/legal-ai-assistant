@@ -102,7 +102,7 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/sys/configs', {
-      params: { page: 1, pageSize: 100, module: filter.group || undefined }
+      params: { page: 1, pageSize: 100, group: filter.group || undefined }
     })
     rows.value = res.data?.list || []
   } catch (e) {

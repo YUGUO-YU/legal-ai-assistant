@@ -217,8 +217,8 @@ function extractVars() {
 async function load() {
   loading.value = true
   try {
-    const res = await api.get('/admin/doc_template/list', { params: { category: filter.category || undefined } })
-    rows.value = res.data?.list || []
+    const res = await api.get('/admin/biz/mod03/templates', { params: { category: filter.category || undefined } })
+    rows.value = res?.list || []
   } catch (e) { rows.value = [] }
   finally { loading.value = false }
 }
@@ -247,8 +247,8 @@ async function handleSave() {
     } else {
       res = await api.post('/admin/doc_template/create', payload)
     }
-    if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
-    else ElMessage.error(res.data?.error || '保存失败')
+    if (res?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
+    else ElMessage.error(res?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
 }
 
@@ -282,8 +282,13 @@ async function copyTemplate(row) {
       version: row.version + '.copy'
     }
     const res = await api.post('/admin/doc_template/create', payload)
-    if (res.data?.ok) { ElMessage.success('已复制为新模板'); load() }
-    else ElMessage.error(res.data?.error || '复制失败')
+    if (res?.ok) { ElMessage.success('已复制为新模板'); load() }
+    else ElMessage.error(res?.error || '复制失败')
+  } catch (e) { ElMessage.error('复制失败') }
+}
+    const res = await api.post('/admin/doc_template/create', payload)
+    if (res?.ok) { ElMessage.success('已复制为新模板'); load() }
+    else ElMessage.error(res?.error || '复制失败')
   } catch (e) { ElMessage.error('复制失败') }
 }
 

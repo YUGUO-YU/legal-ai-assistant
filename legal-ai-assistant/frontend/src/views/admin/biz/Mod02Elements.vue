@@ -121,8 +121,8 @@ const groupedStats = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const res = await api.get('/admin/case_element_dict/list')
-    rows.value = res.data?.list || []
+    const res = await api.get('/admin/biz/mod02/case-elements')
+    rows.value = res?.list || []
   } catch (e) { rows.value = [] }
   finally { loading.value = false }
 }
@@ -145,8 +145,8 @@ async function handleSave() {
     const res = form.id
       ? await api.post(`/admin/case_element_dict/${form.id}/update`, payload)
       : await api.post('/admin/case_element_dict/create', payload)
-    if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
-    else ElMessage.error(res.data?.error || '保存失败')
+    if (res?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
+    else ElMessage.error(res?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
 }
 

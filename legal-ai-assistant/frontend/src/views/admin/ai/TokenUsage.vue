@@ -231,11 +231,11 @@ async function load() {
       api.get('/admin/ai/token-usage', { params: { page: page.value, pageSize: pageSize.value } }),
       api.get('/admin/monitor/overview')
     ])
-    const data = res.data || {}
+    const data = res || {}
     rows.value = data.list || []
     total.value = data.total || 0
     rawModuleData.value = data.list || []
-    const ov = trendRes.data || {}
+    const ov = trendRes || {}
     rawTrendData.value = ov.dailyTokens || []
     summary.todayTokens = ov.todayTokens || 0
     summary.todayCalls = ov.todayCalls || 0

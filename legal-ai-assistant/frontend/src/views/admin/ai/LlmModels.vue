@@ -178,7 +178,7 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/ai/llm-models')
-    rows.value = res.data?.list || []
+    rows.value = res?.list || []
   } catch (e) { rows.value = [] }
   finally { loading.value = false }
 }
@@ -204,12 +204,12 @@ async function handleSave() {
   try {
     let res
     if (form.id) {
-      res = await api.put('/admin/ai/llm-models/' + form.id, payload)
+      res = await api.post('/admin/ai/llm-models/' + form.id, payload)
     } else {
       res = await api.post('/admin/ai/llm-models', payload)
     }
-    if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
-    else ElMessage.error(res.data?.error || '保存失败')
+    if (res?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
+    else ElMessage.error(res?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
 }
 
@@ -225,8 +225,8 @@ async function handleDelete(row) {
 async function handleCheck(row) {
   try {
     const res = await api.post(`/admin/ai/llm-models/${row.id}/health-check`)
-    if (res.data?.ok) { ElMessage.success(`${row.model_name} 健康正常`); load() }
-    else ElMessage.error(res.data?.error || '探测失败')
+    if (res?.ok) { ElMessage.success(`${row.model_name} 健康正常`); load() }
+    else ElMessage.error(res?.error || '探测失败')
   } catch (e) { ElMessage.error('探测失败') }
 }
 
@@ -244,11 +244,11 @@ async function handleSetActive(row) {
   try {
     await ElMessageBox.confirm(`将「${row.model_name}」设为当前使用的大模型？`, '确认切换', { type: 'info' })
     const res = await api.post(`/admin/ai/llm-models/${row.id}/set-active`)
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success('已切换为当前模型')
       load()
     } else {
-      ElMessage.error(res.data?.error || '切换失败')
+      ElMessage.error(res?.error || '切换失败')
     }
   } catch (e) { if (e !== 'cancel') ElMessage.error('切换失败') }
 }
@@ -268,11 +268,11 @@ async function handleUpdateKey() {
   try {
     await ElMessageBox.confirm('此操作将更新模型「' + keyForm.modelName + '」的 API 密钥，是否确认？', '确认更新密钥', { type: 'warning' })
     const res = await api.post(`/admin/ai/llm-models/${keyForm.id}/update-key`, { apiKey: keyForm.apiKey })
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success('API 密钥已更新')
       showKeyDialog.value = false
     } else {
-      ElMessage.error(res.data?.error || '更新失败')
+      ElMessage.error(res?.error || '更新失败')
     }
   } catch (e) { if (e !== 'cancel') ElMessage.error('更新失败') }
 }

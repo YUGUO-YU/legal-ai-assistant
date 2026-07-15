@@ -106,7 +106,7 @@ async function loadLogs(){
   logLoading.value=true
   try{
     const res=await api.get('/admin/biz/mod01/crawl-logs',{params:{taskId:logTask.value.id,page:logPage.value,pageSize:logPageSize.value}})
-    logRows.value=res.data?.list||[];logTotal.value=res.data?.total||0
+    logRows.value=res?.list||[];logTotal.value=res?.total||0
   }catch(e){logRows.value=[];logTotal.value=0}
   finally{logLoading.value=false}
 }
@@ -115,7 +115,7 @@ function openLogs(row){
 }
 async function load(){
   loading.value=true
-  try{const res=await api.get('/admin/biz/mod01/crawl-tasks',{params:{page:page.value,pageSize:pageSize.value}});rows.value=res.data?.list||[];total.value=res.data?.total||rows.value.length}catch(e){rows.value=[];total.value=0}finally{loading.value=false}
+  try{const res=await api.get('/admin/biz/mod01/crawl-tasks',{params:{page:page.value,pageSize:pageSize.value}});rows.value=res?.list||[];total.value=res?.total||rows.value.length}catch(e){rows.value=[];total.value=0}finally{loading.value=false}
 }
 function openCreate(){Object.assign(form,{id:null,task_name:'',source:'官方网站',crawl_type:'full',target_url:'',cron_expression:'0 2 * * *',config:'{}',status:0});showDialog.value=true}
 function openEdit(row){Object.assign(form,{...row});showDialog.value=true}

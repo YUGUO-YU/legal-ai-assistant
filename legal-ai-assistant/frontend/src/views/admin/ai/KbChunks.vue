@@ -100,8 +100,8 @@ const currentChunk = ref(null)
 const loadStats = async () => {
   try {
     const res = await api.get('/admin/ai/kb-chunks/stats')
-    if (res.data.code === 0 || res.data.code === 200) {
-      stats.value = res.data.data || {}
+    if (res.code === 0 || res.code === 200) {
+      stats.value = res.data || {}
     }
   } catch (e) {
     console.error('加载统计失败', e)
@@ -110,9 +110,9 @@ const loadStats = async () => {
 
 const loadKbList = async () => {
   try {
-    const res = await api.get('/admin/biz/mod09-kb')
-    if (res.data.code === 0 || res.data.code === 200) {
-      kbList.value = res.data.data?.list || []
+    const res = await api.get('/admin/biz/mod09/kb-bases')
+    if (res.code === 0 || res.code === 200) {
+      kbList.value = res?.list || []
     }
   } catch (e) {
     console.error('加载知识库列表失败', e)
@@ -126,11 +126,11 @@ const loadChunks = async () => {
     if (filterKbId.value) params.kbId = filterKbId.value
     if (filterFileName.value) params.fileName = filterFileName.value
     const res = await api.get('/admin/ai/kb-chunks', { params })
-    if (res.data.code === 0 || res.data.code === 200) {
-      chunks.value = res.data.data?.list || []
-      total.value = res.data.data?.total || 0
+    if (res.code === 0 || res.code === 200) {
+      chunks.value = res?.list || []
+      total.value = res?.total || 0
     } else {
-      ElMessage.error(res.data.message || '加载失败')
+      ElMessage.error(res.message || '加载失败')
     }
   } catch (e) {
     ElMessage.error('加载分块列表失败')

@@ -99,8 +99,8 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/biz/mod04/research-tasks', { params: { page: page.value, pageSize: pageSize.value, status: filter.status || undefined } })
-    rows.value = res.data?.list || []
-    total.value = res.data?.total || rows.value.length
+    rows.value = res?.list || []
+    total.value = res?.total || rows.value.length
   } catch (e) { rows.value = []; total.value = 0 }
   finally { loading.value = false }
 }
@@ -108,7 +108,7 @@ async function load() {
 async function openDetail(row) {
   try {
     const res = await api.get(`/admin/biz/mod04/research-tasks/${row.id}`)
-    detail.value = res.data?.data || row
+    detail.value = res?.data || row
     showDetail.value = true
   } catch (e) {
     detail.value = row

@@ -113,8 +113,8 @@ async function load() {
     const res = await api.get('/admin/infra/audit-logs', {
       params: { page: filter.page, pageSize: filter.pageSize, userId: filter.userId || undefined, operation: filter.operation || undefined, module: filter.module || undefined }
     })
-    rows.value = res.data?.list || []
-    total.value = res.data?.total || 0
+    rows.value = res?.list || []
+    total.value = res?.total || 0
   } catch (e) {
     ElMessage.error('加载失败')
     rows.value = []

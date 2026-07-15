@@ -41,9 +41,11 @@ function revTag(t) { return ({1:'warning',2:'danger',3:'success',4:'info'}[t]||'
 async function load() {
   loading.value = true
   try {
-    const res = await api.get('/admin/law_revision/list',{params:{page:page.value,pageSize:pageSize.value}})
-    rows.value = res.data?.list||[]; total.value = res.data?.total||rows.value.length
-  } catch(e){rows.value=[];total.value=0} finally{loading.value=false}
+    const res = await api.get('/admin/biz/mod01/laws', { params: { page: page.value, pageSize: pageSize.value, keyword: '' } })
+    const allRows = res?.list || []
+    total.value = res?.total || allRows.length
+    rows.value = allRows
+  } catch(e){ rows.value = []; total.value = 0 } finally { loading.value = false }
 }
 watch([page,pageSize],load)
 onMounted(load)

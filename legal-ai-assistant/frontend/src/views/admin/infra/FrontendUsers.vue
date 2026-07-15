@@ -216,14 +216,14 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/infra/frontend-users', { params: { page: currentPage.value, pageSize: pageSize.value, keyword: filter.keyword } })
-    if (res.data?.error) {
-      ElMessage.error('加载失败: ' + res.data.error)
-      if (res.data.errorType === 'table_not_found') {
+    if (res?.error) {
+      ElMessage.error('加载失败: ' + res.error)
+      if (res.errorType === 'table_not_found') {
         ElMessage.warning('数据库未初始化，请联系管理员执行数据库初始化脚本')
       }
     }
-    rows.value = res.data?.list || []
-    total.value = res.data?.total || 0
+    rows.value = res?.list || []
+    total.value = res?.total || 0
   } catch (e) {
     rows.value = []
     total.value = 0
@@ -236,7 +236,7 @@ async function loadPending() {
   pendingLoading.value = true
   try {
     const res = await api.get('/admin/infra/frontend-users/pending')
-    pendingRows.value = res.data?.list || []
+    pendingRows.value = res?.list || []
     pendingCount.value = pendingRows.value.length
   } catch (e) {
     pendingRows.value = []
@@ -294,8 +294,8 @@ async function handleSave() {
     } else {
       res = await api.post('/admin/infra/frontend-users', payload)
     }
-    if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
-    else ElMessage.error(res.data?.error || '保存失败')
+    if (res?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
+    else ElMessage.error(res?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
 }
 

@@ -165,8 +165,8 @@ watch([page, pageSize], load)
 async function handleExport() {
   exporting.value = true
   try {
-    const res = await fetch('/api/admin/ops/search-logs/export', {
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    const res = await fetch('/api/v1/admin/ops/search-logs/export', {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('admin_token') }
     })
     const text = await res.text()
     const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' })

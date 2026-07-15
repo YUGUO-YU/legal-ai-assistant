@@ -88,7 +88,7 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/ai/milvus/collections')
-    const data = res.data || {}
+    const data = res || {}
     rows.value = data.collections || []
     stats.version = data.version || '-'
     stats.totalCollections = rows.value.length

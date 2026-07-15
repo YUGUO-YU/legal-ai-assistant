@@ -192,7 +192,7 @@ const handleBatchDelete = async () => {
   try {
     await ElMessageBox.confirm(`确定删除选中的 ${selectedRows.value.length} 项？`, '批量删除', { type: 'warning' })
     const ids = selectedRows.value.map(r => r.id)
-    await api.post('/admin/alert_rule/batch-delete', { ids })
+    await api.post('/admin/monitor/alert-rules/batch-delete', { ids })
     ElMessage.success('删除成功')
     selectedRows.value = []
     load()
@@ -202,7 +202,7 @@ const handleBatchDelete = async () => {
 const handleBatchToggle = async (status) => {
   if (!selectedRows.value.length) return
   const ids = selectedRows.value.map(r => r.id)
-  await api.post('/admin/alert_rule/batch-toggle', { ids, status })
+    await api.post('/admin/monitor/alert-rules/batch-toggle', { ids, status })
   ElMessage.success('操作成功')
   selectedRows.value = []
   load()
@@ -217,12 +217,11 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/monitor/alert-rules', { params: { ...filter } })
-    rows.value = res.data?.list || []
+    rows.value = res?.list || []
   } catch (e) {
     rows.value = []
   } finally {
-    loading.value = false
-  }
+    loading.value = false }
 }
 
 function openCreate() {
@@ -248,19 +247,19 @@ async function handleSave() {
   try {
     let res
     if (form.id) {
-      res = await api.post(`/admin/alert_rule/${form.id}/update`, payload)
+      res = await api.put(`/admin/monitor/alert-rules/${form.id}`, payload)
     } else {
-      res = await api.post('/admin/alert_rule/create', payload)
+      res = await api.post('/admin/monitor/alert-rules', payload)
     }
-    if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
-    else ElMessage.error(res.data?.error || '保存失败')
+    if (res?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
+    else ElMessage.error(res?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
 }
 
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除规则「${row.rule_name}」？`, '确认', { type: 'warning' })
-    await api.post(`/admin/alert_rule/${row.id}/delete`)
+    await api.post(`/admin/monitor/alert-rules/${row.id}`)
     ElMessage.success('已删除')
     load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
@@ -268,7 +267,14 @@ async function handleDelete(row) {
 
 async function toggleRule(row) {
   try {
-    await api.post(`/admin/alert_rule/${row.id}/toggle`, { status: row.status === 1 ? 0 : 1 })
+    await api.post(`/admin/monitor/alert-rules/${row.id}/toggle`)
+    row.status = row.status === 1 ? 0 : 1
+  } catch (e) { ElMessage.error('切换失败') }
+}
+
+async function toggleRule(row) {
+  try {
+    await api.post(`/admin/monitor/alert-rules/${row.id}/toggle?column=status`)
     row.status = row.status === 1 ? 0 : 1
   } catch (e) { ElMessage.error('切换失败') }
 }

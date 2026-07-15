@@ -46,11 +46,11 @@ const rules=reactive({
   ]
 })
 function quotaPct(r){return r.monthly_quota?Math.round((r.used_count||0)/r.monthly_quota*100):0}
-async function load(){loading.value=true;try{const res=await api.get('/admin/biz/mod05/company-apis');rows.value=res.data?.list||[]}catch(e){rows.value=[]}finally{loading.value=false}}
+async function load(){loading.value=true;try{const res=await api.get('/admin/biz/mod05/company-apis');rows.value=res?.list||[]}catch(e){rows.value=[]}finally{loading.value=false}}
 function openCreate(){Object.assign(form,{id:null,api_name:'',provider:'企查查',endpoint:'',api_key_enc:'',monthly_quota:10000,used_count:0,status:1});showDialog.value=true}
 function openEdit(row){Object.assign(form,{...row});showDialog.value=true}
-async function handleSave(){if(!form.api_name){ElMessage.warning('API名称必填');return}const p={...form};if(!p.api_key_enc)delete p.api_key_enc;delete p.id;delete p.used_count;try{const res=form.id?await api.post(`/admin/company_api_config/${form.id}/update`,p):await api.post('/admin/company_api_config/create',p);if(res.data?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else ElMessage.error(res.data?.error||'保存失败')}catch(e){ElMessage.error('保存失败')}}
-async function handleDelete(row){try{await ElMessageBox.confirm(`删除「${row.api_name}」？`,'确认',{type:'warning'});await api.post(`/admin/company_api_config/${row.id}/delete`);ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
+async function handleSave(){if(!form.api_name){ElMessage.warning('API名称必填');return}const p={...form};if(!p.api_key_enc)delete p.api_key_enc;delete p.id;delete p.used_count;try{const res=form.id?await api.post(`/admin/biz/mod05/company-apis/${form.id}/update`,p):await api.post('/admin/biz/mod05/company-apis/create',p);if(res?.ok){ElMessage.success('保存成功');showDialog.value=false;load()}else ElMessage.error(res?.error||'保存失败')}catch(e){ElMessage.error('保存失败')}}
+async function handleDelete(row){try{await ElMessageBox.confirm(`删除「${row.api_name}」？`,'确认',{type:'warning'});await api.post(`/admin/biz/mod05/company-apis/${row.id}/delete`);ElMessage.success('已删除');load()}catch(e){if(e!=='cancel')ElMessage.error('删除失败')}}
 onMounted(load)
 </script>
 <style lang="scss" scoped>

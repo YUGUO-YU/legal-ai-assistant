@@ -147,7 +147,7 @@ function toggleFilter(s) {
 async function load() {
   loading.value = true
   try {
-    const res = await api.get('/admin/ops/feedback', { params: { page: page.value, pageSize: pageSize.value } })
+    const res = await api.get('/admin/ops/user-feedback', { params: { page: page.value, pageSize: pageSize.value } })
     rows.value = res.data?.list || []
     total.value = res.data?.total || 0
   } catch (e) {
@@ -159,7 +159,7 @@ async function load() {
 
 async function handleStatus(row, newStatus) {
   try {
-    const res = await api.post(`/admin/user_feedback/${row.id}/update`, { status: newStatus })
+    const res = await api.post(`/admin/ops/user-feedback/${row.id}/update`, { status: newStatus })
     if (res.data?.ok || !res.data?.error) {
       row.status = newStatus
       ElMessage.success(`反馈 ${row.id} → ${statusLabel(newStatus)}`)

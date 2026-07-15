@@ -45,7 +45,7 @@ import {Refresh} from '@element-plus/icons-vue'
 import api from '../../../api'
 const rows=ref([]);const total=ref(0);const loading=ref(false);const page=ref(1);const pageSize=ref(20)
 const filter=reactive({cause:''});const showDetail=ref(false);const detail=ref(null)
-async function load(){loading.value=true;try{const res=await api.get('/admin/biz/mod06/case-search-logs',{params:{page:page.value,pageSize:pageSize.value}});rows.value=res.data?.list||[];total.value=res.data?.total||rows.value.length}catch(e){rows.value=[];total.value=0}finally{loading.value=false}}
+async function load(){loading.value=true;try{const res=await api.get('/admin/biz/mod06/case-search-logs',{params:{page:page.value,pageSize:pageSize.value}});rows.value=res?.list||[];total.value=res?.total||rows.value.length}catch(e){rows.value=[];total.value=0}finally{loading.value=false}}
 function openDetail(row){detail.value=row;showDetail.value=true}
 function reset(){filter.cause='';load()}
 watch([page,pageSize],load)

@@ -169,8 +169,8 @@ async function handleResolve(row) {
 async function handleExport() {
   exporting.value = true
   try {
-    const res = await fetch('/api/admin/monitor/alert-history/export', {
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    const res = await fetch('/api/v1/admin/monitor/alert-history/export', {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('admin_token') }
     })
     const text = await res.text()
     const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' })

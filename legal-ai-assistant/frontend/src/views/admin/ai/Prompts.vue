@@ -233,7 +233,7 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/ai/prompts', { params: filter })
-    rows.value = res.data?.list || []
+    rows.value = res?.list || []
   } catch (e) {
     rows.value = []
   } finally {
@@ -260,12 +260,12 @@ async function handleCreate() {
   }
   try {
     const res = await api.post('/admin/prompt_template/create', payload)
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success('已创建')
       showCreate.value = false
       load()
     } else {
-      ElMessage.error(res.data?.error || '创建失败')
+      ElMessage.error(res?.error || '创建失败')
     }
   } catch (e) {
     ElMessage.error('创建失败：' + (e.message || ''))
@@ -275,7 +275,7 @@ async function handleCreate() {
 async function openDetail(row) {
   try {
     const res = await api.get(`/admin/prompt_template/${row.id}`)
-    detail.value = res.data?.data || row
+    detail.value = res?.data || row
     showDetail.value = true
     loadRelatedVersions(row.prompt_code, row.id)
   } catch (e) {
@@ -288,7 +288,7 @@ async function openDetail(row) {
 async function loadRelatedVersions(code, excludeId) {
   try {
     const allRes = await api.get('/admin/prompt_template/list')
-    const all = allRes.data?.list || []
+    const all = allRes?.list || []
     relatedVersions.value = all.filter(r => r.prompt_code === code && r.id !== excludeId)
   } catch (e) {
     relatedVersions.value = []
@@ -304,11 +304,11 @@ async function handlePublish(row) {
   try {
     await ElMessageBox.confirm(`发布 ${row.prompt_code} ${row.version}？同代码其他版本将自动下线`, '确认', { type: 'success' })
     const res = await api.post(`/admin/ai/prompts/${row.id}/publish`)
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success('已发布')
       load()
     } else {
-      ElMessage.error(res.data?.error || '发布失败')
+      ElMessage.error(res?.error || '发布失败')
     }
   } catch (e) {
     if (e !== 'cancel') ElMessage.error('发布失败：' + (e.message || ''))
@@ -324,12 +324,12 @@ async function handleGraySubmit() {
   try {
     await ElMessageBox.confirm(`确定要对「${grayForm.code} ${grayForm.version}」进行灰度发布？灰度比例：${grayForm.ratio}%。${grayForm.teams ? '（指定团队：' + grayForm.teams + '）' : ''}`, '确认灰度发布', { type: 'warning' })
     const res = await api.post(`/admin/ai/prompts/${grayForm.id}/gray`, null, { params: { ratio: grayForm.ratio, teams: grayForm.teams || '' } })
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success(`已发布 ${grayForm.ratio}% 灰度`)
       showGray.value = false
       load()
     } else {
-      ElMessage.error(res.data?.error || '灰度失败')
+      ElMessage.error(res?.error || '灰度失败')
     }
   } catch (e) { if (e !== 'cancel') ElMessage.error('灰度失败：' + (e.message || '')) }
 }
@@ -338,11 +338,11 @@ async function handleRollback(row) {
   try {
     const { value: reason } = await ElMessageBox.prompt('请输入回滚原因', '回滚', { inputPlaceholder: '例：采纳率下降 5%' })
     const res = await api.post(`/admin/ai/prompts/${row.id}/rollback`, null, { params: { reason } })
-    if (res.data?.ok) {
-      ElMessage.success(`已回滚 ${res.data?.rolledBackVersion || row.version}`)
+    if (res?.ok) {
+      ElMessage.success(`已回滚 ${res?.rolledBackVersion || row.version}`)
       load()
     } else {
-      ElMessage.error(res.data?.error || '回滚失败')
+      ElMessage.error(res?.error || '回滚失败')
     }
   } catch (e) {
     if (e !== 'cancel') ElMessage.error('回滚失败：' + (e.message || ''))

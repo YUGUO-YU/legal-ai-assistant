@@ -307,8 +307,15 @@ const handleDelete = (row) => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    ElMessage.success('删除成功')
+  }).then(async () => {
+    try {
+      const apiPath = props.apiPath.replace(/\/list$/, '')
+      await api.post(`${apiPath}/${row.id}/delete`)
+      ElMessage.success('删除成功')
+      load()
+    } catch (e) {
+      ElMessage.error('删除失败')
+    }
   }).catch(() => {})
 }
 

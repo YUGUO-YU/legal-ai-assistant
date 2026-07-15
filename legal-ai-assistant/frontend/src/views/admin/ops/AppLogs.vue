@@ -88,11 +88,11 @@ async function loadLogs() {
   }
 }
 
-async function handleDownload() {
-  try {
-    const res = await fetch('/api/admin/ops/app-logs/download', {
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('admin_token') }
-    })
+  async function handleDownload() {
+    try {
+      const res = await fetch('/api/v1/admin/ops/app-logs/download', {
+        headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+      })
     if (!res.ok) throw new Error('下载失败')
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)

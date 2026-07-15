@@ -121,7 +121,7 @@ const groupedRows = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const res = await api.get('/admin/infra/dicts/list', { params: { dict_type: filter.dict_type || undefined } })
+    const res = await api.get('/infra/dicts/list', { params: { dict_type: filter.dict_type || undefined } })
     rows.value = res.data?.list || []
   } catch (e) { rows.value = [] }
   finally { loading.value = false }
@@ -159,7 +159,7 @@ async function handleSave() {
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除 ${row.dict_label}？`, '确认', { type: 'warning' })
-    await api.delete('/admin/infra/dicts/' + row.id)
+    await api.post('/admin/infra/dicts/' + row.id + '/delete')
     ElMessage.success('已删除')
     load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败') }
