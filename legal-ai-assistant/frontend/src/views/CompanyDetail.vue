@@ -305,8 +305,8 @@ const loadDetail = async () => {
   loading.value = true
   try {
     const res = await api.company.getQuery(uuid)
-    if (res.data) {
-      company.value = res.data
+    if (res) {
+      company.value = res
     } else {
       ElMessage.error('企业记录不存在')
     }

@@ -227,7 +227,7 @@ async function loadStats() {
         endDate: filter.value.endDate
       }
     })
-    stats.value = res.data || {}
+    stats.value = res || {}
   } catch (e) {
     stats.value = {}
   }
@@ -246,8 +246,8 @@ async function loadList() {
         pageSize: pagination.value.pageSize
       }
     })
-    list.value = res.data?.list || []
-    pagination.value.total = res.data?.total || 0
+    list.value = res?.list || []
+    pagination.value.total = res?.total || 0
   } catch (e) {
     list.value = []
   } finally {

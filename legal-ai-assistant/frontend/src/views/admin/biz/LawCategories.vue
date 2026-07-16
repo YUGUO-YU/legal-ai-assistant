@@ -116,7 +116,7 @@ const form = ref({ categoryName: '', parentId: null, sortOrder: 0, description: 
 const loadCategoryTypes = async () => {
   try {
     const res = await api.categoryTypes()
-    categoryTypes.value = res.data || []
+    categoryTypes.value = res || []
   } catch (e) {
     ElMessage.error('加载维度失败')
   }
@@ -126,7 +126,7 @@ const loadCategories = async () => {
   if (!selectedTypeId.value) return
   try {
     const res = await api.categories(selectedTypeId.value)
-    treeData.value = res.data || []
+    treeData.value = res || []
     selectedCategory.value = null
   } catch (e) {
     ElMessage.error('加载分类失败')

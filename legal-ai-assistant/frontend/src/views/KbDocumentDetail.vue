@@ -265,7 +265,7 @@ const runTest = async () => {
   testing.value = true
   try {
     const res = await api.legalSearch.search({ query: query.value, kbId: kb.value.id })
-    testResults.value = res.data?.items || []
+    testResults.value = res?.items || []
     if (!testResults.value.length) {
       ElMessage.info('未检索到相关结果')
     }

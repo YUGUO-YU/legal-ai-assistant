@@ -291,8 +291,8 @@ const lastAssistantMsg = computed(() => {
 const loadSessions = async () => {
   try {
     const res = await api.docQa.getSessionList()
-    if (res.data && res.data.length > 0) {
-      sessions.value = res.data.map(s => ({
+    if (res && res.length > 0) {
+      sessions.value = res.map(s => ({
         id: s.sessionId,
         sessionUuid: s.sessionId,
         title: s.title || '新会话',
@@ -307,8 +307,8 @@ const loadSessions = async () => {
 const loadKbList = async () => {
   try {
     const res = await api.knowledgeBase.list()
-    if (res.data && res.data.length > 0) {
-      kbList.value = res.data.map(kb => ({
+    if (res && res.length > 0) {
+      kbList.value = res.map(kb => ({
         id: kb.id,
         name: kb.name
       }))
@@ -469,8 +469,8 @@ const switchSession = async (session) => {
 
   try {
     const res = await api.docQa.getSessionHistory(session.sessionUuid || session.id)
-    if (res.data && res.data.length > 0) {
-      messages.value = res.data.map((msg, idx) => ({
+    if (res && res.length > 0) {
+      messages.value = res.map((msg, idx) => ({
         id: idx,
         role: msg.role,
         content: msg.content,
@@ -520,8 +520,8 @@ const restoreSession = async (session) => {
 
   try {
     const res = await api.docQa.getSessionHistory(session.sessionUuid || session.id)
-    if (res.data && res.data.length > 0) {
-      messages.value = res.data.map((msg, idx) => ({
+    if (res && res.length > 0) {
+      messages.value = res.map((msg, idx) => ({
         id: idx,
         role: msg.role,
         content: msg.content,

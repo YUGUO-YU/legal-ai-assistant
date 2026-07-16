@@ -122,14 +122,14 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/biz/mod03/drafts', { params: { page: filter.page, pageSize: filter.pageSize, keyword: filter.keyword || undefined } })
-    let list = res.data?.list || []
+    let list = res?.list || []
     if (filterStatus.value !== 'all') {
       const map = { pending: 0, pass: 1, reject: 2, return: 3 }
       const target = map[filterStatus.value]
       list = list.filter(r => r.review_status === target)
     }
     rows.value = list
-    total.value = res.data?.total || 0
+    total.value = res?.total || 0
   } catch (e) {
     rows.value = []; total.value = 0
   } finally {
@@ -142,7 +142,7 @@ function reset() { filter.keyword = ''; filterStatus.value = 'all'; filter.page 
 async function openDetail(row) {
   try {
     const res = await api.get(`/admin/doc_draft/${row.id}`)
-    detail.value = res.data?.data || row
+    detail.value = res || row
     showDetail.value = true
   } catch (e) {
     detail.value = row
@@ -156,13 +156,13 @@ async function handleAction(row, action) {
   try {
     await ElMessageBox.confirm(`确认${actionName}文书《${row.doc_title}》？`, '复核操作', { type: action === 1 ? 'success' : 'warning' })
     const res = await api.post(`/admin/biz/mod03/drafts/${row.id}/review`, null, { params: { action, reviewerId: 1, reviewerName: 'admin' } })
-    if (res.data?.ok) {
-      const from = reviewLabel(res.data.fromStatus)
-      const to = reviewLabel(res.data.toStatus)
+    if (res?.ok) {
+      const from = reviewLabel(res?.fromStatus)
+      const to = reviewLabel(res?.toStatus)
       ElMessage.success(`${actionName}成功：${from} → ${to}`)
       load()
     } else {
-      ElMessage.error(res.data?.error || `${actionName}失败`)
+      ElMessage.error(res?.error || `${actionName}失败`)
     }
   } catch (e) {
     if (e !== 'cancel') ElMessage.error(`${actionName}失败：${e.message || ''}`)

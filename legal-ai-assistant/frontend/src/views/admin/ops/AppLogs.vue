@@ -72,13 +72,13 @@ async function loadLogs() {
     const res = await api.get('/admin/ops/app-logs', {
       params: { level: level.value, page: page.value, pageSize: pageSize.value }
     })
-    if (res.data?.error) {
-      error.value = res.data.error
+    if (res?.error) {
+      error.value = res.error
       logs.value = []
       total.value = 0
     } else {
-      logs.value = res.data?.logs || []
-      total.value = res.data?.total || 0
+      logs.value = res?.logs || []
+      total.value = res?.total || 0
     }
   } catch (e) {
     error.value = e.message || '加载日志失败'

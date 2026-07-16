@@ -203,8 +203,8 @@ const loadCaseDetail = async () => {
   loading.value = true
   try {
     const res = await api.caseSearch.getCaseDetail(uuid)
-    if (res.data) {
-      caseData.value = res.data
+    if (res) {
+      caseData.value = res
     } else {
       ElMessage.error('案例不存在')
     }

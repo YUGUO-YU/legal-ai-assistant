@@ -231,9 +231,9 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/biz/mod02/cases', { params: { page: page.value, pageSize: pageSize.value, cause: filter.cause || undefined, caseType: filter.type || undefined, judgment: filter.result || undefined } })
-    const list = res.data?.list || []
+    const list = res?.list || []
     rows.value = list
-    total.value = res.data?.total || list.length
+    total.value = res?.total || list.length
     stats.civil = list.filter(r => r.case_type === 1).length
     stats.criminal = list.filter(r => r.case_type === 2).length
     stats.admin = list.filter(r => r.case_type === 3).length
@@ -277,7 +277,7 @@ async function handlePreview() {
   formData.append('file', uploadFile.value)
   try {
     const res = await api.judgmentImport.preview(formData)
-    importPreview.value = res.data
+    importPreview.value = res
     ElMessage.success('预览生成成功')
   } catch (e) {
     ElMessage.error('预览失败: ' + (e.message || '未知错误'))
@@ -291,8 +291,8 @@ async function handleConfirm() {
   if (!importPreview.value?.data) return
   try {
     const res = await api.judgmentImport.confirm({ cases: importPreview.value.data })
-    const jobId = res.data?.jobId
-    const total = res.data?.total || 0
+    const jobId = res?.jobId
+    const total = res?.total || 0
 
     importProgress.value = { status: 'running', progress: 0, processed: 0, total, imported: 0, skipped: 0 }
     importPreview.value = null

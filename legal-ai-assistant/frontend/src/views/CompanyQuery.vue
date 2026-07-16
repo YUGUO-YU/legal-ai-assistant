@@ -458,17 +458,17 @@ const handleQuery = async () => {
     queryStep.value = 1
     const res = await api.company.query({ companyName: companyName.value })
     queryStep.value = 2
-    companyInfo.value = res.data
+    companyInfo.value = res
     queryStep.value = 3
     const historyItem = {
       name: companyName.value,
       timestamp: Date.now(),
-      riskLevel: res.data.riskLevel || 'unknown'
+      riskLevel: res?.riskLevel || 'unknown'
     }
     const existing = queryHistory.value.filter(h => h.name !== companyName.value)
     queryHistory.value = [historyItem, ...existing].slice(0, 10)
     localStorage.setItem('companyQueryHistory', JSON.stringify(queryHistory.value))
-    addRecord('company', `查询"${companyName.value}"`, `风险等级：${res.data.riskLevel || '未知'}`)
+    addRecord('company', `查询"${companyName.value}"`, `风险等级：${res?.riskLevel || '未知'}`)
   } catch (e) {
     console.error(e)
     ElMessage.error('查询失败，请稍后重试')

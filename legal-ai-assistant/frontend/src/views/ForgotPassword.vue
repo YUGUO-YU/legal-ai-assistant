@@ -187,7 +187,7 @@ const handleGetCode = async () => {
     loading.value = true
     try {
       const res = await api.auth.sendVerifyCode(form.username)
-      serverCode.value = res.data.code
+      serverCode.value = res?.code
       codeSent.value = true
       countdown.value = 60
       countdownTimer = setInterval(() => {

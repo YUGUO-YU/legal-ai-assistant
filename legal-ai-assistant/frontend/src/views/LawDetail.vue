@@ -266,8 +266,8 @@ const generateAnalysis = async () => {
       articles
     )
 
-    if (res.data) {
-      analysisResult.value = res.data
+    if (res) {
+      analysisResult.value = res
       ElMessage.success('AI法规解读完成')
     } else {
       throw new Error('解读结果为空')

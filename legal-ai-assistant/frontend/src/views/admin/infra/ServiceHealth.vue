@@ -175,9 +175,9 @@ async function loadLLM() {
       api.get('/admin/ai/llm-models'),
       api.get('/admin/ai/llm-models/health-check')
     ])
-    llmSummary.value = sum.data || {}
-    llmModels.value = list.data?.list || []
-    llmStatus.value = health.data?.overall || -1
+    llmSummary.value = sum || {}
+    llmModels.value = list?.list || []
+    llmStatus.value = health?.overall || -1
   } catch (e) {
     llmStatus.value = 3
   } finally {
@@ -189,8 +189,8 @@ async function loadES() {
   esLoading.value = true
   try {
     const res = await api.get('/admin/infra/es-health')
-    esSummary.value = res.data || {}
-    esStatus.value = res.data?.ok ? 1 : 3
+    esSummary.value = res || {}
+    esStatus.value = res?.ok ? 1 : 3
   } catch (e) {
     esStatus.value = 3
   } finally {
@@ -202,11 +202,10 @@ async function loadMilvus() {
   milvusLoading.value = true
   try {
     const res = await api.get('/admin/ai/milvus/collections')
-    const data = res.data || {}
     milvusSummary.value = {
-      collections: data.collections?.length || 0,
-      vectors: data.collections?.reduce((s, c) => s + (c.rowCount || 0), 0) || 0,
-      version: data.version || 'v2.4.x',
+      collections: res?.collections?.length || 0,
+      vectors: res?.collections?.reduce((s, c) => s + (c.rowCount || 0), 0) || 0,
+      version: res?.version || 'v2.4.x',
       lastCheckAt: new Date().toLocaleString('zh-CN')
     }
     milvusStatus.value = 1
@@ -221,8 +220,8 @@ async function loadMysql() {
   mysqlLoading.value = true
   try {
     const res = await api.get('/admin/infra/mysql-health')
-    mysqlSummary.value = res.data || {}
-    mysqlStatus.value = res.data?.status === 'UP' ? 1 : 3
+    mysqlSummary.value = res || {}
+    mysqlStatus.value = res?.status === 'UP' ? 1 : 3
   } catch (e) {
     mysqlStatus.value = 3
   } finally {
@@ -234,8 +233,8 @@ async function loadRedis() {
   redisLoading.value = true
   try {
     const res = await api.get('/admin/infra/redis-health')
-    redisSummary.value = res.data || {}
-    redisStatus.value = res.data?.status === 'UP' ? 1 : 3
+    redisSummary.value = res || {}
+    redisStatus.value = res?.status === 'UP' ? 1 : 3
   } catch (e) {
     redisStatus.value = 3
   } finally {
@@ -252,7 +251,7 @@ async function loadAll() {
 async function checkOne(row) {
   try {
     const res = await api.post(`/admin/ai/llm-models/${row.id}/health-check`)
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success(`${row.model_name} 健康`)
       loadLLM()
     } else {

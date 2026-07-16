@@ -104,7 +104,7 @@ async function load() {
     const res = await api.get('/admin/sys/configs', {
       params: { page: 1, pageSize: 100, group: filter.group || undefined }
     })
-    rows.value = res.data?.list || []
+    rows.value = res?.list || []
   } catch (e) {
     rows.value = []
   } finally {
@@ -134,13 +134,13 @@ async function handleSave() {
     } else {
       res = await api.post('/admin/sys/configs', form)
     }
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success('配置已更新并应用')
       showDialog.value = false
       await api.post('/admin/sys/configs/refresh')
       load()
     } else {
-      ElMessage.error(res.data?.error || '保存失败')
+      ElMessage.error(res?.error || '保存失败')
     }
   } catch (e) {
     ElMessage.error('保存失败：' + (e.message || ''))
@@ -151,11 +151,11 @@ async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`删除配置 ${row.config_key}？`, '确认', { type: 'warning' })
     const res = await api.delete(`/admin/sys/configs/${row.id}`)
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success('已删除')
       load()
     } else {
-      ElMessage.error(res.data?.error || '删除失败')
+      ElMessage.error(res?.error || '删除失败')
     }
   } catch (e) {
     if (e !== 'cancel') ElMessage.error('删除失败：' + (e.message || ''))
@@ -167,10 +167,10 @@ async function handleRefreshCache() {
     await ElMessageBox.confirm('此操作将清除所有系统缓存，可能导致短暂性能下降，是否确认刷新？', '确认刷新缓存', { type: 'warning', confirmButtonText: '确认刷新', cancelButtonText: '取消' })
     refreshing.value = true
     const res = await api.post('/admin/sys/cache/refresh')
-    if (res.data?.ok) {
-      ElMessage.success(res.data?.message || '缓存已刷新')
+    if (res?.ok) {
+      ElMessage.success(res?.message || '缓存已刷新')
     } else {
-      ElMessage.error(res.data?.error || '刷新失败')
+      ElMessage.error(res?.error || '刷新失败')
     }
   } catch (e) { if (e !== 'cancel') ElMessage.error('刷新失败') }
   finally { refreshing.value = false }

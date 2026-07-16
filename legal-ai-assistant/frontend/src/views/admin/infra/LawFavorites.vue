@@ -129,7 +129,7 @@ const topUserName = computed(() => {
 async function loadStats() {
   try {
     const res = await api.get('/admin/infra/law-favorites/stats')
-    stats.value = res.data || {}
+    stats.value = res || {}
   } catch (e) {
     stats.value = {}
   }
@@ -147,8 +147,8 @@ async function loadList() {
         pageSize: pagination.value.pageSize
       }
     })
-    list.value = res.data?.list || []
-    pagination.value.total = res.data?.total || 0
+    list.value = res?.list || []
+    pagination.value.total = res?.total || 0
   } catch (e) {
     list.value = []
   } finally {
@@ -164,11 +164,11 @@ async function handleDelete(row) {
       { type: 'warning' }
     )
     const res = await api.delete(`/admin/infra/law-favorites/${row.id}`)
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success('删除成功')
       await loadAll()
     } else {
-      ElMessage.error(res.data?.error || '删除失败')
+      ElMessage.error(res?.error || '删除失败')
     }
   } catch (e) {
     if (e !== 'cancel') {

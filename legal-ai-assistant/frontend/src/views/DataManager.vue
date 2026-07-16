@@ -235,7 +235,7 @@ const submitWeb = async () => {
   webLoading.value = true
   try {
     const res = await api.lawImport.webSearch({ lawName: webForm.lawName, operator: webForm.operator })
-    const job = res.data || res
+    const job = res
     showJobResult(job, 'AI 联网导入')
   } catch (e) {
     ElMessage.error('导入失败: ' + (e?.message || '未知错误'))
@@ -280,7 +280,7 @@ const submitUpload = async () => {
     formData.append('lawName', uploadForm.lawName)
     formData.append('operator', uploadForm.operator)
     const res = await api.lawImport.uploadFile(formData)
-    const job = res.data || res
+    const job = res
     showJobResult(job, 'JSON 上传')
   } catch (e) {
     ElMessage.error('上传导入失败: ' + (e?.message || '未知错误'))
@@ -303,7 +303,7 @@ const presetLoading = ref('')
 const loadPresets = async () => {
   try {
     const res = await api.lawImport.presets()
-    presets.value = res.data || res || []
+    presets.value = res || []
   } catch (e) {
     presets.value = []
   }
@@ -320,7 +320,7 @@ const submitPreset = async (presetKey) => {
   presetLoading.value = presetKey
   try {
     const res = await api.lawImport.preset(presetKey, 'system')
-    const job = res.data || res
+    const job = res
     showJobResult(job, '预置种子导入')
   } catch (e) {
     ElMessage.error('预置导入失败: ' + (e?.message || '未知错误'))
@@ -341,7 +341,7 @@ const loadHistory = async () => {
   historyLoading.value = true
   try {
     const res = await api.lawImport.history(historyPage.value, historyPageSize.value)
-    const data = res.data || res
+    const data = res
     history.value = data.items || []
     historyTotal.value = data.total || 0
   } catch (e) {

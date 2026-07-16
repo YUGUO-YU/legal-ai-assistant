@@ -137,9 +137,9 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/ops/search-logs', { params: { page: page.value, pageSize: pageSize.value } })
-    const list = res?.data?.list || []
+    const list = res?.list || []
     rows.value = list
-    total.value = res.data?.total || 0
+    total.value = res?.total || 0
 
     stats.todayCount = list.filter(r => {
       const d = new Date(r.created_at)

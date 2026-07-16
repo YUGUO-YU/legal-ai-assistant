@@ -348,8 +348,8 @@ const loadReport = async () => {
   loading.value = true
   try {
     const res = await api.lawDocument.dataQuality()
-    if (res.data) {
-      report.value = res.data
+    if (res) {
+      report.value = res
       nextTick(() => {
         updateStatusChart()
         updateCategoryChart()
@@ -454,12 +454,12 @@ const loadLaws = async () => {
       search: searchKeyword.value || undefined
     }
     const res = await api.v2?.laws ? await api.v2.laws(params) : await api.lawSearch.search({ keyword: searchKeyword.value, page: currentPage.value, pageSize: pageSize.value })
-    if (res.data?.items) {
-      laws.value = res.data.items
-      total.value = res.data.total || 0
-    } else if (res.data?.laws) {
-      laws.value = res.data.laws
-      total.value = res.data.total || 0
+    if (res?.items) {
+      laws.value = res.items
+      total.value = res.total || 0
+    } else if (res?.laws) {
+      laws.value = res.laws
+      total.value = res.total || 0
     }
   } catch (e) {
     ElMessage.error('加载法规列表失败')
@@ -573,8 +573,8 @@ const handleExport = async () => {
   exporting.value = true
   try {
     const res = await api.lawDocument.export({ includeArticles: true })
-    if (res.data) {
-      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
+    if (res) {
+      const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url

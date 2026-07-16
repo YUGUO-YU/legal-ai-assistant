@@ -225,8 +225,8 @@ const handleSearch = async () => {
       caseType: caseType.value,
       caseCause: caseCause.value
     })
-    results.value = res.data.items || []
-    statistics.value = res.data.statistics || {}
+    results.value = res?.items || []
+    statistics.value = res?.statistics || {}
     addRecord('case', `类案检索"${caseDescription.value.slice(0, 20)}..."`, `找到 ${results.value.length} 个相似案例`)
   } catch (e) {
     console.error(e)

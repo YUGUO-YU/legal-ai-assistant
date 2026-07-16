@@ -367,8 +367,8 @@ async function load() {
         module: filter.module || undefined
       }
     })
-    rows.value = res.data?.list || []
-    total.value = res.data?.total || 0
+    rows.value = res?.list || []
+    total.value = res?.total || 0
   } catch (e) {
     ElMessage.error('加载失败：' + (e.message || '未知错误'))
     rows.value = []
@@ -395,7 +395,7 @@ async function handleView(row) {
   const detailPath = props.detailPath || props.apiPath.replace(/\?.*$/, '').replace(/\/list$/, `/${row.id}`)
   try {
     const res = await api.get(detailPath)
-    detail.value = res.data?.data || row
+    detail.value = res || row
     showDetail.value = true
   } catch (e) {
     detail.value = row

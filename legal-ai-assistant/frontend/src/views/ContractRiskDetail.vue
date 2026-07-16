@@ -223,8 +223,8 @@ const loadDetail = async () => {
   loading.value = true
   try {
     const res = await api.contract.getReview(uuid)
-    if (res.data) {
-      reviewData.value = res.data
+    if (res) {
+      reviewData.value = res
     } else {
       ElMessage.error('审查记录不存在或已过期')
     }

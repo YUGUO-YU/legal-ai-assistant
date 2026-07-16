@@ -94,8 +94,8 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/ai/gray-releases', { params: { page: page.value, pageSize: pageSize.value } })
-    rows.value = res.data?.list || []
-    total.value = res.data?.total || 0
+    rows.value = res?.list || []
+    total.value = res?.total || 0
   } catch (e) {
     rows.value = []; total.value = 0
   } finally {

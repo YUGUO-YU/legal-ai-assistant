@@ -208,8 +208,8 @@ const loadSession = async () => {
   loading.value = true
   try {
     const res = await api.docQa.getSessionHistory(sessionId.value)
-    if (res.data) {
-      messages.value = res.data
+    if (res) {
+      messages.value = res
       const firstUser = messages.value.find(m => m.role === 'user')
       if (firstUser) {
         title.value = snippet(firstUser.content, 30) || '会话详情'

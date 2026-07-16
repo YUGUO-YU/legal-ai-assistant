@@ -107,7 +107,7 @@ const loadStats = async () => {
   try {
     const res = await api.get('/admin/ai/kb-chunks/stats')
     if (res.code === 0 || res.code === 200) {
-      stats.value = res.data || {}
+      stats.value = res || {}
     }
   } catch (e) {
     console.error('加载统计失败', e)

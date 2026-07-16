@@ -261,15 +261,15 @@ const handleSearch = async () => {
       pageSize: pageSize.value,
       includeCases: true
     })
-    results.value = (res.data.items || []).map(item => ({ ...item, rating: 0 }))
-    relatedCases.value = res.data.relatedCases || []
-    total.value = res.data.total || 0
-    tookMs.value = res.data.tookMs || 0
-    searchLogId.value = res.data.searchLogId
+    results.value = (res?.items || []).map(item => ({ ...item, rating: 0 }))
+    relatedCases.value = res?.relatedCases || []
+    total.value = res?.total || 0
+    tookMs.value = res?.tookMs || 0
+    searchLogId.value = res?.searchLogId
 
-    if (page.value === 1 && res.data.items?.length > 0) {
+    if (page.value === 1 && res?.items?.length > 0) {
       loadSuggestedQueries()
-      addRecord('search', query.value, `找到 ${res.data.items.length} 条相关法规`)
+      addRecord('search', query.value, `找到 ${res.items.length} 条相关法规`)
     }
   } catch (e) {
     console.error(e)
@@ -282,7 +282,7 @@ const handleSearch = async () => {
 const loadSuggestedQueries = async () => {
   try {
     const res = await api.legalSearch.getSuggestedQueries(query.value)
-    suggestedQueries.value = res.data || []
+    suggestedQueries.value = res || []
   } catch (e) {
     console.error(e)
   }

@@ -116,7 +116,7 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/infra/roles')
-    rows.value = res.data?.list || []
+    rows.value = res?.list || []
   } catch (e) { rows.value = [] }
   finally { loading.value = false }
 }
@@ -124,7 +124,7 @@ async function load() {
 async function loadAllMenus() {
   try {
     const res = await api.get('/admin/infra/menus')
-    allMenus.value = res.data?.list || []
+    allMenus.value = res?.list || []
     buildMenuTree()
   } catch (e) { allMenus.value = [] }
 }
@@ -150,7 +150,7 @@ function buildMenuTree() {
 async function loadRoleMenus(roleId) {
   try {
     const res = await api.get(`/admin/infra/roles/${roleId}/menus`)
-    return res.data?.menu_ids || []
+    return res?.menu_ids || []
   } catch (e) { return [] }
 }
 
@@ -181,12 +181,12 @@ async function handleSave() {
     const res = form.id
       ? await api.post(`/admin/admin_role/${form.id}/update`, payload)
       : await api.post('/admin/admin_role/create', payload)
-    if (res.data?.ok) {
+    if (res?.ok) {
       if (menuTreeRef.value) {
         const checkedKeys = menuTreeRef.value.getCheckedKeys()
         const halfCheckedKeys = menuTreeRef.value.getHalfCheckedKeys()
         const allChecked = [...checkedKeys, ...halfCheckedKeys]
-        await api.post(`/admin/infra/roles/${form.id || res.data?.id || rows.value[0]?.id}/menus`, { menu_ids: allChecked })
+        await api.post(`/admin/infra/roles/${form.id || res?.id || rows.value[0]?.id}/menus`, { menu_ids: allChecked })
       }
       ElMessage.success('保存成功'); showDialog.value = false; load()
     } else ElMessage.error(res.data?.error || '保存失败')

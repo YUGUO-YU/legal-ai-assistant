@@ -272,7 +272,7 @@ function relationTypeTag(type) {
 async function loadLaws() {
   try {
     const res = await api.lawDocument.export({ includeArticles: false })
-    const laws = res.data?.laws || []
+    const laws = res?.laws || []
     lawList.value = laws.map(l => ({ id: l.id, title: l.title }))
   } catch (e) {
     lawList.value = []
@@ -290,8 +290,8 @@ async function load() {
     if (filter.relationType) params.relationType = filter.relationType
 
     const res = await api.get('/admin/biz/mod01/law-relations', { params })
-    rows.value = res.data?.list || []
-    total.value = res.data?.total || 0
+    rows.value = res?.list || []
+    total.value = res?.total || 0
 
     updateStats()
   } catch (e) {
@@ -395,21 +395,21 @@ async function handleSave() {
 
     if (isEdit.value) {
       const res = await api.put(`/admin/biz/mod01/law-relations/${editingId.value}`, payload)
-      if (res.data?.ok) {
+      if (res?.ok) {
         ElMessage.success('更新成功')
         dialogVisible.value = false
         load()
       } else {
-        ElMessage.error(res.data?.error || '更新失败')
+        ElMessage.error(res?.error || '更新失败')
       }
     } else {
       const res = await api.post('/admin/biz/mod01/law-relations', payload)
-      if (res.data?.ok) {
+      if (res?.ok) {
         ElMessage.success('创建成功')
         dialogVisible.value = false
         load()
       } else {
-        ElMessage.error(res.data?.error || '创建失败')
+        ElMessage.error(res?.error || '创建失败')
       }
     }
   } catch (e) {
@@ -421,11 +421,11 @@ async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`确认删除该关联关系吗？`, '删除确认', { type: 'warning' })
     const res = await api.delete(`/admin/biz/mod01/law-relations/${row.id}`)
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success('删除成功')
       load()
     } else {
-      ElMessage.error(res.data?.error || '删除失败')
+      ElMessage.error(res?.error || '删除失败')
     }
   } catch (e) {
     if (e !== 'cancel') {

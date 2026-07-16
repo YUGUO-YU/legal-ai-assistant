@@ -221,9 +221,9 @@ const loadDetail = async () => {
   loading.value = true
   try {
     const res = await api.company.getQuery(companyUuid)
-    if (res.data) {
-      companyInfo.value = res.data
-      shareholder.value = (res.data.shareholders || []).find(s => s.name === shareholderName) || { name: shareholderName }
+    if (res) {
+      companyInfo.value = res
+      shareholder.value = (res?.shareholders || []).find(s => s.name === shareholderName) || { name: shareholderName }
     } else {
       ElMessage.error('企业记录不存在')
     }

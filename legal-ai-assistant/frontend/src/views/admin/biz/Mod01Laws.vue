@@ -118,13 +118,13 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/admin/biz/mod01/laws', { params: { page: filter.page, pageSize: filter.pageSize, keyword: filter.keyword || undefined } })
-    let list = res.data?.list || []
+    let list = res?.list || []
     if (statusFilter.value === 'pending') list = list.filter(r => r.audit_status === 0)
     else if (statusFilter.value === 'first') list = list.filter(r => r.audit_status === 1)
     else if (statusFilter.value === 'done') list = list.filter(r => r.audit_status === 2)
     else if (statusFilter.value === 'reject') list = list.filter(r => r.audit_status === 3)
     rows.value = list
-    total.value = res.data?.total || 0
+    total.value = res?.total || 0
   } catch (e) {
     rows.value = []; total.value = 0
   } finally {
@@ -138,7 +138,7 @@ function reset() { filter.keyword = ''; statusFilter.value = 'all'; filter.page 
 async function openDetail(row) {
   try {
     const res = await api.get(`/admin/law_document/${row.id}`)
-    detail.value = res.data?.data || row
+    detail.value = res || row
     showDetail.value = true
   } catch (e) {
     detail.value = row
@@ -151,13 +151,13 @@ async function handleAction(row, action) {
   try {
     await ElMessageBox.confirm(`确认${actionName}法规《${row.title}》？`, '审核操作', { type: action === 1 ? 'success' : 'warning' })
     const res = await api.post(`/admin/biz/mod01/laws/${row.id}/audit`, null, { params: { action, auditorId: 1 } })
-    if (res.data?.ok) {
-      const from = auditLabel(res.data.fromStatus)
-      const to = auditLabel(res.data.toStatus)
+    if (res?.ok) {
+      const from = auditLabel(res?.fromStatus)
+      const to = auditLabel(res?.toStatus)
       ElMessage.success(`${actionName}成功：${from} → ${to}`)
       load()
     } else {
-      ElMessage.error(res.data?.error || `${actionName}失败`)
+      ElMessage.error(res?.error || `${actionName}失败`)
     }
   } catch (e) {
     if (e !== 'cancel') ElMessage.error(`${actionName}失败：${e.message || ''}`)

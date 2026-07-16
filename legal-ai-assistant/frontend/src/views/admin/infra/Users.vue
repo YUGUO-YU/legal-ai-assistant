@@ -214,14 +214,14 @@ async function load() {
   loadError.value = ''
   try {
     const res = await api.get('/admin/infra/users', { params: { ...filter } })
-    if (res.data?.error) {
-      loadError.value = '数据加载失败: ' + res.data.error
-      if (res.data.errorType === 'table_not_found') {
+    if (res?.error) {
+      loadError.value = '数据加载失败: ' + res.error
+      if (res.errorType === 'table_not_found') {
         loadError.value = '数据库表未初始化，请联系管理员执行数据库初始化脚本'
       }
       rows.value = []
     } else {
-      rows.value = res.data?.list || []
+      rows.value = res?.list || []
     }
   } catch (e) {
     rows.value = []
@@ -253,8 +253,8 @@ async function handleSave() {
     } else {
       res = await api.post('/admin/admin_user/create', payload)
     }
-    if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
-    else ElMessage.error(res.data?.error || '保存失败')
+    if (res?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
+    else ElMessage.error(res?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
 }
 
@@ -301,11 +301,11 @@ async function handleAssignRoles() {
     const res = await api.post(`/admin/infra/users/${roleForm.userId}/roles`, {
       role_ids: roleForm.selectedRoles
     })
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success('角色分配成功')
       showRoleDialog.value = false
     } else {
-      ElMessage.error(res.data?.error || '分配失败')
+      ElMessage.error(res?.error || '分配失败')
     }
   } catch (e) { ElMessage.error('分配失败') }
 }

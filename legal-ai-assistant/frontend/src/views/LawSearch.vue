@@ -245,7 +245,7 @@ const statusOptions = ref([])
 const loadStatusOptions = async () => {
   try {
     const res = await api.lawSearch.getCategories()
-    statusOptions.value = res.data?.statusOptions || []
+    statusOptions.value = res?.statusOptions || []
   } catch (e) {
     console.error('Failed to load status options:', e)
     statusOptions.value = [
@@ -270,8 +270,8 @@ const handleSearch = async () => {
       pageSize: pageSize.value
     })
 
-    results.value = res.data.items || []
-    total.value = res.data.total || 0
+    results.value = res?.items || []
+    total.value = res?.total || 0
   } catch (e) {
     console.error(e)
     ElMessage.error('查询失败，请稍后重试')
@@ -294,7 +294,7 @@ const submitLawUpload = async () => {
   uploadLoading.value = true
   try {
     const res = await api.lawImport.webSearch({ lawName: uploadForm.lawName.trim() })
-    if (res.data) {
+    if (res) {
       ElMessage.success('法规导入任务已启动，请到数据管理中心查看进度')
       uploadDialogVisible.value = false
     }
@@ -336,7 +336,7 @@ const browseArticles = async (law) => {
 
   try {
     const res = await api.lawSearch.getLawArticles(law.lawUuid)
-    articles.value = res.data || []
+    articles.value = res || []
   } catch (e) {
     console.error('加载条款失败:', e)
     ElMessage.error('加载条款失败')
@@ -363,14 +363,14 @@ onMounted(async () => {
 const loadCategories = async () => {
   try {
     const res = await api.lawSearch.getCategories()
-    const categories = res.data?.categoryL1 || []
+    const categories = res?.categoryL1 || []
     treeData.value = categories.map((cat) => ({
       id: cat.code,
       label: cat.name,
       count: null,
       children: []
     }))
-    statusOptions.value = res.data?.statusOptions || [
+    statusOptions.value = res?.statusOptions || [
       { value: 1, label: '现行有效' },
       { value: 2, label: '已废止' },
       { value: 3, label: '修订中' },

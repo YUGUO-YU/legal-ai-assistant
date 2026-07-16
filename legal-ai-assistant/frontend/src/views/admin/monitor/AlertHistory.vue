@@ -112,8 +112,8 @@ async function load() {
     if (filter.notify != null) params.notify_status = filter.notify
     if (filter.level != null) params.level = filter.level
     const res = await api.get('/admin/alert_history/list', { params })
-    rows.value = res.data?.list || []
-    total.value = res.data?.total || 0
+    rows.value = res?.list || []
+    total.value = res?.total || 0
   } catch (e) {
     ElMessage.error('加载失败')
     rows.value = []
@@ -140,11 +140,11 @@ function filterOpen() {
 async function handleAck(row) {
   try {
     const res = await api.post(`/admin/monitor/alert-history/${row.id}/ack`)
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success('已确认')
       load()
     } else {
-      ElMessage.warning(res.data?.error || '操作失败')
+      ElMessage.warning(res?.error || '操作失败')
     }
   } catch (e) {
     ElMessage.error('确认失败：' + (e.message || ''))
@@ -155,11 +155,11 @@ async function handleResolve(row) {
   try {
     await ElMessageBox.confirm(`确认将告警 #${row.id} 标记为已解决？`, '操作确认', { type: 'success' })
     const res = await api.post(`/admin/monitor/alert-history/${row.id}/resolve`)
-    if (res.data?.ok) {
+    if (res?.ok) {
       ElMessage.success('已解决')
       load()
     } else {
-      ElMessage.warning(res.data?.error || '操作失败')
+      ElMessage.warning(res?.error || '操作失败')
     }
   } catch (e) {
     if (e !== 'cancel') ElMessage.error('操作失败：' + (e.message || ''))

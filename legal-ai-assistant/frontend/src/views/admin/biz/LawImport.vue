@@ -250,14 +250,14 @@ const handlePreview = async () => {
   formData.append('file', uploadFile.value)
   try {
     const res = await api.importPreview(formData)
-    previewData.value = res.data || res
+    previewData.value = res || {}
     previewForm.value = {
-      lawTitle: res.data?.lawTitle || res.data?.title || '',
-      shortTitle: res.data?.shortTitle || '',
-      documentNo: res.data?.documentNo || '',
-      issuingAuthority: res.data?.issuingAuthority || '',
-      issueDate: res.data?.issueDate || '',
-      effectiveDate: res.data?.effectiveDate || ''
+      lawTitle: res?.lawTitle || res?.title || '',
+      shortTitle: res?.shortTitle || '',
+      documentNo: res?.documentNo || '',
+      issuingAuthority: res?.issuingAuthority || '',
+      issueDate: res?.issueDate || '',
+      effectiveDate: res?.effectiveDate || ''
     }
     expandedArticles.value.clear()
     showAllArticles.value = false
@@ -277,7 +277,7 @@ const handleConfirm = async () => {
       chapters: previewData.value?.chapters || [],
       articles: previewData.value?.articles || []
     })
-    const jobId = res.data?.jobId
+    const jobId = res?.jobId
     ElMessage.success('导入任务已提交')
     previewData.value = null
     uploadFile.value = null
@@ -310,7 +310,7 @@ const pollJobStatus = (jobId) => {
   pollTimers.value[jobId] = setInterval(async () => {
     try {
       const res = await api.lawImport.historyById(jobId)
-      const job = res.data
+      const job = res
       if (job) {
         const index = historyData.value.findIndex(h => h.id === jobId)
         if (index !== -1) {
@@ -339,7 +339,7 @@ const pollJobStatus = (jobId) => {
 const loadHistory = async () => {
   try {
     const res = await api.lawImport.history(1, 20)
-    historyData.value = res.data || []
+    historyData.value = res || []
   } catch (e) {
     ElMessage.error('加载历史失败')
   }

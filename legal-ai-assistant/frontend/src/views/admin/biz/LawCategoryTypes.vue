@@ -63,7 +63,7 @@ const form = ref({ typeCode: '', typeName: '', description: '', sortOrder: 0 })
 const loadData = async () => {
   try {
     const res = await api.categoryTypes()
-    tableData.value = res.data || []
+    tableData.value = res || []
   } catch (e) {
     ElMessage.error('加载失败')
   }

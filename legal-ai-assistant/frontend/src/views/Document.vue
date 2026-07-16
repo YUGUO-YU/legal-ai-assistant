@@ -441,7 +441,7 @@ const handleDraft = async () => {
         includeRiskPrompt: true
       })
 
-      draftResult.value = res.data
+      draftResult.value = res
       showResult.value = true
       activeTab.value = 'content'
       ElMessage.success('文书生成成功')
@@ -530,8 +530,8 @@ const handleExtractInfo = async () => {
   try {
     const res = await api.document.extractInfo(pasteText.value, selectedTemplate.value)
     console.debug('[Document.extractInfo] response received')
-    if (res.data) {
-      const info = res.data
+    if (res) {
+      const info = res
       if (info.plaintiffName) formData.plaintiffName = info.plaintiffName
       if (info.plaintiffAddress) formData.plaintiffAddress = info.plaintiffAddress
       if (info.plaintiffPhone) formData.plaintiffPhone = info.plaintiffPhone
@@ -594,7 +594,7 @@ const handleExtractInfo = async () => {
 const loadTemplates = async () => {
   try {
     const res = await api.document.getTemplates()
-    templates.value = res.data || []
+    templates.value = res || []
   } catch (e) {
     console.error(e)
   }

@@ -280,9 +280,9 @@ const handleSearch = async () => {
       pageSize: pageSize.value
     })
 
-    results.value = res.data.items || []
-    total.value = res.data.total || 0
-    tookMs.value = res.data.tookMs || 0
+    results.value = res?.items || []
+    total.value = res?.total || 0
+    tookMs.value = res?.tookMs || 0
   } catch (e) {
     console.error(e)
     ElMessage.error('查询失败，请稍后重试')

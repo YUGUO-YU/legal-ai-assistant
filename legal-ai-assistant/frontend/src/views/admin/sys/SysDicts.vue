@@ -122,7 +122,7 @@ async function load() {
   loading.value = true
   try {
     const res = await api.get('/infra/dicts/list', { params: { dict_type: filter.dict_type || undefined } })
-    rows.value = res.data?.list || []
+    rows.value = res?.list || []
   } catch (e) { rows.value = [] }
   finally { loading.value = false }
 }
@@ -151,8 +151,8 @@ async function handleSave() {
     } else {
       res = await api.post('/admin/infra/dicts', payload)
     }
-    if (res.data?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
-    else ElMessage.error(res.data?.error || '保存失败')
+    if (res?.ok) { ElMessage.success('保存成功'); showDialog.value = false; load() }
+    else ElMessage.error(res?.error || '保存失败')
   } catch (e) { ElMessage.error('保存失败') }
 }
 

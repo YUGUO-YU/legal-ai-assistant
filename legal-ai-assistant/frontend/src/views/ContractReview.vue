@@ -374,9 +374,9 @@ const handleReview = async () => {
       contractType: reviewOptions.contractType,
       contractAmount: reviewOptions.amount
     })
-    reviewResult.value = res.data
+    reviewResult.value = res
     ElMessage.success('审查完成')
-    const riskCount = res.data.risks?.length || 0
+    const riskCount = res?.risks?.length || 0
     addRecord('contract', `审查"${reviewOptions.contractType}"合同`, `发现 ${riskCount} 处风险`)
   } catch (e) {
     console.error(e)
