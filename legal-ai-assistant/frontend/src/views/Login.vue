@@ -337,13 +337,9 @@ const handleLogin = async () => {
 
     localStorage.setItem('token', res.token)
     localStorage.setItem('userInfo', JSON.stringify(res.userInfo))
-    window.dispatchEvent(new Event('login-state-change'))
 
-    ElMessage.success('登录成功，即将跳转到首页...')
-
-    setTimeout(() => {
-      router.push('/dashboard')
-    }, 500)
+    ElMessage.success('登录成功，正在跳转...')
+    router.replace('/dashboard')
   } catch (e) {
     console.error('登录失败:', e)
     ElMessage.error(e?.message || '登录失败，请检查用户名和密码')
