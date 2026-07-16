@@ -1,8 +1,8 @@
 <template>
-  <div class="service-health-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>基础设施 · 服务健康</h2>
+        <h2 class="gradient-text">基础设施 · 服务健康</h2>
         <p>LLM 网关 / Elasticsearch / Milvus 向量库 · 实时探测 + 指标</p>
       </div>
       <div class="header-actions">
@@ -107,7 +107,7 @@
       </el-col>
     </el-row>
 
-    <el-card style="margin-top:16px">
+    <el-card class="glass table-card" style="margin-top:16px">
       <template #header>
         <span>LLM 模型健康矩阵</span>
       </template>

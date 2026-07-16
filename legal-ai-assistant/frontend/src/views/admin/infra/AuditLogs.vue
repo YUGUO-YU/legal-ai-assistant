@@ -1,14 +1,16 @@
 <template>
-  <div class="admin-list-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>操作审计</h2>
+        <h2 class="gradient-text">操作审计</h2>
         <p>所有 admin 写操作 + 敏感读，自动入库</p>
       </div>
-      <el-tag type="primary" size="small">基础设施域</el-tag>
+      <div class="header-actions">
+        <el-tag type="primary" size="small">基础设施域</el-tag>
+      </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline :model="filter">
         <el-form-item label="用户ID"><el-input v-model="filter.userId" clearable style="width:160px" /></el-form-item>
         <el-form-item label="操作"><el-select v-model="filter.operation" clearable style="width:160px"><el-option v-for="o in operations" :key="o" :label="o" :value="o" /></el-select></el-form-item>
@@ -21,7 +23,7 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border @row-click="openDetail">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="user_id" label="用户ID" width="100" />

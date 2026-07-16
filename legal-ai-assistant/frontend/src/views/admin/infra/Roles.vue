@@ -1,8 +1,8 @@
 <template>
-  <div class="roles-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>角色权限管理</h2>
+        <h2 class="gradient-text">角色权限管理</h2>
         <p>基础设施域 · RBAC 角色 · 数据范围 · 菜单授权</p>
       </div>
       <div class="header-actions">
@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <el-card>
+    <el-card class="glass table-card">
       <template v-if="rows.length === 0 && !loading">
         <table-empty-state text="暂无数据" />
       </template>

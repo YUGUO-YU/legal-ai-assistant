@@ -1,8 +1,8 @@
 <template>
-  <div class="search-feedback-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>搜索反馈统计</h2>
+        <h2 class="gradient-text">搜索反馈统计</h2>
         <p>用户对搜索结果的满意度跟踪与分析</p>
       </div>
       <div class="header-actions">
@@ -87,7 +87,7 @@
       </el-col>
     </el-row>
 
-    <el-card class="table-card">
+    <el-card class="glass table-card">
       <template #header>
         <div class="card-header">
           <span>反馈列表</span>

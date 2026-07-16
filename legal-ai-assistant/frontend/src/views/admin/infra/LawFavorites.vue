@@ -1,8 +1,8 @@
 <template>
-  <div class="law-favorites-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>法规收藏管理</h2>
+        <h2 class="gradient-text">法规收藏管理</h2>
         <p>查看和管理所有用户的法规收藏记录</p>
       </div>
       <div class="header-actions">
@@ -41,7 +41,7 @@
       </el-col>
     </el-row>
 
-    <el-card class="table-card">
+    <el-card class="glass table-card">
       <template #header>
         <div class="card-header">
           <span>收藏列表</span>

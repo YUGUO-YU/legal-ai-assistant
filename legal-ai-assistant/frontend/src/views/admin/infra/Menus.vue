@@ -1,10 +1,10 @@
 <template>
-  <div class="menus-page">
+  <div class="admin-page">
     <div class="page-header">
-      <div class="header-content"><h2>菜单权限管理</h2><p>基础设施域 · 树形菜单 / 目录-菜单-按钮 / 权限标识</p></div>
+      <div class="header-content"><h2 class="gradient-text">菜单权限管理</h2><p>基础设施域 · 树形菜单 / 目录-菜单-按钮 / 权限标识</p></div>
       <div class="header-actions"><el-button :icon="Refresh" @click="load">刷新</el-button><el-button type="primary" @click="openCreate">新增菜单</el-button></div>
     </div>
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="treeRows" v-loading="loading" stripe border row-key="id" default-expand-all>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="menu_name" label="名称" min-width="200"><template #default="{row}"><span :style="{paddingLeft:(row._depth*20)+'px'}">{{row.menu_name}}</span></template></el-table-column>

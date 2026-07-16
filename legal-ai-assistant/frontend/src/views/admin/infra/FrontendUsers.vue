@@ -1,8 +1,8 @@
 <template>
-  <div class="users-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>前端用户管理</h2>
+        <h2 class="gradient-text">前端用户管理</h2>
         <p>基础设施域 · 前端注册用户账号管理</p>
       </div>
       <div class="header-actions">
@@ -15,7 +15,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card" v-if="activeTab === 'all'">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;" v-if="activeTab === 'all'">
       <el-form inline>
         <el-form-item label="关键词">
           <el-input v-model="filter.keyword" placeholder="用户名/姓名/邮箱/手机" clearable style="width:220px" @keyup.enter="load" />
@@ -33,7 +33,7 @@
       </el-form>
     </el-card>
 
-    <el-card v-if="activeTab === 'all'">
+    <el-card class="glass table-card" v-if="activeTab === 'all'">
       <template v-if="rows.length === 0 && !loading">
         <table-empty-state text="暂无数据" />
       </template>
