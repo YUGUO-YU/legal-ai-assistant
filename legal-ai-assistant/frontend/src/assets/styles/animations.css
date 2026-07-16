@@ -531,3 +531,240 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* ======================
+   全站暗色文本覆盖（所有页面）
+   ====================== */
+body,
+#app {
+  color: var(--color-text-primary);
+}
+
+/* 通用深色文本 → CSS变量 */
+* {
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+}
+
+/* 硬编码亮色文字 → 暗色 */
+body,
+#app,
+.el-card,
+.el-dialog,
+.el-table,
+.el-tabs,
+.el-collapse,
+.el-dropdown-menu,
+.el-popover,
+.el-tooltip__popper {
+  color: var(--color-text-primary);
+}
+
+/* ======================
+   全站白色/浅色背景 → 深色玻璃
+   ====================== */
+
+/* 白色背景块 */
+.el-card .el-card__body,
+.el-dialog .el-dialog__body,
+.el-table .el-table__body,
+.el-table .el-table__header,
+.el-collapse-item__content,
+.el-drawer__body,
+.el-select-dropdown,
+.el-select-dropdown__item,
+.el-dropdown-menu__item,
+.el-popover,
+.el-tour__body {
+  background: transparent !important;
+}
+
+/* 通用白色背景元素（覆盖所有页面内的 #fff） */
+.el-message-box,
+.el-message-box__content,
+.el-table tr,
+.el-table td,
+.el-table th,
+.el-tabs__content,
+.el-tab-pane,
+.el-collapse-item__header,
+.el-dropdown-menu,
+.el-cascader-panel,
+.el-color-picker__trigger {
+  background: transparent !important;
+}
+
+/* 搜索/筛选结果列表白色背景 */
+.result-item,
+.search-result-item,
+.list-item,
+.article-item,
+.card-item,
+.info-card,
+.stat-item,
+.data-row,
+.table-row {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(102, 126, 234, 0.1) !important;
+}
+
+/* 浅灰背景块 */
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select-dropdown__item.hover,
+.el-select-dropdown__item:hover,
+.el-dropdown-menu__item:hover,
+.el-menu-item:hover,
+.el-sub-menu__title:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* 浅灰分隔线 */
+.el-divider,
+.el-table td.el-table__cell,
+.el-table th.el-table__cell,
+.el-table--border .el-table__cell {
+  border-color: rgba(102, 126, 234, 0.1) !important;
+}
+
+/* ======================
+   硬编码颜色 → CSS变量（高优先级）
+   ====================== */
+
+/* 文本颜色 */
+[class*="color: #1f2937"],
+[class*="color:#1f2937"],
+[class*="color: #374151"],
+[class*="color:#374151"],
+[class*="color: #4b5563"],
+[class*="color:#4b5563"],
+[class*="color: #6b7280"],
+[class*="color:#6b7280"],
+[class*="color: #9ca3af"],
+[class*="color:#9ca3af"] {
+  color: var(--color-text-secondary) !important;
+}
+
+/* 最深文字 */
+[class*="color: #111827"],
+[class*="color:#111827"],
+[class*="color: #1f2937"],
+[class*="color:#1f2937"] {
+  color: var(--color-text-primary) !important;
+}
+
+/* 浅色标签背景 */
+.el-tag,
+.el-tag--info,
+.el-tag--warning,
+.el-tag--success,
+.el-tag--danger {
+  opacity: 0.85;
+}
+
+/* 输入框内部 */
+.el-input__inner,
+.el-textarea__inner {
+  color: var(--color-text-primary) !important;
+}
+
+/* Tab 标签 */
+.el-tabs__item {
+  color: var(--color-text-secondary) !important;
+}
+.el-tabs__item.is-active {
+  color: var(--color-primary-light) !important;
+}
+.el-tabs__active-bar {
+  background: var(--gradient-primary) !important;
+}
+
+/* Dropdown / Select */
+.el-select-dropdown__item {
+  color: var(--color-text-secondary) !important;
+}
+.el-select-dropdown__item.is-selected {
+  color: var(--color-primary-light) !important;
+}
+.el-select-dropdown__item.hover,
+.el-select-dropdown__item:hover {
+  background: rgba(102, 126, 234, 0.1) !important;
+}
+
+/* Dialog */
+.el-dialog {
+  background: rgba(19, 17, 28, 0.95) !important;
+  backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(102, 126, 234, 0.2) !important;
+}
+.el-dialog__title {
+  color: var(--color-text-primary) !important;
+}
+.el-dialog__header {
+  border-bottom: 1px solid rgba(102, 126, 234, 0.12) !important;
+}
+
+/* Drawer */
+.el-drawer {
+  background: rgba(19, 17, 28, 0.98) !important;
+}
+
+/* Message Box */
+.el-message-box {
+  background: rgba(19, 17, 28, 0.98) !important;
+  border-color: rgba(102, 126, 234, 0.2) !important;
+}
+
+/* Switch */
+.el-switch.is-checked .el-switch__core {
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+/* Radio / Checkbox */
+.el-radio__input.is-checked .el-radio__inner {
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background: var(--gradient-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+/* Slider */
+.el-slider__runway {
+  background: rgba(102, 126, 234, 0.2) !important;
+}
+
+/* Progress */
+.el-progress__text {
+  color: var(--color-text-secondary) !important;
+}
+
+/* Tooltip */
+.el-tooltip__popper,
+.el-popper.is-dark {
+  background: rgba(19, 17, 28, 0.95) !important;
+  border-color: rgba(102, 126, 234, 0.2) !important;
+}
+
+/* Popover */
+.el-popover.el-popper {
+  background: rgba(19, 17, 28, 0.98) !important;
+  border-color: rgba(102, 126, 234, 0.2) !important;
+}
+
+/* Badge */
+.el-badge__content {
+  background: var(--gradient-primary) !important;
+}
+
+/* Alert */
+.el-alert {
+  border-color: rgba(102, 126, 234, 0.2) !important;
+}
+
+/* Timeline */
+.el-timeline-item__tail {
+  border-color: rgba(102, 126, 234, 0.2) !important;
+}
