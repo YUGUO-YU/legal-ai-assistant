@@ -423,10 +423,11 @@ onMounted(() => {
 
     .section-content {
       padding: 16px 20px;
-      background: #f9fafb;
+      background: rgba(102, 126, 234, 0.06);
+      border: 1px solid rgba(102, 126, 234, 0.12);
       border-radius: 12px;
       font-size: 14px;
-      color: #4b5563;
+      color: var(--color-text-secondary);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -544,10 +545,11 @@ onMounted(() => {
   gap: 16px;
 
   .article-item {
-    background: #f9fafb;
+    background: rgba(102, 126, 234, 0.06);
+    border: 1px solid rgba(102, 126, 234, 0.12);
     border-radius: 12px;
     padding: 16px 20px;
-    border-left: 4px solid #667eea;
+    border-left: 4px solid var(--color-primary);
 
     .article-header {
       display: flex;
@@ -566,7 +568,7 @@ onMounted(() => {
 
       .article-title {
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
         font-size: 15px;
       }
     }
@@ -574,46 +576,40 @@ onMounted(() => {
     .article-content {
       font-size: 14px;
       line-height: 1.8;
-      color: #4b5563;
+      color: var(--color-text-primary);
+      padding: 16px;
+      background: rgba(102, 126, 234, 0.06);
+      border: 1px solid rgba(102, 126, 234, 0.12);
+      border-radius: 8px;
     }
-  }
-}
 
-.analysis-content {
-  .analysis-text {
-    font-size: 14px;
-    line-height: 1.8;
-    color: #333;
-    padding: 16px;
-    background: #f9f9f9;
-    border-radius: 8px;
-  }
-
-  .article-interpretation {
-    padding: 16px;
-    background: #f9f9f9;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    h4 {
-      margin: 0 0 8px 0;
-      color: #1890ff;
-      font-size: 15px;
+    .article-interpretation {
+      padding: 16px;
+      background: rgba(102, 126, 234, 0.06);
+      border: 1px solid rgba(102, 126, 234, 0.12);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      h4 {
+        margin: 0 0 8px 0;
+        color: #1890ff;
+        font-size: 15px;
+      }
+      p {
+        margin: 0;
+        color: var(--color-text-secondary);
+        font-size: 14px;
+        line-height: 1.6;
+      }
     }
-    p {
-      margin: 0;
-      color: #333;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-  }
 
-  .scenario-list {
-    padding-left: 20px;
-    li {
-      font-size: 14px;
-      line-height: 1.8;
-      color: #333;
-      margin-bottom: 8px;
+    .scenario-list {
+      padding-left: 20px;
+      li {
+        font-size: 14px;
+        line-height: 1.8;
+        color: var(--color-text-secondary);
+        margin-bottom: 8px;
+      }
     }
   }
 }
