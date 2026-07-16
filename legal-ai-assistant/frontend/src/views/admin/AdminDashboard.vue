@@ -318,14 +318,14 @@ const tokenTrendOption = computed(() => {
     xAxis: {
       type: 'category',
       data: t.map(x => String(x.day).slice(5)),
-      axisLine: { lineStyle: { color: '#e2e8f0' } },
-      axisLabel: { color: '#64748b', fontSize: 11 }
+      axisLine: { lineStyle: { color: '#30363d' } },
+      axisLabel: { color: '#8b949e', fontSize: 11 }
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10 }
+      splitLine: { lineStyle: { color: '#21262d', type: 'dashed' } },
+      axisLabel: { color: '#8b949e', fontSize: 10 }
     },
     series: [{
       type: 'line',
@@ -370,21 +370,21 @@ const moduleTokenOption = computed(() => {
     xAxis: {
       type: 'value',
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10 }
+      splitLine: { lineStyle: { color: '#21262d', type: 'dashed' } },
+      axisLabel: { color: '#8b949e', fontSize: 10 }
     },
     yAxis: {
       type: 'category',
       data: list.map(x => x.module || '未分类'),
-      axisLine: { lineStyle: { color: '#e2e8f0' } },
-      axisLabel: { color: '#475569', fontSize: 11 }
+      axisLine: { lineStyle: { color: '#30363d' } },
+      axisLabel: { color: '#8b949e', fontSize: 11 }
     },
     series: [{
       type: 'bar',
       data,
       barWidth: 14,
       itemStyle: { borderRadius: [0, 6, 6, 0] },
-      label: { show: true, position: 'right', formatter: (p) => formatNum(p.value), fontSize: 10, color: '#64748b' }
+      label: { show: true, position: 'right', formatter: (p) => formatNum(p.value), fontSize: 10, color: '#8b949e' }
     }]
   }
 })
@@ -403,14 +403,14 @@ const activeTrendOption = computed(() => {
     xAxis: {
       type: 'category',
       data: trend.map(x => String(x.date).slice(5)),
-      axisLine: { lineStyle: { color: '#e2e8f0' } },
-      axisLabel: { color: '#64748b', fontSize: 11 }
+      axisLine: { lineStyle: { color: '#30363d' } },
+      axisLabel: { color: '#8b949e', fontSize: 11 }
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10 }
+      splitLine: { lineStyle: { color: '#21262d', type: 'dashed' } },
+      axisLabel: { color: '#8b949e', fontSize: 10 }
     },
     series: [{
       type: 'line',
@@ -445,14 +445,14 @@ const topUsersOption = computed(() => {
   return {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (params) => `${params[0].name}<br/>活跃次数: ${params[0].value}` },
     grid: { left: '3%', right: '4%', bottom: '3%', top: '3%', containLabel: true },
-    xAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }, axisLabel: { color: '#94a3b8', fontSize: 10 } },
-    yAxis: { type: 'category', data: users.map(x => x.username || '未知'), axisLine: { lineStyle: { color: '#e2e8f0' } }, axisLabel: { color: '#475569', fontSize: 11 } },
+    xAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#21262d', type: 'dashed' } }, axisLabel: { color: '#8b949e', fontSize: 10 } },
+    yAxis: { type: 'category', data: users.map(x => x.username || '未知'), axisLine: { lineStyle: { color: '#30363d' } }, axisLabel: { color: '#8b949e', fontSize: 11 } },
     series: [{
       type: 'bar',
       data,
       barWidth: 14,
       itemStyle: { borderRadius: [0, 6, 6, 0] },
-      label: { show: true, position: 'right', formatter: (p) => formatNum(p.value), fontSize: 10, color: '#64748b' }
+      label: { show: true, position: 'right', formatter: (p) => formatNum(p.value), fontSize: 10, color: '#8b949e' }
     }]
   }
 })
@@ -473,19 +473,19 @@ const hourlyAccessOption = computed(() => {
         return `${h}<br/>今日: ${todayVal}次<br/>昨日: ${yesterdayVal}次`
       }
     },
-    legend: { data: ['今日', '昨日'], top: 0, right: 8, textStyle: { color: '#64748b', fontSize: 11 } },
+    legend: { data: ['今日', '昨日'], top: 0, right: 8, textStyle: { color: '#8b949e', fontSize: 11 } },
     grid: { left: '3%', right: '4%', bottom: '3%', top: '36px', containLabel: true },
     xAxis: {
       type: 'category',
       data: hours,
-      axisLine: { lineStyle: { color: '#e2e8f0' } },
-      axisLabel: { color: '#64748b', fontSize: 10, interval: 2 }
+      axisLine: { lineStyle: { color: '#30363d' } },
+      axisLabel: { color: '#8b949e', fontSize: 10, interval: 2 }
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
-      axisLabel: { color: '#94a3b8', fontSize: 10 }
+      splitLine: { lineStyle: { color: '#21262d', type: 'dashed' } },
+      axisLabel: { color: '#8b949e', fontSize: 10 }
     },
     series: [
       {
@@ -501,8 +501,8 @@ const hourlyAccessOption = computed(() => {
         smooth: true,
         symbol: 'circle',
         symbolSize: 4,
-        lineStyle: { color: '#94a3b8', width: 1.5, type: 'dashed' },
-        itemStyle: { color: '#94a3b8' }
+        lineStyle: { color: '#8b949e', width: 1.5, type: 'dashed' },
+        itemStyle: { color: '#8b949e' }
       }
     ]
   }
@@ -553,7 +553,7 @@ function levelLabel(l) {
 async function loadStats() {
   try {
     const res = await api.get('/admin/stats')
-    counts.value = res?.counts || {}
+    counts.value = res || {}
   } catch (e) { counts.value = {} }
 }
 
@@ -561,7 +561,7 @@ async function loadOverview() {
   try {
     const res = await api.get('/admin/monitor/overview')
     overview.value = res || {}
-    recentAlerts.value = overview.value.recentAlerts || []
+    recentAlerts.value = (res || {}).recentAlerts || []
   } catch (e) {
     overview.value = {}
     recentAlerts.value = []
@@ -589,7 +589,7 @@ async function loadLawUsage() {
 async function loadHourlyAccess() {
   try {
     const res = await api.stats.hourlyAccess()
-    hourlyAccess.value = res?.data || { today: Array(24).fill(0), yesterday: Array(24).fill(0) }
+    hourlyAccess.value = res || { today: Array(24).fill(0), yesterday: Array(24).fill(0) }
   } catch (e) {
     hourlyAccess.value = { today: Array(24).fill(0), yesterday: Array(24).fill(0) }
   }
