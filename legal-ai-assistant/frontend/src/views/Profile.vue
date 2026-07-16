@@ -228,17 +228,17 @@
               <el-tag size="small">{{ userInfo.role === 'lawyer' ? '律师' : '用户' }}</el-tag>
             </div>
           </div>
-          <div class="user-stats">
+            <div class="user-stats">
             <div class="stat-item">
-              <span class="stat-value">{{ stats.searchCount }}</span>
+              <span class="stat-value">{{ statsStore.stats.value.searchCount || 0 }}</span>
               <span class="stat-label">搜索次数</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value">{{ stats.docCount }}</span>
+              <span class="stat-value">{{ statsStore.stats.value.documentDraftCount || 0 }}</span>
               <span class="stat-label">文档数</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value">{{ stats.sessionCount }}</span>
+              <span class="stat-value">{{ statsStore.stats.value.sessionCount || 0 }}</span>
               <span class="stat-label">会话数</span>
             </div>
           </div>
@@ -297,8 +297,10 @@ import {
   Document
 } from '@element-plus/icons-vue'
 import api from '../api'
+import { useStats } from '@/composables/useStats'
 
 const router = useRouter()
+const { stats } = useStats()
 const activeTab = ref('profile')
 const profileFormRef = ref(null)
 const saving = ref(false)
@@ -343,12 +345,7 @@ const preferences = reactive({
   saveSessions: true
 })
 
-const stats = reactive({
-  searchCount: 156,
-  docCount: 23,
-  sessionCount: 8
-})
-
+const statsStore = useStats()
 const searchHistoryCount = ref(89)
 const sessionCount = ref(12)
 

@@ -142,6 +142,14 @@
             <el-icon><component :is="isDark ? Sunny : Moon" /></el-icon>
             <span v-show="!sidebarCollapsed">{{ isDark ? '深色' : '浅色' }}</span>
           </div>
+          <div class="sidebar-footer-toggle" @click="$router.push('/profile')" title="个人设置" v-show="!sidebarCollapsed">
+            <el-icon><User /></el-icon>
+            <span>个人设置</span>
+          </div>
+          <div class="sidebar-footer-toggle" @click="$router.push('/help')" title="使用帮助" v-show="!sidebarCollapsed">
+            <el-icon><QuestionFilled /></el-icon>
+            <span>使用帮助</span>
+          </div>
           <div class="ai-badge" v-show="!sidebarCollapsed">
             <div class="ai-badge-icon">
               <el-icon><MagicStick /></el-icon>
