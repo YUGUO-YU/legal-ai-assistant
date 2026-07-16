@@ -217,14 +217,14 @@ const loadLawDetail = async () => {
       api.lawSearch.getLawArticles(lawUuid)
     ])
 
-    if (detailRes.data) {
-      lawData.value = detailRes.data
+    if (detailRes) {
+      lawData.value = detailRes
     } else {
       ElMessage.error('法规不存在')
     }
 
-    if (articlesRes.data) {
-      lawArticles.value = articlesRes.data
+    if (articlesRes) {
+      lawArticles.value = articlesRes
     }
   } catch (e) {
     console.error('Failed to load law detail:', e)

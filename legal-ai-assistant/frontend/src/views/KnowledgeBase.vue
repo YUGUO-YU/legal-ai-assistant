@@ -311,11 +311,26 @@ const handleUpload = async () => {
   }
 
   uploading.value = true
-  await new Promise(r => setTimeout(r, 2000))
-  uploading.value = false
-  showUpload.value = false
-  fileList.value = []
-  ElMessage.success('文档上传成功，正在解析中...')
+  try {
+    for (const file of fileList.value) {
+      const formData = new FormData()
+      formData.append('kbId', uploadForm.kbId)
+      if (uploadForm.docName) {
+        formData.append('docName', uploadForm.docName)
+      }
+      formData.append('file', file.raw || file)
+      await api.knowledgeBase.upload(formData)
+    }
+    ElMessage.success('文档上传成功，正在解析中...')
+    fileList.value = []
+    uploadForm.docName = ''
+    showUpload.value = false
+  } catch (e) {
+    console.error('Upload failed:', e)
+    ElMessage.error('上传失败，请稍后重试')
+  } finally {
+    uploading.value = false
+  }
 }
 
 const handleCreateKb = async () => {

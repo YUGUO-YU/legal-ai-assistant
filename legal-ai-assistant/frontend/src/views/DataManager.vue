@@ -216,7 +216,7 @@ const refreshAll = async () => {
   loading.value = true
   try {
     const s = await api.lawImport.stats()
-    stats.value = s.data || s
+    stats.value = s || {}
   } catch (e) {
     ElMessage.error('加载统计失败')
   } finally {

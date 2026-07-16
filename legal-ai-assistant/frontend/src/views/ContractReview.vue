@@ -692,15 +692,29 @@ const generateReportHtml = (result) => {
 }
 
 const saveDraft = async () => {
+  if (!reviewResult.value) {
+    ElMessage.warning('请先完成合同审查')
+    return
+  }
   try {
-    const data = {
-      fileName: fileName.value,
-      reviewType: reviewType.value,
-      riskLevel: riskLevel.value,
-      riskDetails: JSON.stringify(risks.value),
-      summary: summary.value
+    const draft = {
+      id: reviewResult.value.reviewUuid || Date.now().toString(36),
+      contractText: contractText.value,
+      contractType: reviewOptions.contractType,
+      contractAmount: reviewOptions.amount,
+      riskLevel: reviewResult.value.riskLevel,
+      risks: reviewResult.value.risks,
+      summary: reviewResult.value.summary,
+      savedAt: Date.now()
     }
-    await api.post('/admin/biz/contract-reviews/draft', data)
+    const drafts = JSON.parse(localStorage.getItem('contract_drafts') || '[]')
+    const existing = drafts.findIndex(d => d.id === draft.id)
+    if (existing >= 0) {
+      drafts[existing] = draft
+    } else {
+      drafts.unshift(draft)
+    }
+    localStorage.setItem('contract_drafts', JSON.stringify(drafts.slice(0, 20)))
     ElMessage.success('草稿已保存')
   } catch (e) {
     ElMessage.error('保存失败')

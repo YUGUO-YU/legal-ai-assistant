@@ -500,7 +500,22 @@ const clearSessions = async () => {
 }
 
 const exportData = () => {
-  ElMessage.info('数据导出功能开发中...')
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  const exportObj = {
+    profile: userInfo,
+    preferences: JSON.parse(localStorage.getItem('preferences') || '{}'),
+    stats: JSON.parse(localStorage.getItem('user_stats') || '{}'),
+    usageMemory: JSON.parse(localStorage.getItem('usage_memory') || '[]'),
+    exportedAt: new Date().toLocaleString('zh-CN')
+  }
+  const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `legal-ai-data-${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success('数据已导出为 JSON 文件')
 }
 
 const showDeleteConfirm = () => {
