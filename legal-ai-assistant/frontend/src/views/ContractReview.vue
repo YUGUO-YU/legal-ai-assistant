@@ -632,8 +632,8 @@ const generateReportHtml = (result) => {
     .score-circle.medium { background: linear-gradient(135deg, #f59e0b, #d97706); }
     .score-circle.high { background: linear-gradient(135deg, #ef4444, #dc2626); }
     table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-    th { background: #f9fafb; font-weight: 600; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(102, 126, 234, 0.1); }
+    th { background: rgba(102, 126, 234, 0.06); font-weight: 600; color: var(--color-text-primary); }
     .score { font-weight: bold; color: #667eea; }
     .risk-section { margin: 20px 0; padding: 15px; border-radius: 8px; }
     .risk-section.high { background: rgba(239,68,68,0.1); border-left: 4px solid #ef4444; }
@@ -644,7 +644,7 @@ const generateReportHtml = (result) => {
     .risk-desc { color: #666; margin: 5px 0; }
     .risk-suggestion { color: #667eea; font-size: 14px; }
     .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #888; font-size: 12px; }
-    .disclaimer { background: #f9fafb; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 13px; color: #666; }
+    .disclaimer { background: rgba(102, 126, 234, 0.06); padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 13px; color: var(--color-text-secondary); border: 1px solid rgba(102, 126, 234, 0.12); }
   </style>
 </head>
 <body>
@@ -1159,7 +1159,7 @@ useKeyboardShortcuts([
       }
 
       :deep(.el-progress-bar__outer) {
-        background: #f3f4f6;
+        background: rgba(102, 126, 234, 0.12) !important;
         border-radius: 4px;
       }
 

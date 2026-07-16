@@ -768,3 +768,126 @@ body,
 .el-timeline-item__tail {
   border-color: rgba(102, 126, 234, 0.2) !important;
 }
+
+/* ======================
+   全局硬编码浅色背景 → 深色玻璃
+   ====================== */
+
+/* 页面主体背景 */
+.page-container,
+.page-content,
+.main-content,
+.content-area,
+.result-list,
+.search-list,
+.article-list,
+.data-list,
+.list-container,
+.card-grid {
+  background: transparent !important;
+}
+
+/* 搜索/列表结果项 */
+.result-item,
+.search-result-item,
+.article-item,
+.list-item,
+.card-item,
+.data-row,
+.info-row,
+.table-row,
+.article-card,
+.result-card,
+.search-card {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(102, 126, 234, 0.1) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* 悬停亮色背景 */
+.suggestion-tag,
+.tag-item,
+.chip-item,
+.filter-tag,
+.keyword-tag {
+  background: rgba(102, 126, 234, 0.08) !important;
+  border-color: rgba(102, 126, 234, 0.2) !important;
+  color: var(--color-text-secondary) !important;
+}
+
+/* 浅灰背景块（#f9fafb / #f3f4f6 / #f5f7fa / #f0f4ff / #fafbfc → 深色） */
+[class*="background: #f9fafb"],
+[class*="background:#f9fafb"],
+[class*="background: #f3f4f6"],
+[class*="background:#f3f4f6"],
+[class*="background: #f5f7fa"],
+[class*="background:#f5f7fa"],
+[class*="background: #f0f4ff"],
+[class*="background:#f0f4ff"],
+[class*="background: #fafbfc"],
+[class*="background:#fafbfc"],
+[class*="background: #f8fafc"],
+[class*="background:#f8fafc"],
+[class*="background: #f4f4f5"],
+[class*="background:#f4f4f5"],
+[class*="background: #f9f9f9"],
+[class*="background:#f9f9f9"] {
+  background: rgba(102, 126, 234, 0.06) !important;
+}
+
+/* 通用输入/卡片容器 */
+.input-card,
+.filter-card,
+.search-box,
+.result-card,
+.chat-input,
+.input-area,
+.input-wrapper,
+.suggestion-area,
+.session-item,
+.session-card,
+.kb-card,
+.article-card,
+.detail-card {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(102, 126, 234, 0.12) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* 表格行悬停 */
+.el-table tr:hover > td,
+.el-table--striped .el-table__body tr:hover > td {
+  background: rgba(102, 126, 234, 0.06) !important;
+}
+
+/* 深色背景上的文字 */
+.title-text,
+.card-title,
+.article-title,
+.result-title,
+.search-title,
+.section-title {
+  color: var(--color-text-primary) !important;
+}
+
+.subtitle-text,
+.card-subtitle,
+.article-summary,
+.result-summary {
+  color: var(--color-text-secondary) !important;
+}
+
+/* 图标容器 */
+.icon-wrap,
+.icon-box,
+.kpi-icon-wrap,
+.stat-icon {
+  background: rgba(102, 126, 234, 0.1) !important;
+}
+
+/* 警告/错误标签 */
+.warning-text { color: #fb923c !important; }
+.danger-text { color: #f87171 !important; }
+.success-text { color: #4ade80 !important; }
+.info-text { color: #60a5fa !important; }
+.primary-text { color: var(--color-primary-light) !important; }

@@ -724,9 +724,9 @@ useKeyboardShortcuts([
       padding: 8px 16px;
       border-radius: 20px;
       font-size: 13px;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      color: #4b5563;
+      background: rgba(102, 126, 234, 0.08);
+      border: 1px solid rgba(102, 126, 234, 0.2);
+      color: var(--color-text-secondary);
       transition: all 0.3s;
 
       &:hover {
@@ -783,9 +783,10 @@ useKeyboardShortcuts([
 
   &.assistant {
     .message-bubble {
-      background: #fff;
+      background: rgba(102, 126, 234, 0.1);
+      border: 1px solid rgba(102, 126, 234, 0.15);
       border-radius: 20px 20px 20px 4px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
     }
   }
 }
@@ -908,22 +909,22 @@ useKeyboardShortcuts([
 
 .chat-input {
   padding: 20px 24px;
-  border-top: 1px solid #f3f4f6;
-  background: #fff;
+  border-top: 1px solid rgba(102, 126, 234, 0.12);
+  background: rgba(19, 17, 28, 0.8);
 
   .input-wrapper {
     display: flex;
     gap: 12px;
-    background: #f9fafb;
+    background: rgba(255, 255, 255, 0.06);
     border-radius: 16px;
     padding: 6px 6px 6px 20px;
-    border: 2px solid transparent;
+    border: 2px solid rgba(102, 126, 234, 0.15);
     transition: all 0.3s;
 
     &:focus-within {
-      border-color: #667eea;
-      background: #fff;
-      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+      border-color: rgba(102, 126, 234, 0.5);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12);
     }
 
     :deep(.el-input__wrapper) {
@@ -988,14 +989,14 @@ useKeyboardShortcuts([
     margin-right: 8px;
     margin-bottom: 8px;
     cursor: pointer;
-    background: #fff;
-    border: 1px solid #e0e7ff;
-    color: #4f46e5;
+    background: rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    color: var(--color-primary-light);
     transition: all 0.2s;
 
     &:hover {
-      background: #6366f1;
-      border-color: #6366f1;
+      background: rgba(102, 126, 234, 0.25);
+      border-color: rgba(102, 126, 234, 0.4);
       color: #fff;
       transform: translateY(-1px);
     }
@@ -1115,12 +1116,12 @@ useKeyboardShortcuts([
     .session-icon {
       width: 36px;
       height: 36px;
-      background: #fff;
+      background: rgba(102, 126, 234, 0.12);
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #667eea;
+      color: var(--color-primary-light);
     }
 
     .session-info {

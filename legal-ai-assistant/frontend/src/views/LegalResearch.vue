@@ -622,7 +622,7 @@ const copySection = (section) => {
   }
 
   :deep(.el-progress-bar__outer) {
-    background: #f3f4f6;
+    background: rgba(102, 126, 234, 0.12) !important;
     border-radius: 6px;
   }
 

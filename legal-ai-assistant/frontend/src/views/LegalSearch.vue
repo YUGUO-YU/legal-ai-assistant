@@ -682,12 +682,13 @@ useKeyboardShortcuts([
       margin: 0 0 12px 0;
       font-size: 17px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--color-text-primary);
       line-height: 1.5;
     }
 
     .result-content {
-      background: #f9fafb;
+      background: rgba(102, 126, 234, 0.06);
+      border: 1px solid rgba(102, 126, 234, 0.12);
       border-radius: 12px;
       padding: 16px;
       margin-bottom: 16px;
@@ -870,7 +871,7 @@ useKeyboardShortcuts([
       height: 120px;
       object-fit: cover;
       border-radius: 8px;
-      background: #f3f4f6;
+      background: rgba(102, 126, 234, 0.08);
     }
 
     .case-header {

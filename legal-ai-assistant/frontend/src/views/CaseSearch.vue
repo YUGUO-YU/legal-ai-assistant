@@ -473,9 +473,10 @@ const copyCaseNo = (caseNo) => {
     align-items: center;
     margin-bottom: 20px;
     padding: 16px 20px;
-    background: #fff;
+    background: rgba(102, 126, 234, 0.06);
+    border: 1px solid rgba(102, 126, 234, 0.12);
     border-radius: 14px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 
     .stats-info {
       display: flex;
