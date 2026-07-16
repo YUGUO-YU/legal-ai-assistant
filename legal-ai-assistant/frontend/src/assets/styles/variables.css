@@ -7,9 +7,9 @@
   --screen-xl: 1200px;
   --screen-xxl: 1400px;
 
-  /* ====== 深度美化：科技感深蓝/紫 SaaS 风格 ====== */
+  /* ====== 日间模式（Light Theme）====== */
 
-  /* Primary */
+  /* Primary - 保持科技感紫蓝 */
   --color-primary: #667eea;
   --color-primary-end: #764ba2;
   --color-primary-light: #818cf8;
@@ -18,35 +18,35 @@
   /* Gradients */
   --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --gradient-text: linear-gradient(135deg, #667eea 0%, #a78bfa 50%, #764ba2 100%);
-  --gradient-card: linear-gradient(135deg, rgba(102,126,234,0.12) 0%, rgba(118,75,162,0.12) 100%);
-  --gradient-glow: linear-gradient(135deg, rgba(102,126,234,0.3) 0%, rgba(118,75,162,0.3) 100%);
+  --gradient-card: linear-gradient(135deg, rgba(102,126,234,0.06) 0%, rgba(118,75,162,0.06) 100%);
+  --gradient-glow: linear-gradient(135deg, rgba(102,126,234,0.2) 0%, rgba(118,75,162,0.2) 100%);
 
-  /* Page Background */
-  --color-bg-page: #0f0e1a;
-  --color-bg-sidebar: #13111c;
-  --color-bg-card: rgba(30, 27, 75, 0.6);
-  --color-bg-glass: rgba(255, 255, 255, 0.05);
-  --color-bg-glass-hover: rgba(255, 255, 255, 0.08);
-  --color-bg-overlay: rgba(0, 0, 0, 0.7);
+  /* Page Background - 纯净浅灰白 */
+  --color-bg-page: #f5f6fa;
+  --color-bg-sidebar: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-glass: rgba(255, 255, 255, 0.85);
+  --color-bg-glass-hover: rgba(102, 126, 234, 0.06);
+  --color-bg-overlay: rgba(0, 0, 0, 0.4);
 
-  /* Glass Borders */
-  --color-border-glass: rgba(255, 255, 255, 0.08);
-  --color-border-glass-hover: rgba(255, 255, 255, 0.15);
+  /* Glass Borders - 日间浅色边框 */
+  --color-border-glass: rgba(0, 0, 0, 0.08);
+  --color-border-glass-hover: rgba(102, 126, 234, 0.3);
 
-  /* Status */
-  --color-success: #34d399;
-  --color-warning: #fbbf24;
-  --color-danger: #f87171;
-  --color-info: #818cf8;
+  /* Status - 保持高饱和度 */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #667eea;
 
-  /* Text */
-  --color-text-primary: #e2e8f0;
-  --color-text-secondary: #94a3b8;
-  --color-text-muted: #64748b;
-  --color-text-placeholder: #475569;
+  /* Text - 深色易读 */
+  --color-text-primary: #1a1d2e;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+  --color-text-placeholder: #b0b8c8;
   --color-text-inverse: #ffffff;
 
-  /* Module Colors (保留) */
+  /* Module Colors */
   --color-purple: #8b5cf6;
   --color-pink: #ec4899;
   --color-cyan: #06b6d4;
@@ -55,13 +55,13 @@
   --color-teal: #14b8a6;
   --color-orange: #f97316;
 
-  /* Shadows */
-  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --shadow-glow: 0 0 24px rgba(102, 126, 234, 0.35);
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  /* Shadows - 日间浅阴影 */
+  --shadow-glass: 0 4px 24px rgba(102, 126, 234, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 4px 20px rgba(102, 126, 234, 0.25);
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
 
   /* Transitions */
   --transition-fast: 0.15s ease;
@@ -91,20 +91,35 @@
   --spacing-xl: 32px;
 }
 
-/* Dark Mode 完整覆盖 */
+/* 夜间模式（Dark Theme） */
 [data-theme="dark"] {
+  /* Background - 深色科技感 */
   --color-bg-page: #0f0e1a;
   --color-bg-sidebar: #13111c;
   --color-bg-card: rgba(30, 27, 75, 0.6);
   --color-bg-glass: rgba(255, 255, 255, 0.05);
   --color-bg-glass-hover: rgba(255, 255, 255, 0.08);
+  --color-bg-overlay: rgba(0, 0, 0, 0.7);
+
+  /* Glass Borders */
   --color-border-glass: rgba(255, 255, 255, 0.08);
   --color-border-glass-hover: rgba(255, 255, 255, 0.15);
+
+  /* Text */
   --color-text-primary: #e2e8f0;
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
+  --color-text-placeholder: #475569;
 
-  /* Element Plus 覆盖 */
+  /* Shadows - 夜间深阴影 */
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-glow: 0 0 24px rgba(102, 126, 234, 0.35);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  /* Element Plus 夜间覆盖 */
   --el-bg-color: #0f0e1a;
   --el-bg-color-page: #0a0d12;
   --el-bg-color-overlay: #1e1b4b;
