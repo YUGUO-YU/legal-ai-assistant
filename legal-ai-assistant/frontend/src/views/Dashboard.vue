@@ -1190,16 +1190,18 @@ const handleFeatureContextMenu = (card, event) => {
 }
 
 .stat-card {
-  border: none;
+  border: 1px solid var(--color-border-glass);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  background: var(--color-bg-glass);
+  box-shadow: var(--shadow-glass);
   transition: all 0.3s;
   overflow: hidden;
   cursor: pointer;
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
+    border-color: rgba(102, 126, 234, 0.3);
+    box-shadow: var(--shadow-glow);
 
     .stat-arrow {
       opacity: 1;
@@ -1210,6 +1212,7 @@ const handleFeatureContextMenu = (card, event) => {
 
   :deep(.el-card__body) {
     padding: 20px;
+    background: transparent;
   }
 
   .stat-content {
@@ -1273,13 +1276,14 @@ const handleFeatureContextMenu = (card, event) => {
 }
 
 .detail-cards-row {
-  border: none;
+  border: 1px solid var(--color-border-glass);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  background: var(--color-bg-glass);
+  box-shadow: var(--shadow-glass);
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.12);
   }
 
   :deep(.el-card__body) {
@@ -1287,8 +1291,8 @@ const handleFeatureContextMenu = (card, event) => {
   }
 
   .detail-card {
-    background: var(--color-bg);
-    border: 1px solid var(--color-border-light);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(102, 126, 234, 0.15);
     border-radius: var(--radius-lg);
     padding: 18px;
     margin-bottom: 16px;
@@ -1314,7 +1318,7 @@ const handleFeatureContextMenu = (card, event) => {
 
     &:hover {
       transform: translateY(-3px);
-      box-shadow: var(--shadow-lg);
+      box-shadow: var(--shadow-glow);
       border-color: rgba(102, 126, 234, 0.3);
 
       &::before {
@@ -1365,7 +1369,7 @@ const handleFeatureContextMenu = (card, event) => {
       justify-content: space-between;
       align-items: center;
       padding-top: 10px;
-      border-top: 1px dashed var(--color-border-light);
+      border-top: 1px dashed rgba(102, 126, 234, 0.15);
 
       .detail-card-meta {
         font-size: 12px;
@@ -1496,13 +1500,14 @@ const handleFeatureContextMenu = (card, event) => {
 }
 
 .quick-access {
-  border: none;
+  border: 1px solid var(--color-border-glass);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  background: var(--color-bg-glass);
+  box-shadow: var(--shadow-glass);
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.12);
   }
 
   :deep(.el-card__body) {
@@ -1514,14 +1519,16 @@ const handleFeatureContextMenu = (card, event) => {
     align-items: center;
     gap: 14px;
     padding: 16px;
-    background: var(--color-bg-secondary);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: var(--radius-lg);
     cursor: pointer;
     transition: all 0.3s;
     margin-bottom: 12px;
 
     &:hover {
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+      background: rgba(102, 126, 234, 0.1);
+      border-color: rgba(102, 126, 234, 0.2);
       transform: translateX(4px);
 
       .quick-arrow {
@@ -1573,13 +1580,14 @@ const handleFeatureContextMenu = (card, event) => {
 }
 
 .recent-activity {
-  border: none;
+  border: 1px solid var(--color-border-glass);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  background: var(--color-bg-glass);
+  box-shadow: var(--shadow-glass);
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.12);
   }
 
   :deep(.el-card__body) {
@@ -1592,7 +1600,7 @@ const handleFeatureContextMenu = (card, event) => {
       align-items: center;
       gap: 14px;
       padding: 14px 0;
-      border-bottom: 1px solid var(--color-border-light);
+      border-bottom: 1px solid rgba(102, 126, 234, 0.08);
       transition: all 0.3s;
 
       &:last-child {
@@ -1644,13 +1652,14 @@ const handleFeatureContextMenu = (card, event) => {
 }
 
 .hot-topics {
-  border: none;
+  border: 1px solid var(--color-border-glass);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  background: var(--color-bg-glass);
+  box-shadow: var(--shadow-glass);
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.12);
   }
 
   :deep(.el-card__body) {
@@ -1700,7 +1709,7 @@ const handleFeatureContextMenu = (card, event) => {
 
       :deep(.el-progress) {
         .el-progress-bar__outer {
-          background: var(--color-border-light);
+      background: rgba(102, 126, 234, 0.12);
         }
       }
     }
@@ -1715,13 +1724,14 @@ const handleFeatureContextMenu = (card, event) => {
 }
 
 .tips-card {
-  border: none;
+  border: 1px solid var(--color-border-glass);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  background: var(--color-bg-glass);
+  box-shadow: var(--shadow-glass);
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.12);
   }
 
   :deep(.el-card__body) {

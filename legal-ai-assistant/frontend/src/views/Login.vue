@@ -311,9 +311,21 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: linear-gradient(135deg, #0f0e1a 0%, #1a1530 40%, #0f0e1a 100%);
   position: relative;
   overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, rgba(102,126,234,0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(118,75,162,0.12) 0%, transparent 50%);
+    pointer-events: none;
+  }
 }
 
 .top-right-admin {
@@ -349,12 +361,11 @@ onMounted(() => {
 .login-box {
   width: 420px;
   padding: 48px 40px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 24px;
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  background: rgba(19, 17, 28, 0.85);
+  backdrop-filter: blur(24px);
+  border-radius: 20px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 48px rgba(102, 126, 234, 0.08);
   animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   z-index: 10;
@@ -396,13 +407,16 @@ onMounted(() => {
   h1 {
     font-size: 26px;
     font-weight: 700;
-    color: #1a1a2e;
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     margin-bottom: 8px;
   }
 
   p {
     font-size: 14px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
   }
 }
 
@@ -418,27 +432,33 @@ onMounted(() => {
   :deep(.el-input__wrapper) {
     padding: 14px 16px;
     border-radius: 12px;
-    box-shadow: 0 0 0 1px #e5e7eb;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(102, 126, 234, 0.15);
+    box-shadow: none;
     transition: all 0.3s ease;
 
     &:hover, &:focus {
-      box-shadow: 0 0 0 2px #667eea;
+      border-color: rgba(102, 126, 234, 0.5);
+      background: rgba(255, 255, 255, 0.08);
     }
 
     &.is-focus {
-      box-shadow: 0 0 0 2px #667eea;
+      border-color: rgba(102, 126, 234, 0.6);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
     }
   }
 
   .input-icon {
     font-size: 18px;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 
   .captcha-code {
     width: 38%;
     height: 40px;
-    background: linear-gradient(135deg, var(--color-border-light), var(--color-border));
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -453,7 +473,8 @@ onMounted(() => {
     transition: all 0.3s;
 
     &:hover {
-      background: linear-gradient(135deg, var(--color-border), var(--color-border-dark));
+      background: rgba(102, 126, 234, 0.18);
+      border-color: rgba(102, 126, 234, 0.4);
       transform: scale(1.02);
     }
   }
@@ -472,18 +493,23 @@ onMounted(() => {
     margin-bottom: 28px;
 
     :deep(.el-checkbox__label) {
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 13px;
+    }
+
+    :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+      background: var(--gradient-primary);
+      border-color: var(--color-primary);
     }
 
     .forgot-link {
       font-size: 13px;
-      color: #667eea;
+      color: var(--color-primary-light);
       text-decoration: none;
       transition: color 0.2s;
 
       &:hover {
-        color: #764ba2;
+        color: var(--color-primary);
       }
     }
   }
@@ -521,7 +547,7 @@ onMounted(() => {
   text-align: center;
   margin-top: 32px;
   padding-top: 24px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid rgba(102, 126, 234, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -529,7 +555,7 @@ onMounted(() => {
 
   span {
     font-size: 14px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
   }
 
   :deep(.el-link) {
@@ -546,14 +572,14 @@ onMounted(() => {
   span {
     flex: 1;
     height: 1px;
-    background: #e5e7eb;
+    background: rgba(102, 126, 234, 0.15);
   }
 
   em {
     padding: 0 16px;
     font-style: normal;
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--color-text-muted);
   }
 }
 
@@ -565,8 +591,8 @@ onMounted(() => {
     flex: 1;
     height: 48px;
     border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    background: rgba(102, 126, 234, 0.06);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -574,12 +600,12 @@ onMounted(() => {
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 14px;
-    color: #4b5563;
+    color: var(--color-text-secondary);
 
     &:hover {
-      border-color: #667eea;
-      color: #667eea;
-      background: rgba(102, 126, 234, 0.05);
+      border-color: rgba(102, 126, 234, 0.5);
+      color: var(--color-primary-light);
+      background: rgba(102, 126, 234, 0.12);
     }
 
     svg {
