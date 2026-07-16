@@ -66,7 +66,8 @@
   /* Transitions */
   --transition-fast: 0.15s ease;
   --transition-base: 0.25s ease;
-  --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.4s ease-out;
+  --transition-page: 0.4s ease-out;
 
   /* Border Radius */
   --radius-sm: 6px;
@@ -93,10 +94,12 @@
 /* Dark Mode 完整覆盖 */
 [data-theme="dark"] {
   --color-bg-page: #0f0e1a;
-  --color-bg-secondary: #13111c;
+  --color-bg-sidebar: #13111c;
   --color-bg-card: rgba(30, 27, 75, 0.6);
   --color-bg-glass: rgba(255, 255, 255, 0.05);
+  --color-bg-glass-hover: rgba(255, 255, 255, 0.08);
   --color-border-glass: rgba(255, 255, 255, 0.08);
+  --color-border-glass-hover: rgba(255, 255, 255, 0.15);
   --color-text-primary: #e2e8f0;
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
