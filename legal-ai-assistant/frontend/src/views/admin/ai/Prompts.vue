@@ -77,37 +77,60 @@
 
     <!-- 创建/编辑 -->
     <el-dialog v-model="showCreate" title="新建 Prompt 版本" width="780px">
+      <el-steps :active="createStep" finish-status="success" style="margin-bottom:24px">
+        <el-step title="基本信息" description="代码 / 模块 / 场景 / 版本" />
+        <el-step title="内容配置" description="Prompt 正文 / 变量定义" />
+        <el-step title="确认保存" description="检查并提交" />
+      </el-steps>
       <el-form :model="form" label-width="100px">
-        <el-form-item label="代码" required>
-          <el-input v-model="form.prompt_code" placeholder="例：MOD-01.q&a" />
-        </el-form-item>
-        <el-row :gutter="12">
-          <el-col :span="12">
-            <el-form-item label="模块" required>
-              <el-select v-model="form.module" style="width:100%">
-                <el-option v-for="m in modules" :key="m" :label="m" :value="m" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="场景" required>
-              <el-input v-model="form.scene" placeholder="例：search/case/draft" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="版本" required>
-          <el-input v-model="form.version" placeholder="例：v1.0 / v1.1" />
-        </el-form-item>
-        <el-form-item label="内容" required>
-          <el-input v-model="form.content" type="textarea" :rows="10" placeholder="Prompt 正文，支持 {variable} 占位符" />
-        </el-form-item>
-        <el-form-item label="变量">
-          <el-input v-model="form.variables" type="textarea" :rows="2" placeholder='JSON 数组，例：["query","context"]' />
-        </el-form-item>
+        <template v-if="createStep === 0">
+          <el-form-item label="代码" required>
+            <el-input v-model="form.prompt_code" placeholder="例：MOD-01.q&a" />
+          </el-form-item>
+          <el-row :gutter="12">
+            <el-col :span="12">
+              <el-form-item label="模块" required>
+                <el-select v-model="form.module" style="width:100%">
+                  <el-option v-for="m in modules" :key="m" :label="m" :value="m" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="场景" required>
+                <el-input v-model="form.scene" placeholder="例：search/case/draft" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-form-item label="版本" required>
+            <el-input v-model="form.version" placeholder="例：v1.0 / v1.1" />
+          </el-form-item>
+        </template>
+        <template v-else-if="createStep === 1">
+          <el-form-item label="内容" required>
+            <el-input v-model="form.content" type="textarea" :rows="10" placeholder="Prompt 正文，支持 {variable} 占位符" />
+          </el-form-item>
+          <el-form-item label="变量">
+            <el-input v-model="form.variables" type="textarea" :rows="2" placeholder='JSON 数组，例：["query","context"]' />
+          </el-form-item>
+        </template>
+        <template v-else>
+          <el-descriptions :column="1" border style="margin-bottom:12px">
+            <el-descriptions-item label="代码">{{ form.prompt_code }}</el-descriptions-item>
+            <el-descriptions-item label="模块">{{ form.module }}</el-descriptions-item>
+            <el-descriptions-item label="场景">{{ form.scene }}</el-descriptions-item>
+            <el-descriptions-item label="版本">{{ form.version }}</el-descriptions-item>
+            <el-descriptions-item label="变量">{{ form.variables || '无' }}</el-descriptions-item>
+          </el-descriptions>
+          <div class="glass" style="padding:12px;border-radius:8px;max-height:200px;overflow:auto">
+            <pre style="margin:0;font-size:12px;color:var(--color-text-secondary)">{{ form.content }}</pre>
+          </div>
+        </template>
       </el-form>
       <template #footer>
+        <el-button v-if="createStep > 0" @click="createStep--">上一步</el-button>
+        <el-button v-if="createStep < 2" type="primary" @click="nextStep">下一步</el-button>
+        <el-button v-else type="primary" :loading="createLoading" @click="handleCreate">保存</el-button>
         <el-button @click="showCreate = false">取消</el-button>
-        <el-button type="primary" @click="handleCreate">保存</el-button>
       </template>
     </el-dialog>
 
@@ -236,6 +259,8 @@ const relatedVersions = ref([])
 const compareData = ref(null)
 const form = reactive({ prompt_code: '', module: 'MOD-01', scene: '', version: 'v1.0', content: '', variables: '' })
 const grayForm = reactive({ id: null, code: '', version: '', ratio: 10, teams: '' })
+const createStep = ref(0)
+const createLoading = ref(false)
 
 function parseVars(v) {
   if (!v) return []
@@ -260,7 +285,20 @@ function reset() { filter.keyword = ''; filter.module = ''; load() }
 
 function openCreate() {
   Object.assign(form, { prompt_code: '', module: 'MOD-01', scene: '', version: 'v1.0', content: '', variables: '' })
+  createStep.value = 0
   showCreate.value = true
+}
+
+function nextStep() {
+  if (createStep.value === 0 && (!form.prompt_code || !form.version)) {
+    ElMessage.warning('代码和版本为必填项')
+    return
+  }
+  if (createStep.value === 1 && !form.content) {
+    ElMessage.warning('Prompt 内容为必填项')
+    return
+  }
+  createStep.value++
 }
 
 async function handleCreate() {
@@ -273,17 +311,21 @@ async function handleCreate() {
     try { payload.variables = JSON.stringify(payload.variables.split(',').map(s => s.trim()).filter(Boolean)) }
     catch (e) { /* keep as string */ }
   }
+  createLoading.value = true
   try {
     const res = await api.post('/admin/prompt_template/create', payload)
     if (res?.ok) {
       ElMessage.success('已创建')
       showCreate.value = false
+      createStep.value = 0
       load()
     } else {
       ElMessage.error(res?.error || '创建失败')
     }
   } catch (e) {
     ElMessage.error('创建失败：' + (e.message || ''))
+  } finally {
+    createLoading.value = false
   }
 }
 
