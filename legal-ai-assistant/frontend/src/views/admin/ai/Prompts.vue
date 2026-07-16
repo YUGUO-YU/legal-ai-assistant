@@ -29,7 +29,7 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="prompt_code" label="代码" width="170" />
@@ -60,6 +60,17 @@
           </template>
         </el-table-column>
       </el-table>
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="filter.page"
+          :page-size="filter.pageSize"
+          :total="total"
+          :page-sizes="[20, 50, 100]"
+          layout="total, prev, pager, next"
+          :background="true"
+          style="margin-top:16px;justify-content:center;"
+        />
+      </div>
     </el-card>
 
     <!-- 创建/编辑 -->
@@ -212,6 +223,7 @@ import api from '../../../api'
 const modules = ['MOD-01', 'MOD-02', 'MOD-03', 'MOD-04', 'MOD-05', 'MOD-06', 'MOD-07', 'MOD-08', 'MOD-09', 'MOD-10']
 const rows = ref([])
 const loading = ref(false)
+const total = ref(0)
 const filter = reactive({ page: 1, pageSize: 50, keyword: '', module: '' })
 const showCreate = ref(false)
 const showGray = ref(false)
@@ -234,6 +246,7 @@ async function load() {
   try {
     const res = await api.get('/admin/ai/prompts', { params: filter })
     rows.value = res?.list || []
+    total.value = res?.total || 0
   } catch (e) {
     rows.value = []
   } finally {

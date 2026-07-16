@@ -12,13 +12,6 @@
         </el-button>
       </div>
     </div>
-        <p>跨库数据一致性校验、数据统计分析</p>
-      </div>
-      <el-button @click="loadReport" :loading="loading" type="primary">
-        <el-icon><Refresh /></el-icon>
-        刷新报告
-      </el-button>
-    </div>
 
     <el-row :gutter="20" class="stats-row">
       <el-col :span="8">
