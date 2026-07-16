@@ -1,8 +1,8 @@
 <template>
-  <div class="sys-dicts-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>数据字典</h2>
+        <h2 class="gradient-text">数据字典</h2>
         <p>系统配置域 · 分组枚举 / 排序 / 状态管理</p>
       </div>
       <div class="header-actions">
@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline>
         <el-form-item label="分组">
           <el-select v-model="filter.dict_type" clearable filterable placeholder="全部" style="width:180px">
@@ -27,7 +27,7 @@
 
     <!-- Grouped Card Layout -->
     <div v-if="groupedRows.length">
-      <el-card v-for="group in groupedRows" :key="group.type" style="margin-bottom:16px">
+      <el-card class="glass table-card" v-for="group in groupedRows" :key="group.type" style="margin-bottom:14px">
         <template #header>
           <div class="group-header">
             <el-tag type="primary" size="small">{{ group.type }}</el-tag>

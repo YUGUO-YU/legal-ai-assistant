@@ -1,8 +1,8 @@
 <template>
-  <div class="admin-list-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>{{ title }}</h2>
+        <h2 class="gradient-text">{{ title }}</h2>
         <p v-if="subtitle">{{ subtitle }}</p>
       </div>
       <div class="header-actions">
@@ -25,7 +25,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline :model="filter" class="filter-form" @submit.prevent>
         <FormField
           field="keyword"
@@ -66,7 +66,7 @@
       @update:saved-filters="(v) => savedFilters = v"
     />
 
-    <el-card class="table-card">
+    <el-card class="glass table-card">
       <TableEmptyState
         v-if="rows.length === 0 && !loading"
         title="暂无记录"

@@ -1,8 +1,8 @@
 <template>
-  <div class="announcements-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>系统公告</h2>
+        <h2 class="gradient-text">系统公告</h2>
         <p>系统运维域 · 公告与通知管理</p>
       </div>
       <div class="header-actions">
@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline>
         <el-form-item label="关键词">
           <el-input v-model="filter.keyword" placeholder="标题/内容" clearable style="width:220px" @keyup.enter="load" />
@@ -23,7 +23,7 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <el-card class="glass table-card">
       <template v-if="selectedRows.length > 0">
         <div class="batch-actions">
           <span>已选择 {{ selectedRows.length }} 项</span>

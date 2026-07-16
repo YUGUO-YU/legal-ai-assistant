@@ -1,8 +1,8 @@
 <template>
-  <div class="sys-config-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>系统参数</h2>
+        <h2 class="gradient-text">系统参数</h2>
         <p>动态配置 · LLM/Cache/RateLimit/Feature Flag · 即时生效</p>
       </div>
       <div class="header-actions">
@@ -12,7 +12,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline>
         <el-form-item label="分组">
           <el-select v-model="filter.group" clearable placeholder="全部" style="width:160px">
@@ -25,7 +25,7 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="config_key" label="Key" min-width="240" />
