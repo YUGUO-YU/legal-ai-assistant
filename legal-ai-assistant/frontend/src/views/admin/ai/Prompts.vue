@@ -30,9 +30,9 @@
     </el-card>
 
     <el-card class="glass table-card">
-      <el-table :data="rows" v-loading="loading" stripe border>
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="prompt_code" label="代码" width="170" />
+      <el-table :data="displayRows" v-loading="loading" stripe border @sort-change="handleSortChange">
+        <el-table-column prop="id" label="ID" width="70" sortable="custom" />
+        <el-table-column prop="prompt_code" label="代码" width="170" sortable="custom" />
         <el-table-column prop="module" label="模块" width="90" />
         <el-table-column prop="scene" label="场景" width="110" />
         <el-table-column prop="version" label="版本" width="90" />
@@ -50,7 +50,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="feedback_score" label="评分" width="80" />
-        <el-table-column prop="created_at" label="创建时间" width="170" />
+        <el-table-column prop="created_at" label="创建时间" width="170" sortable="custom" />
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="openDetail(row)">查看</el-button>
@@ -240,7 +240,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { Refresh, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../../api'
@@ -261,6 +261,21 @@ const form = reactive({ prompt_code: '', module: 'MOD-01', scene: '', version: '
 const grayForm = reactive({ id: null, code: '', version: '', ratio: 10, teams: '' })
 const createStep = ref(0)
 const createLoading = ref(false)
+const sortState = ref({ prop: '', order: '' })
+
+const displayRows = computed(() => {
+  if (!sortState.value.prop || !sortState.value.order) return rows.value
+  return [...rows.value].sort((a, b) => {
+    const valA = a[sortState.value.prop] ?? ''
+    const valB = b[sortState.value.prop] ?? ''
+    const cmp = String(valA).localeCompare(String(valB), 'zh-CN', { numeric: true })
+    return sortState.value.order === 'ascending' ? cmp : -cmp
+  })
+})
+
+const handleSortChange = ({ prop, order }) => {
+  sortState.value = { prop, order }
+}
 
 function parseVars(v) {
   if (!v) return []
