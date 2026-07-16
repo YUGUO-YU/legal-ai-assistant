@@ -220,6 +220,13 @@
       action-text="重置筛选"
       @action="resetFilters"
     />
+
+    <empty-state
+      v-else
+      icon="Search"
+      title="开始案例查询"
+      description="请输入关键词或选择筛选条件开始查询"
+    />
   </div>
 </template>
 

@@ -260,7 +260,6 @@ const loadStatusOptions = async () => {
 
 const handleSearch = async () => {
   loading.value = true
-  searched.value = true
 
   try {
     const res = await api.lawSearch.search({
@@ -270,6 +269,7 @@ const handleSearch = async () => {
       pageSize: pageSize.value
     })
 
+    searched.value = true
     results.value = res?.items || []
     total.value = res?.total || 0
   } catch (e) {

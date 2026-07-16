@@ -51,7 +51,7 @@ api.interceptors.response.use(
           localStorage.removeItem('admin_user')
           const reqUrl = error.config?.url || ''
           const isAdminReq = reqUrl.includes('/admin/') || reqUrl.includes('/auth/admin/')
-          window.location.href = isAdminReq ? '/admin/login' : '/'
+          window.location.hash = isAdminReq ? '#/admin/login' : '#/'
           break
         case 403:
           ElMessage.error('权限不足')

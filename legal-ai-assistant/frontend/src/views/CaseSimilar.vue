@@ -176,6 +176,13 @@
       action-text="清除搜索"
       @action="caseDescription = ''; caseType = null; caseCause = ''; results = []; hasSearched = false"
     />
+
+    <empty-state
+      v-else
+      icon="ChatLineSquare"
+      title="AI 类案分析"
+      description="请输入案件描述，AI将为您匹配相似案例并分析裁判要点"
+    />
   </div>
 </template>
 
