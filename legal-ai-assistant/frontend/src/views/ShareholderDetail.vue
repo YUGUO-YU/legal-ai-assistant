@@ -307,7 +307,7 @@ onMounted(() => {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
   }
   .header-content h2 {
     margin: 0 0 8px 0;
@@ -317,7 +317,7 @@ onMounted(() => {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-  .header-content p { margin: 0; color: #6b7280; font-size: 14px; }
+  .header-content p { margin: 0; color: var(--color-text-secondary); font-size: 14px; }
 }
 
 .detail-container {
@@ -347,14 +347,14 @@ onMounted(() => {
 
     .shareholder-meta {
       flex: 1;
-      h1 { margin: 0 0 12px 0; font-size: 22px; color: #1f2937; }
+      h1 { margin: 0 0 12px 0; font-size: 22px; color: var(--color-text-primary); }
     }
 
     .meta-tags { display: flex; gap: 8px; flex-wrap: wrap; }
 
     .ratio-badge {
-      :deep(.ratio-value) { font-size: 24px; font-weight: 700; color: #1f2937; display: block; text-align: center; }
-      :deep(.ratio-label) { font-size: 11px; color: #6b7280; display: block; text-align: center; }
+      :deep(.ratio-value) { font-size: 24px; font-weight: 700; color: var(--color-text-primary); display: block; text-align: center; }
+      :deep(.ratio-label) { font-size: 11px; color: var(--color-text-secondary); display: block; text-align: center; }
     }
   }
 
@@ -372,7 +372,7 @@ onMounted(() => {
     gap: 8px;
     font-size: 15px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
     .el-icon { color: #667eea; }
   }
 
@@ -395,7 +395,7 @@ onMounted(() => {
     .tree-node.root {
       background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
       .node-tag { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
-      .node-name { font-weight: 600; color: #1f2937; }
+      .node-name { font-weight: 600; color: var(--color-text-primary); }
     }
 
     .tree-leaf {
@@ -404,9 +404,9 @@ onMounted(() => {
         background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
         border-left: 3px solid #667eea;
       }
-      .node-tag { background: #e5e7eb; color: #4b5563; }
+      .node-tag { background: #e5e7eb; color: var(--color-text-secondary); }
       .node-tag.active { background: #667eea; color: #fff; }
-      .node-name { flex: 1; color: #1f2937; }
+      .node-name { flex: 1; color: var(--color-text-primary); }
       .node-ratio { color: #667eea; font-weight: 600; font-size: 13px; }
     }
 
@@ -438,8 +438,8 @@ onMounted(() => {
     &.risk-medium { border-color: #f59e0b; }
     &.risk-low { border-color: #10b981; }
 
-    .risk-type { font-weight: 500; color: #1f2937; font-size: 13px; }
-    .risk-desc { width: 100%; font-size: 12px; color: #6b7280; margin: 4px 0 0 0; }
+    .risk-type { font-weight: 500; color: var(--color-text-primary); font-size: 13px; }
+    .risk-desc { width: 100%; font-size: 12px; color: var(--color-text-secondary); margin: 4px 0 0 0; }
   }
 
   .action-list {

@@ -422,11 +422,11 @@ onMounted(() => {
     margin: 0 0 4px;
     font-size: 22px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
   }
   p {
     margin: 0;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     font-size: 14px;
   }
 }
@@ -468,12 +468,12 @@ onMounted(() => {
   .stat-value {
     font-size: 24px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
   }
 
   .stat-label {
     font-size: 13px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     margin-top: 2px;
   }
 }
@@ -497,7 +497,7 @@ onMounted(() => {
   .form-tip {
     margin-left: 16px;
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--color-text-secondary);
   }
 }
 
@@ -529,7 +529,7 @@ onMounted(() => {
     .preset-name {
       font-size: 14px;
       font-weight: 500;
-      color: #1f2937;
+      color: var(--color-text-primary);
       margin: 8px 0 12px;
     }
   }
@@ -537,7 +537,7 @@ onMounted(() => {
 
 .empty-tip {
   text-align: center;
-  color: #9ca3af;
+  color: var(--color-text-secondary);
   padding: 40px 0;
 }
 

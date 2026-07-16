@@ -596,7 +596,7 @@ useKeyboardShortcuts([
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }
@@ -647,7 +647,7 @@ useKeyboardShortcuts([
       .ai-name {
         font-size: 15px;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       .ai-model {
@@ -703,12 +703,12 @@ useKeyboardShortcuts([
     margin: 0 0 8px 0;
     font-size: 20px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
   }
 
   p {
     margin: 0 0 24px 0;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     font-size: 14px;
     max-width: 360px;
   }
@@ -825,7 +825,7 @@ useKeyboardShortcuts([
   line-height: 1.7;
 
   .message-text {
-    color: #1f2937;
+    color: var(--color-text-primary);
     font-size: 14px;
     white-space: pre-wrap;
   }
@@ -840,7 +840,7 @@ useKeyboardShortcuts([
       display: flex;
       align-items: center;
       gap: 6px;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 12px;
       margin-bottom: 8px;
     }
@@ -858,7 +858,7 @@ useKeyboardShortcuts([
       }
 
       .citation-text {
-        color: #4b5563;
+        color: var(--color-text-secondary);
         font-size: 12px;
       }
     }
@@ -866,7 +866,7 @@ useKeyboardShortcuts([
 
   .message-time {
     font-size: 11px;
-    color: #9ca3af;
+    color: var(--color-text-secondary);
     margin-top: 6px;
   }
 
@@ -963,7 +963,7 @@ useKeyboardShortcuts([
     gap: 6px;
     margin-top: 10px;
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--color-text-secondary);
 
     .el-icon {
       font-size: 14px;
@@ -1028,7 +1028,7 @@ useKeyboardShortcuts([
         margin: 0;
         font-size: 15px;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
     }
   }
@@ -1088,7 +1088,7 @@ useKeyboardShortcuts([
     .session-detail-btn {
       padding: 4px;
       border-radius: 6px;
-      color: #9ca3af;
+      color: var(--color-text-secondary);
       cursor: pointer;
       transition: all 0.2s;
       &:hover {
@@ -1102,7 +1102,7 @@ useKeyboardShortcuts([
     .session-continue-btn {
       padding: 4px;
       border-radius: 6px;
-      color: #9ca3af;
+      color: var(--color-text-secondary);
       cursor: pointer;
       transition: all 0.2s;
       &:hover {
@@ -1132,17 +1132,17 @@ useKeyboardShortcuts([
       .session-title {
         font-size: 14px;
         font-weight: 500;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       .session-date {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--color-text-secondary);
       }
     }
 
     .session-arrow {
-      color: #9ca3af;
+      color: var(--color-text-secondary);
       opacity: 0;
       transform: translateX(-10px);
       transition: all 0.3s;
@@ -1169,7 +1169,7 @@ useKeyboardShortcuts([
 
     span {
       font-size: 13px;
-      color: #4b5563;
+      color: var(--color-text-secondary);
       flex: 1;
     }
 

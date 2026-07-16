@@ -770,7 +770,7 @@ onMounted(() => {
     .template-name {
       font-size: 14px;
       font-weight: 500;
-      color: #1f2937;
+      color: var(--color-text-primary);
     }
   }
 }
@@ -794,7 +794,7 @@ onMounted(() => {
 
   :deep(.el-form-item__label) {
     font-weight: 500;
-    color: #4b5563;
+    color: var(--color-text-secondary);
   }
 
   :deep(.el-input__wrapper),
@@ -870,7 +870,7 @@ onMounted(() => {
       gap: 12px;
       padding: 14px;
       border-bottom: 1px solid #f3f4f6;
-      color: #374151;
+      color: var(--color-text-secondary);
       font-size: 14px;
 
       .el-icon {

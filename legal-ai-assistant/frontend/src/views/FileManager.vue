@@ -286,13 +286,13 @@ onMounted(() => {
   h3 {
     font-size: 20px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
     margin: 0 0 8px 0;
   }
 
   p {
     font-size: 14px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     margin: 0 0 24px 0;
   }
 }
@@ -340,7 +340,7 @@ onMounted(() => {
     .file-title {
       font-size: 16px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--color-text-primary);
       margin: 0 0 8px 0;
       white-space: nowrap;
       overflow: hidden;
@@ -356,7 +356,7 @@ onMounted(() => {
         align-items: center;
         gap: 4px;
         font-size: 12px;
-        color: #6b7280;
+        color: var(--color-text-secondary);
 
         .el-icon {
           font-size: 12px;

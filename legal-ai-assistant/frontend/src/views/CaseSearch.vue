@@ -482,7 +482,7 @@ const copyCaseNo = (caseNo) => {
       display: flex;
       align-items: center;
       gap: 10px;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
 
       .el-icon {
@@ -500,7 +500,7 @@ const copyCaseNo = (caseNo) => {
       display: flex;
       align-items: center;
       gap: 8px;
-      color: #9ca3af;
+      color: var(--color-text-secondary);
       font-size: 13px;
 
       .el-icon {
@@ -552,7 +552,7 @@ const copyCaseNo = (caseNo) => {
         margin: 0 0 10px 0;
         font-size: 17px;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       .case-meta {
@@ -567,7 +567,7 @@ const copyCaseNo = (caseNo) => {
 
         .case-type {
           font-size: 13px;
-          color: #9ca3af;
+          color: var(--color-text-secondary);
         }
       }
     }
@@ -576,7 +576,7 @@ const copyCaseNo = (caseNo) => {
   .case-summary {
     margin: 0 0 16px 0;
     font-size: 14px;
-    color: #4b5563;
+    color: var(--color-text-secondary);
     line-height: 1.7;
   }
 
@@ -592,7 +592,7 @@ const copyCaseNo = (caseNo) => {
       align-items: center;
       gap: 8px;
       font-size: 13px;
-      color: #9ca3af;
+      color: var(--color-text-secondary);
 
       .el-icon {
         font-size: 16px;

@@ -362,7 +362,7 @@ const handleRegister = async () => {
 
   p {
     font-size: 14px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
   }
 }
 
@@ -392,7 +392,7 @@ const handleRegister = async () => {
 
   .input-icon {
     font-size: 18px;
-    color: #9ca3af;
+    color: var(--color-text-secondary);
   }
 
   .login-btn {
@@ -461,7 +461,7 @@ const handleRegister = async () => {
 
   p {
     font-size: 14px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
 
     a {
       color: #67c23a;

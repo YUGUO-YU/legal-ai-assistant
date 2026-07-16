@@ -300,7 +300,7 @@ const viewDetail = (item) => {
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }
@@ -326,7 +326,7 @@ const viewDetail = (item) => {
       margin-bottom: 14px;
       font-size: 15px;
       font-weight: 500;
-      color: #1f2937;
+      color: var(--color-text-primary);
 
       .el-icon {
         color: #667eea;
@@ -342,7 +342,7 @@ const viewDetail = (item) => {
       resize: none;
 
       &::placeholder {
-        color: #9ca3af;
+        color: var(--color-text-secondary);
       }
     }
   }
@@ -360,7 +360,7 @@ const viewDetail = (item) => {
         align-items: center;
         gap: 8px;
         font-size: 13px;
-        color: #4b5563;
+        color: var(--color-text-secondary);
         margin-bottom: 8px;
 
         .el-icon {
@@ -438,13 +438,13 @@ const viewDetail = (item) => {
         .stat-value {
           font-size: 28px;
           font-weight: 700;
-          color: #1f2937;
+          color: var(--color-text-primary);
           line-height: 1.2;
         }
 
         .stat-label {
           font-size: 13px;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           margin-top: 4px;
         }
       }
@@ -486,7 +486,7 @@ const viewDetail = (item) => {
         margin: 0 0 8px 0;
         font-size: 17px;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       .case-meta {
@@ -494,7 +494,7 @@ const viewDetail = (item) => {
         align-items: center;
         gap: 10px;
         font-size: 13px;
-        color: #6b7280;
+        color: var(--color-text-secondary);
 
         .divider {
           color: #d1d5db;
@@ -534,14 +534,14 @@ const viewDetail = (item) => {
 
     .feature-label {
       font-size: 13px;
-      color: #6b7280;
+      color: var(--color-text-secondary);
     }
   }
 
   .case-summary {
     margin: 0 0 16px 0;
     font-size: 14px;
-    color: #4b5563;
+    color: var(--color-text-secondary);
     line-height: 1.7;
   }
 
@@ -558,7 +558,7 @@ const viewDetail = (item) => {
       align-items: center;
       gap: 6px;
       font-size: 13px;
-      color: #6b7280;
+      color: var(--color-text-secondary);
 
       .el-icon {
         color: #667eea;

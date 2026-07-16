@@ -504,7 +504,7 @@ const copySection = (section) => {
       margin-bottom: 14px;
       font-size: 15px;
       font-weight: 500;
-      color: #1f2937;
+      color: var(--color-text-primary);
 
       .el-icon {
         font-size: 18px;
@@ -520,7 +520,7 @@ const copySection = (section) => {
       resize: none;
 
       &::placeholder {
-        color: #9ca3af;
+        color: var(--color-text-secondary);
       }
     }
   }
@@ -536,7 +536,7 @@ const copySection = (section) => {
         align-items: center;
         gap: 8px;
         font-size: 13px;
-        color: #4b5563;
+        color: var(--color-text-secondary);
         margin-bottom: 12px;
 
         .el-icon {
@@ -609,7 +609,7 @@ const copySection = (section) => {
         .progress-title {
           font-size: 16px;
           font-weight: 500;
-          color: #1f2937;
+          color: var(--color-text-primary);
         }
 
         .progress-percent {
@@ -640,7 +640,7 @@ const copySection = (section) => {
       background: #f9fafb;
       border-radius: 20px;
       font-size: 13px;
-      color: #9ca3af;
+      color: var(--color-text-secondary);
       transition: all 0.3s;
 
       .phase-icon {
@@ -661,7 +661,7 @@ const copySection = (section) => {
 
   .progress-message {
     text-align: center;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     font-size: 14px;
     margin: 20px 0 0 0;
   }
@@ -689,7 +689,7 @@ const copySection = (section) => {
     gap: 10px;
     font-size: 15px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
 
     .el-icon {
       font-size: 20px;
@@ -740,7 +740,7 @@ const copySection = (section) => {
         margin: 0;
         font-size: 20px;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
         border-left: 4px solid #667eea;
         padding-left: 16px;
         line-height: 1.4;
@@ -751,7 +751,7 @@ const copySection = (section) => {
   .section-content {
     line-height: 1.9;
     font-size: 14px;
-    color: #374151;
+    color: var(--color-text-secondary);
 
     p {
       margin: 0 0 16px 0;
@@ -768,7 +768,7 @@ const copySection = (section) => {
     }
 
     strong {
-      color: #1f2937;
+      color: var(--color-text-primary);
     }
   }
 
@@ -784,7 +784,7 @@ const copySection = (section) => {
       margin-bottom: 14px;
       font-size: 14px;
       font-weight: 500;
-      color: #6b7280;
+      color: var(--color-text-secondary);
 
       .el-icon {
         color: #667eea;

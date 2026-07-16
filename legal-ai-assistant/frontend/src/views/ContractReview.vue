@@ -915,19 +915,19 @@ useKeyboardShortcuts([
         display: block;
         font-size: 15px;
         font-weight: 500;
-        color: #1f2937;
+        color: var(--color-text-primary);
         margin-bottom: 4px;
       }
 
       .sub-text {
         font-size: 13px;
-        color: #6b7280;
+        color: var(--color-text-secondary);
       }
     }
 
     .upload-hint {
       font-size: 12px;
-      color: #9ca3af;
+      color: var(--color-text-secondary);
     }
   }
 }
@@ -951,7 +951,7 @@ useKeyboardShortcuts([
       gap: 8px;
       font-size: 13px;
       font-weight: 500;
-      color: #4b5563;
+      color: var(--color-text-secondary);
 
       .el-icon {
         color: #667eea;
@@ -1002,7 +1002,7 @@ useKeyboardShortcuts([
   }
 
   p {
-    color: #6b7280;
+    color: var(--color-text-secondary);
     font-size: 14px;
   }
 }
@@ -1053,12 +1053,12 @@ useKeyboardShortcuts([
         .score-value {
           font-size: 36px;
           font-weight: 700;
-          color: #1f2937;
+          color: var(--color-text-primary);
         }
 
         .score-unit {
           font-size: 14px;
-          color: #9ca3af;
+          color: var(--color-text-secondary);
         }
       }
     }
@@ -1089,7 +1089,7 @@ useKeyboardShortcuts([
       }
 
       .risk-desc {
-        color: #6b7280;
+        color: var(--color-text-secondary);
         font-size: 14px;
         margin: 0;
       }
@@ -1104,7 +1104,7 @@ useKeyboardShortcuts([
       margin: 0 0 20px 0;
       font-size: 15px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--color-text-primary);
 
       .el-icon {
         color: #667eea;
@@ -1149,7 +1149,7 @@ useKeyboardShortcuts([
         .dim-name {
           font-size: 14px;
           font-weight: 500;
-          color: #374151;
+          color: var(--color-text-secondary);
         }
 
         .dim-score {
@@ -1165,7 +1165,7 @@ useKeyboardShortcuts([
 
       .dim-comment {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--color-text-secondary);
         margin-top: 6px;
       }
     }
@@ -1182,7 +1182,7 @@ useKeyboardShortcuts([
       .dim-name {
         font-size: 13px;
         font-weight: 500;
-        color: #374151;
+        color: var(--color-text-secondary);
       }
 
       .dim-score {
@@ -1242,12 +1242,12 @@ useKeyboardShortcuts([
     margin: 0 0 8px 0;
     font-size: 18px;
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-secondary);
   }
 
   p {
     margin: 0;
-    color: #9ca3af;
+    color: var(--color-text-secondary);
     font-size: 14px;
   }
 }
@@ -1339,7 +1339,7 @@ useKeyboardShortcuts([
   .risk-desc {
     margin: 0 0 16px 0;
     font-size: 14px;
-    color: #4b5563;
+    color: var(--color-text-secondary);
     line-height: 1.6;
   }
 
@@ -1351,7 +1351,7 @@ useKeyboardShortcuts([
     background: rgba(255, 255, 255, 0.6);
     border-radius: 10px;
     font-size: 13px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     line-height: 1.6;
 
     .el-icon {
@@ -1395,14 +1395,14 @@ useKeyboardShortcuts([
       margin: 0;
       font-size: 16px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--color-text-primary);
     }
   }
 
   p {
     margin: 0 0 20px 0;
     font-size: 14px;
-    color: #4b5563;
+    color: var(--color-text-secondary);
     line-height: 1.8;
   }
 

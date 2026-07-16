@@ -547,7 +547,7 @@ useKeyboardShortcuts([
   gap: 12px;
 
   .tip-label {
-    color: #6b7280;
+    color: var(--color-text-secondary);
     font-size: 13px;
   }
 
@@ -568,7 +568,7 @@ useKeyboardShortcuts([
     gap: 6px;
     background: #f3f4f6;
     border-color: #e5e7eb;
-    color: #4b5563;
+    color: var(--color-text-secondary);
 
     &:hover {
       background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
@@ -600,7 +600,7 @@ useKeyboardShortcuts([
     display: flex;
     align-items: center;
     gap: 10px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     font-size: 14px;
 
     .stats-icon {
@@ -624,7 +624,7 @@ useKeyboardShortcuts([
     }
 
     .time-cost {
-      color: #9ca3af;
+      color: var(--color-text-secondary);
     }
   }
 }
@@ -701,7 +701,7 @@ useKeyboardShortcuts([
       }
 
       .content-text {
-        color: #4b5563;
+        color: var(--color-text-secondary);
         font-size: 14px;
         line-height: 1.8;
       }
@@ -717,10 +717,10 @@ useKeyboardShortcuts([
         align-items: center;
         gap: 6px;
         font-size: 13px;
-        color: #6b7280;
+        color: var(--color-text-secondary);
 
         .el-icon {
-          color: #9ca3af;
+          color: var(--color-text-secondary);
         }
 
         .source-link {
@@ -752,7 +752,7 @@ useKeyboardShortcuts([
 
         .score-text {
           font-size: 12px;
-          color: #6b7280;
+          color: var(--color-text-secondary);
         }
       }
     }
@@ -792,7 +792,7 @@ useKeyboardShortcuts([
       font-size: 14px;
       background: #fff;
       border-color: #e5e7eb;
-      color: #4b5563;
+      color: var(--color-text-secondary);
       transition: all 0.3s;
 
       &:hover {
@@ -839,7 +839,7 @@ useKeyboardShortcuts([
       margin: 0;
       font-size: 18px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--color-text-primary);
     }
   }
 
@@ -884,7 +884,7 @@ useKeyboardShortcuts([
         margin: 0;
         font-size: 16px;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
         flex: 1;
         margin-right: 12px;
       }
@@ -894,18 +894,18 @@ useKeyboardShortcuts([
       display: flex;
       align-items: center;
       gap: 6px;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 13px;
       margin-bottom: 12px;
 
       .el-icon {
-        color: #9ca3af;
+        color: var(--color-text-secondary);
       }
     }
 
     .case-summary {
       margin: 0 0 16px 0;
-      color: #4b5563;
+      color: var(--color-text-secondary);
       font-size: 14px;
       line-height: 1.6;
       display: -webkit-box;
@@ -920,7 +920,7 @@ useKeyboardShortcuts([
       align-items: center;
 
       .source {
-        color: #9ca3af;
+        color: var(--color-text-secondary);
         font-size: 12px;
       }
     }

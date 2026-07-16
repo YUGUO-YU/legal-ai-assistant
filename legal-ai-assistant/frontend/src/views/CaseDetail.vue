@@ -351,7 +351,7 @@ onMounted(() => {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: #6b7280;
+      color: var(--color-text-secondary);
 
       &:hover {
         color: #667eea;
@@ -372,7 +372,7 @@ onMounted(() => {
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }
@@ -405,7 +405,7 @@ onMounted(() => {
         margin: 0 0 16px 0;
         font-size: 24px;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
         line-height: 1.4;
       }
 
@@ -459,7 +459,7 @@ onMounted(() => {
       margin: 0 0 16px 0;
       font-size: 16px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--color-text-primary);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -481,7 +481,7 @@ onMounted(() => {
       &.text-content {
         font-size: 14px;
         line-height: 1.8;
-        color: #4b5563;
+        color: var(--color-text-secondary);
       }
 
       &.highlight {
@@ -495,7 +495,7 @@ onMounted(() => {
         gap: 8px;
         font-size: 15px;
         font-weight: 500;
-        color: #1f2937;
+        color: var(--color-text-primary);
 
         .el-icon {
           color: #667eea;
@@ -515,13 +515,13 @@ onMounted(() => {
 
         .label {
           font-size: 13px;
-          color: #6b7280;
+          color: var(--color-text-secondary);
         }
 
         .value {
           font-size: 15px;
           font-weight: 500;
-          color: #1f2937;
+          color: var(--color-text-primary);
         }
       }
     }
@@ -560,7 +560,7 @@ onMounted(() => {
         .feature-name {
           width: 100px;
           font-size: 14px;
-          color: #4b5563;
+          color: var(--color-text-secondary);
           flex-shrink: 0;
         }
 

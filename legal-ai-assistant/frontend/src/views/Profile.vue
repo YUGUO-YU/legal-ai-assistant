@@ -557,7 +557,7 @@ onMounted(() => {
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }
@@ -624,7 +624,7 @@ onMounted(() => {
     margin: 0 0 20px 0;
     font-size: 16px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
   }
 }
 
@@ -642,13 +642,13 @@ onMounted(() => {
       display: block;
       font-size: 15px;
       font-weight: 500;
-      color: #374151;
+      color: var(--color-text-secondary);
     }
 
     .setting-desc {
       display: block;
       font-size: 13px;
-      color: #9ca3af;
+      color: var(--color-text-secondary);
       margin-top: 4px;
     }
   }
@@ -668,13 +668,13 @@ onMounted(() => {
       display: block;
       font-size: 15px;
       font-weight: 500;
-      color: #374151;
+      color: var(--color-text-secondary);
     }
 
     .data-desc {
       display: block;
       font-size: 13px;
-      color: #9ca3af;
+      color: var(--color-text-secondary);
       margin-top: 4px;
     }
   }
@@ -738,12 +738,12 @@ onMounted(() => {
         margin: 0 0 6px 0;
         font-size: 20px;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
 
       p {
         margin: 0 0 10px 0;
-        color: #6b7280;
+        color: var(--color-text-secondary);
         font-size: 14px;
       }
     }
@@ -769,7 +769,7 @@ onMounted(() => {
 
       .stat-label {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--color-text-secondary);
       }
     }
   }
@@ -783,7 +783,7 @@ onMounted(() => {
 
   :deep(.el-card__header) {
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-secondary);
     border-bottom: none;
     padding: 18px 20px 8px;
   }

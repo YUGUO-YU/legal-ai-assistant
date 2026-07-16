@@ -599,7 +599,7 @@ const goToDetail = (kb) => {
 
       .stat-label {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--color-text-secondary);
       }
     }
   }
@@ -608,7 +608,7 @@ const goToDetail = (kb) => {
     display: flex;
     gap: 16px;
     font-size: 13px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     margin-bottom: 14px;
 
     span {

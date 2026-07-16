@@ -545,7 +545,7 @@ const getTrendClass = (trend) => {
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }
@@ -569,7 +569,7 @@ const getTrendClass = (trend) => {
 
   .history-label {
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--color-text-secondary);
     margin-bottom: 10px;
   }
 
@@ -717,7 +717,7 @@ const getTrendClass = (trend) => {
           margin: 0 0 12px 0;
           font-size: 22px;
           font-weight: 600;
-          color: #1f2937;
+          color: var(--color-text-primary);
         }
 
         .company-tags {
@@ -743,12 +743,12 @@ const getTrendClass = (trend) => {
         .risk-value {
           font-size: 28px;
           font-weight: 700;
-          color: #1f2937;
+          color: var(--color-text-primary);
         }
 
         .risk-label {
           font-size: 12px;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           margin-top: 4px;
         }
 
@@ -786,7 +786,7 @@ const getTrendClass = (trend) => {
   gap: 10px;
   font-size: 16px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 
   .el-icon {
     font-size: 20px;
@@ -806,13 +806,13 @@ const getTrendClass = (trend) => {
 
     label {
       font-size: 13px;
-      color: #6b7280;
+      color: var(--color-text-secondary);
     }
 
     span {
       font-size: 15px;
       font-weight: 500;
-      color: #1f2937;
+      color: var(--color-text-primary);
     }
   }
 }
@@ -873,20 +873,20 @@ const getTrendClass = (trend) => {
         .risk-type {
           font-size: 15px;
           font-weight: 500;
-          color: #1f2937;
+          color: var(--color-text-primary);
         }
       }
 
       .risk-desc {
         margin: 0 0 8px 0;
         font-size: 14px;
-        color: #6b7280;
+        color: var(--color-text-secondary);
         line-height: 1.6;
       }
 
       .risk-date {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--color-text-secondary);
       }
     }
   }
@@ -941,13 +941,13 @@ const getTrendClass = (trend) => {
       .shareholder-name {
         font-size: 15px;
         font-weight: 500;
-        color: #1f2937;
+        color: var(--color-text-primary);
         margin-bottom: 4px;
       }
 
       .shareholder-detail {
         font-size: 13px;
-        color: #6b7280;
+        color: var(--color-text-secondary);
 
         .divider {
           margin: 0 8px;
@@ -1036,13 +1036,13 @@ const getTrendClass = (trend) => {
       font-size: 13px;
       font-weight: 600;
       background: #e5e7eb;
-      color: #9ca3af;
+      color: var(--color-text-secondary);
       transition: all 0.4s ease;
     }
 
     span {
       font-size: 14px;
-      color: #9ca3af;
+      color: var(--color-text-secondary);
       transition: color 0.4s ease;
     }
   }
@@ -1062,32 +1062,32 @@ const getTrendClass = (trend) => {
   .progress-tip {
     text-align: center;
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--color-text-secondary);
   }
 
   .analysis-item {
     background: #f9fafb; border-radius: 12px; padding: 16px; text-align: center;
-    .analysis-label { font-size: 12px; color: #9ca3af; margin-bottom: 8px; }
-    .analysis-value { font-size: 20px; font-weight: 700; color: #1f2937; }
+    .analysis-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 8px; }
+    .analysis-value { font-size: 20px; font-weight: 700; color: var(--color-text-primary); }
     .analysis-trend {
       font-size: 12px; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 4px;
       &.trend-up { color: #10b981; }
       &.trend-down { color: #ef4444; }
-      &.trend-stable { color: #9ca3af; }
+      &.trend-stable { color: var(--color-text-secondary); }
     }
   }
 
   .ip-item {
     display: flex; align-items: center; gap: 8px; padding: 12px;
     background: #f9fafb; border-radius: 10px; justify-content: center;
-    color: #6b7280; font-size: 14px;
+    color: var(--color-text-secondary); font-size: 14px;
     .el-icon { color: #667eea; font-size: 18px; }
   }
 
   .business-scope {
     margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 12px;
-    .scope-label { font-size: 13px; color: #9ca3af; margin-bottom: 8px; }
-    .scope-content { font-size: 14px; color: #4b5563; line-height: 1.8; }
+    .scope-label { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px; }
+    .scope-content { font-size: 14px; color: var(--color-text-secondary); line-height: 1.8; }
   }
 
   .equity-chain {
@@ -1097,8 +1097,8 @@ const getTrendClass = (trend) => {
       text-align: center; position: relative;
       &.is-target { background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1)); border: 2px solid #667eea; }
       .node-header { display: flex; align-items: center; justify-content: center; gap: 10px; }
-      .node-name { font-size: 16px; font-weight: 600; color: #1f2937; }
-      .node-meta { font-size: 13px; color: #6b7280; margin-top: 8px; }
+      .node-name { font-size: 16px; font-weight: 600; color: var(--color-text-primary); }
+      .node-meta { font-size: 13px; color: var(--color-text-secondary); margin-top: 8px; }
       .node-arrow { color: #667eea; margin-top: 8px; }
     }
   }
@@ -1113,8 +1113,8 @@ const getTrendClass = (trend) => {
       display: flex; align-items: center; justify-content: center; color: #fff;
     }
     .related-info { flex: 1; }
-    .related-name { font-size: 14px; color: #1f2937; font-weight: 500; }
-    .related-meta { font-size: 12px; color: #6b7280; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+    .related-name { font-size: 14px; color: var(--color-text-primary); font-weight: 500; }
+    .related-meta { font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 6px; }
   }
 }
 </style>

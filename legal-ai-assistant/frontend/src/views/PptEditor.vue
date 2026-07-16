@@ -332,7 +332,7 @@ onMounted(async () => {
   .panel-title {
     font-size: 14px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
   }
 
   .add-slide-btn {
@@ -397,7 +397,7 @@ onMounted(async () => {
     .slide-title-preview {
       font-size: 13px;
       font-weight: 500;
-      color: #1f2937;
+      color: var(--color-text-primary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -405,7 +405,7 @@ onMounted(async () => {
 
     .slide-layout-tag {
       font-size: 11px;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       margin-top: 2px;
     }
   }

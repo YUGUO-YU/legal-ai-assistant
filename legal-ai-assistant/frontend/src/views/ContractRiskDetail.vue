@@ -334,7 +334,7 @@ onMounted(() => {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
   }
 
   .header-content h2 {
@@ -348,7 +348,7 @@ onMounted(() => {
 
   .header-content p {
     margin: 0;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     font-size: 14px;
   }
 }
@@ -374,7 +374,7 @@ onMounted(() => {
     .overview-title h1 {
       margin: 0 0 12px 0;
       font-size: 22px;
-      color: #1f2937;
+      color: var(--color-text-primary);
     }
 
     .overview-tags {
@@ -391,11 +391,11 @@ onMounted(() => {
       .score-value {
         font-size: 32px;
         font-weight: 700;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
       .score-unit {
         font-size: 14px;
-        color: #6b7280;
+        color: var(--color-text-secondary);
       }
     }
 
@@ -444,7 +444,7 @@ onMounted(() => {
     gap: 8px;
     font-size: 15px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
 
     .el-icon { color: #667eea; }
   }
@@ -482,20 +482,20 @@ onMounted(() => {
 
       .risk-dim {
         font-size: 12px;
-        color: #6b7280;
+        color: var(--color-text-secondary);
         background: #fff;
         padding: 2px 8px;
         border-radius: 4px;
       }
       .risk-title {
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
       }
     }
 
     .risk-block-desc {
       font-size: 13px;
-      color: #4b5563;
+      color: var(--color-text-secondary);
       line-height: 1.6;
       margin-bottom: 8px;
     }
@@ -533,7 +533,7 @@ onMounted(() => {
 
     .dim-name {
       font-size: 14px;
-      color: #1f2937;
+      color: var(--color-text-primary);
       font-weight: 500;
     }
     .dim-score {
@@ -541,7 +541,7 @@ onMounted(() => {
     }
     .dim-comment {
       font-size: 12px;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       margin-top: 6px;
       line-height: 1.5;
     }
@@ -550,7 +550,7 @@ onMounted(() => {
   .comment-card .comment-text {
     font-size: 14px;
     line-height: 1.8;
-    color: #4b5563;
+    color: var(--color-text-secondary);
     background: #f9fafb;
     border-radius: 10px;
     padding: 14px 16px;

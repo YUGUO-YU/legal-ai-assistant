@@ -330,7 +330,7 @@ onMounted(() => {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: #6b7280;
+      color: var(--color-text-secondary);
 
       &:hover {
         color: #667eea;
@@ -351,7 +351,7 @@ onMounted(() => {
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }
@@ -379,7 +379,7 @@ onMounted(() => {
         margin: 0 0 16px 0;
         font-size: 24px;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
         line-height: 1.4;
       }
 
@@ -407,7 +407,7 @@ onMounted(() => {
       margin: 0 0 16px 0;
       font-size: 16px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--color-text-primary);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -455,13 +455,13 @@ onMounted(() => {
 
         .label {
           font-size: 13px;
-          color: #6b7280;
+          color: var(--color-text-secondary);
         }
 
         .value {
           font-size: 15px;
           font-weight: 500;
-          color: #1f2937;
+          color: var(--color-text-primary);
         }
       }
     }
