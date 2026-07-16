@@ -731,7 +731,7 @@ onMounted(() => {
   align-items: center;
   gap: 14px;
   padding: 14px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid rgba(102, 126, 234, 0.15);
   border-radius: 14px;
   cursor: pointer;
   transition: all 0.3s;
@@ -816,7 +816,7 @@ onMounted(() => {
     }
 
     &:disabled {
-      background: #d1d5db;
+      background: rgba(102, 126, 234, 0.1);
     }
   }
 
@@ -852,7 +852,7 @@ onMounted(() => {
     font-size: 14px;
     max-height: 500px;
     overflow-y: auto;
-    border: 1px solid #e5e7eb;
+    border: 1px solid rgba(102, 126, 234, 0.12);
   }
 
   .risk-content {
@@ -905,7 +905,7 @@ onMounted(() => {
     align-items: flex-start;
     gap: 8px;
     font-size: 13px;
-    color: #909399;
+    color: var(--color-text-secondary);
   }
 }
 </style>
