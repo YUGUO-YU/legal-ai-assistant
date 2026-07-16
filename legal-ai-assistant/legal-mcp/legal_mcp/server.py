@@ -24,6 +24,8 @@ API_BASE_URL = os.environ.get("LEGAL_API_BASE_URL", "http://localhost:3001")
 API_TIMEOUT = 120.0
 MAX_RETRIES = 3
 RETRY_BACKOFF = 1.5
+SEARCH_API_KEY = os.environ.get("SEARCH_API_KEY", "")
+SEARCH_API_URL = os.environ.get("SEARCH_API_URL", "https://ddg-api.herokuapp.com/search")
 
 server = Server("legal-ai-assistant")
 
@@ -112,6 +114,25 @@ def _parse_sse_events(chunks: list[str]) -> dict[str, Any]:
                 content_parts.append(chunk)
     result["content"] = "".join(content_parts)
     return result
+
+
+def _search_web(query: str) -> str:
+    """Perform real web search using configured search API or free DuckDuckGo JSON API."""
+    try:
+        ddg_url = f"https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1"
+        resp = httpx.get(ddg_url, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        lines = []
+        if data.get("AbstractText"):
+            heading = data.get("Heading", query)
+            lines.append(f"【{heading}】\n{data['AbstractText']}\n来源: {data.get('AbstractURL', '')}\n")
+        for topic in data.get("RelatedTopics", [])[:15]:
+            if topic.get("Text"):
+                lines.append(f"- {topic['Text']}")
+        return "\n".join(lines) if lines else f"未找到关于'{query}'的相关信息"
+    except Exception as e:
+        return f"网络搜索失败: {e}"
 
 
 # =============================================================================
@@ -423,6 +444,19 @@ TOOLS = [
             "properties": {}
         }
     ),
+
+    # --- Infrastructure: real web search ---
+    Tool(
+        name="web_search",
+        description="网络搜索 - 通过 DuckDuckGo 实时搜索互联网，获取最新信息。用于查询企业工商信息、司法判决、新闻舆情等实时数据。支持任何关键词搜索。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "搜索关键词，如'腾讯公司工商信息'、'某企业法律诉讼'、'某公司失信被执行人'"}
+            },
+            "required": ["query"]
+        }
+    ),
 ]
 
 
@@ -590,6 +624,10 @@ async def _dispatch(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
     elif name == "ai_status":
         return _make_request("GET", "/api/v1/ai-status")
+
+    elif name == "web_search":
+        search_results = _search_web(arguments["query"])
+        return {"webSearchResult": search_results, "query": arguments["query"]}
 
     else:
         return {"error": f"Unknown tool: {name}"}
@@ -995,6 +1033,13 @@ def _format_result(name: str, result: Any) -> str:
             if model:
                 lines.append(f"  当前模型：{model}")
             return "\n".join(lines)
+        return str(result)
+
+    elif name == "web_search":
+        if isinstance(result, dict):
+            search_result = result.get("webSearchResult", result.get("content", ""))
+            query = result.get("query", "")
+            return f"网络搜索结果（关键词：{query}）：\n\n{search_result}"
         return str(result)
 
     else:

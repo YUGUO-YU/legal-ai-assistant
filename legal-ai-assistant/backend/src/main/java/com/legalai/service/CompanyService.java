@@ -9,11 +9,13 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import okhttp3.*;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class CompanyService {
@@ -197,18 +199,78 @@ public class CompanyService {
     private CompanyQueryResponse realQueryCompany(CompanyQueryRequest request) {
         log.info("两阶段查询: 1.联网搜索 + 2.AI结构化整理...");
 
+        String searchResult = null;
         try {
             String searchPrompt = buildSearchPrompt(request);
-            String searchResult = aiService.searchWeb(searchPrompt);
+            searchResult = aiService.searchWeb(searchPrompt);
             log.info("联网搜索完成，结果长度={}", searchResult != null ? searchResult.length() : 0);
+        } catch (IOException e) {
+            log.warn("MiniMax联网搜索失败，尝试直接HTTP搜索: {}", e.getMessage());
+            searchResult = directWebSearch(buildSearchPrompt(request));
+            log.info("直接HTTP搜索完成，结果长度={}", searchResult != null ? searchResult.length() : 0);
+        }
 
+        if (searchResult == null || searchResult.contains("未获取到搜索结果") || searchResult.contains("搜索API调用失败") || searchResult.contains("网络搜索失败")) {
+            log.warn("MiniMax搜索返回无效结果，尝试直接HTTP搜索...");
+            searchResult = directWebSearch(buildSearchPrompt(request));
+            log.info("直接HTTP搜索完成，结果长度={}", searchResult != null ? searchResult.length() : 0);
+        }
+
+        try {
             String structurePrompt = buildStructurePrompt(request, searchResult);
             String aiResponse = aiService.chat(structurePrompt);
-
             return parseAIResponse(aiResponse, request);
         } catch (IOException e) {
-            log.error("AI企业查询失败: {}", e.getMessage());
+            log.error("AI结构化失败: {}", e.getMessage());
+            if (searchResult != null && !searchResult.startsWith("未获取到") && !searchResult.contains("搜索失败")) {
+                return parseAIResponse("企业信息查询失败，但有搜索结果: " + searchResult, request);
+            }
             return mockQueryCompany(request);
+        }
+    }
+
+    private String directWebSearch(String query) {
+        try {
+            String encodedQuery = java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8);
+            String url = "https://api.duckduckgo.com/?q=" + encodedQuery + "&format=json&no_html=1&skip_disambig=1";
+            OkHttpClient client = new OkHttpClient.Builder()
+                    .connectTimeout(15, TimeUnit.SECONDS)
+                    .readTimeout(15, TimeUnit.SECONDS)
+                    .build();
+            Request request = new Request.Builder()
+                    .url(url)
+                    .get()
+                    .build();
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    log.warn("DuckDuckGo搜索失败: code={}", response.code());
+                    return "网络搜索失败";
+                }
+                String body = response.body() != null ? response.body().string() : "";
+                if (body.isEmpty()) {
+                    return "网络搜索返回空结果";
+                }
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(body);
+                StringBuilder sb = new StringBuilder();
+                if (node.has("AbstractText") && !node.get("AbstractText").isNull()) {
+                    sb.append(node.get("AbstractText").asText());
+                }
+                if (node.has("RelatedTopics")) {
+                    for (JsonNode topic : node.get("RelatedTopics")) {
+                        if (topic.has("Text")) {
+                            sb.append("\n").append(topic.get("Text").asText());
+                        }
+                        if (sb.length() > 3000) break;
+                    }
+                }
+                String result = sb.toString();
+                log.info("DuckDuckGo搜索返回 {} 字符", result.length());
+                return result.isEmpty() ? "网络搜索未返回有效结果" : result;
+            }
+        } catch (Exception e) {
+            log.error("DuckDuckGo搜索异常: {}", e.getMessage());
+            return "网络搜索异常: " + e.getMessage();
         }
     }
 

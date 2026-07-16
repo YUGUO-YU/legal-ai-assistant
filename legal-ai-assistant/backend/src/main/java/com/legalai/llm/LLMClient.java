@@ -251,7 +251,97 @@ public class LLMClient {
         requestBody.put("tools", tools);
         requestBody.put("tool_calls", toolCalls);
 
-        return executeChatRequest(requestBody);
+        return executeSearchWebRequest(requestBody);
+    }
+
+    private String executeSearchWebRequest(Map<String, Object> requestBody) throws IOException {
+        String resolvedModel = resolveModel();
+        String resolvedBaseUrl = resolveBaseUrl();
+        String resolvedApiKey = resolveApiKey();
+
+        String json = objectMapper.writeValueAsString(requestBody);
+        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+            .url(resolvedBaseUrl + "chat/completions")
+            .addHeader("Authorization", "Bearer " + resolvedApiKey)
+            .addHeader("Content-Type", "application/json")
+            .post(body)
+            .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String errorBody = response.body() != null ? response.body().string() : "no body";
+                log.error("MiniMax 联网搜索API调用失败: code={}, message={}, body={}", response.code(), response.message(), errorBody);
+                throw new IOException("API调用失败: " + response.code() + " " + errorBody);
+            }
+
+            String responseBody = response.body().string();
+            log.info("MiniMax 联网搜索响应长度: {}", responseBody.length());
+
+            return parseSearchWebResponse(responseBody);
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("MiniMax 联网搜索异常: {}", e.getMessage(), e);
+            throw new IOException("联网搜索异常: " + e.getMessage(), e);
+        }
+    }
+
+    private String parseSearchWebResponse(String responseBody) {
+        try {
+            JsonNode json = objectMapper.readTree(responseBody);
+            JsonNode choices = json.get("choices");
+            if (choices == null || !choices.isArray() || choices.size() == 0) {
+                log.warn("MiniMax 联网搜索响应格式异常: choices={}", choices);
+                return "{\"error\": \"响应格式异常\"}";
+            }
+
+            JsonNode message = choices.get(0).get("message");
+
+            if (message.has("content") && !message.get("content").isNull()) {
+                String content = message.get("content").asText();
+                if (content != null && !content.trim().isEmpty()) {
+                    log.info("MiniMax 联网搜索解析成功(content): content长度={}", content.length());
+                    return content;
+                }
+            }
+
+            JsonNode toolCalls = message.get("tool_calls");
+            if (toolCalls != null && toolCalls.isArray() && toolCalls.size() > 0) {
+                JsonNode firstCall = toolCalls.get(0);
+                JsonNode function = firstCall.get("function");
+                if (function != null) {
+                    String fnName = function.has("name") ? function.get("name").asText() : "";
+                    String args = function.has("arguments") ? function.get("arguments").asText() : "{}";
+                    log.info("MiniMax 联网搜索解析成功(tool_call): fn={}, args前100字符={}", fnName, args.substring(0, Math.min(100, args.length())));
+
+                    try {
+                        JsonNode argsNode = objectMapper.readTree(args);
+                        if (argsNode.has("search_result") || argsNode.has("results") || argsNode.has("data")) {
+                            String searchResults = argsNode.has("search_result") ? argsNode.get("search_result").asText()
+                                : argsNode.has("results") ? argsNode.get("results").asText()
+                                : argsNode.get("data").asText();
+                            return searchResults;
+                        }
+                        if (argsNode.has("content")) {
+                            return argsNode.get("content").asText();
+                        }
+                    } catch (Exception e) {
+                        log.debug("解析tool_call arguments失败，返回原始文本: {}", e.getMessage());
+                    }
+
+                    return args;
+                }
+            }
+
+            log.warn("MiniMax 联网搜索响应content和tool_calls均为空: responseBody前300字符={}",
+                    responseBody.substring(0, Math.min(300, responseBody.length())));
+            return "{\"error\": \"未获取到搜索结果\"}";
+        } catch (Exception e) {
+            log.error("解析 MiniMax 联网搜索响应失败: {}", e.getMessage(), e);
+            return "{\"error\": \"解析搜索响应失败: " + e.getMessage() + "\"}";
+        }
     }
 
     /**
@@ -520,12 +610,40 @@ public class LLMClient {
         try {
             JsonNode json = objectMapper.readTree(responseBody);
             JsonNode choices = json.get("choices");
-            if (choices != null && choices.isArray() && choices.size() > 0) {
-                String content = choices.get(0).get("message").get("content").asText();
+            if (choices == null || !choices.isArray() || choices.size() == 0) {
+                log.warn("MiniMax 响应格式异常: choices={}", choices);
+                return "抱歉，AI服务暂时无法响应，请稍后重试。";
+            }
+
+            JsonNode message = choices.get(0).get("message");
+            String content = null;
+
+            if (message.has("content") && !message.get("content").isNull()) {
+                content = message.get("content").asText();
+            }
+
+            if (content != null && !content.trim().isEmpty()) {
                 log.info("MiniMax 解析成功: content长度={}", content.length());
                 return content;
             }
-            log.warn("MiniMax 响应格式异常: choices={}", choices);
+
+            JsonNode finishReason = choices.get(0).has("finish_reason") ? choices.get(0).get("finish_reason") : null;
+            if (finishReason != null && "tool_calls".equals(finishReason.asText())) {
+                JsonNode toolCalls = message.get("tool_calls");
+                if (toolCalls != null && toolCalls.isArray() && toolCalls.size() > 0) {
+                    JsonNode firstCall = toolCalls.get(0);
+                    JsonNode function = firstCall.get("function");
+                    if (function != null) {
+                        String fnName = function.has("name") ? function.get("name").asText() : "";
+                        String args = function.has("arguments") ? function.get("arguments").asText() : "{}";
+                        log.info("MiniMax tool_calls 响应: fn={}, args长度={}", fnName, args.length());
+                        return "联网搜索工具(" + fnName + ")已调用，参数: " + args + "。搜索结果已由AI整理。";
+                    }
+                }
+            }
+
+            log.warn("MiniMax 响应content为空: finish_reason={}, responseBody前200字符={}",
+                    finishReason, responseBody.substring(0, Math.min(200, responseBody.length())));
             return "抱歉，AI服务暂时无法响应，请稍后重试。";
         } catch (Exception e) {
             log.error("解析 MiniMax 响应失败: {}", e.getMessage(), e);
