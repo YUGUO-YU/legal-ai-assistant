@@ -1,8 +1,8 @@
 <template>
-  <div class="milvus-collections-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>Milvus · 向量集合监控</h2>
+        <h2 class="gradient-text">Milvus · 向量集合监控</h2>
         <p>嵌入式向量库 · 各域集合行数 · 健康状态</p>
       </div>
       <div class="header-actions">

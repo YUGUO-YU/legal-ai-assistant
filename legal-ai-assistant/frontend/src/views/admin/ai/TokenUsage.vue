@@ -1,8 +1,8 @@
 <template>
-  <div class="token-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>Token 用量分析</h2>
+        <h2 class="gradient-text">Token 用量分析</h2>
         <p>AI 能力域 · 按模块 & 按模型 · 近 30 日走势 + 模块分布</p>
       </div>
       <div class="header-actions">

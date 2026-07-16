@@ -1,8 +1,8 @@
 <template>
-  <div class="llm-models-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>LLM 模型配置</h2>
+        <h2 class="gradient-text">LLM 模型配置</h2>
         <p>AI 域 · 供应商 / 端点 / 权重 · 主备切换 · 健康探测</p>
       </div>
       <div class="header-actions">
@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="model_code" label="代码" width="120" />

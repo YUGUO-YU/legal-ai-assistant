@@ -1,8 +1,8 @@
 <template>
-  <div class="prompts-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>Prompt 模板管理</h2>
+        <h2 class="gradient-text">Prompt 模板管理</h2>
         <p>AI 域核心资产 · 创建 / 灰度 / 回滚 / A/B</p>
       </div>
       <div class="header-actions">
@@ -12,7 +12,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline :model="filter">
         <el-form-item label="关键词">
           <el-input v-model="filter.keyword" placeholder="prompt_code / scene" clearable style="width:200px" @keyup.enter="load" />

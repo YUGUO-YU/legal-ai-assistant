@@ -1,5 +1,11 @@
 <template>
-  <div class="kb-chunks-page">
+  <div class="admin-page">
+    <div class="page-header">
+      <div class="header-content">
+        <h2 class="gradient-text">知识库分块管理</h2>
+        <p>AI 域 · 分块统计与监控</p>
+      </div>
+    </div>
     <el-row :gutter="16" class="stats-row">
       <el-col :span="8">
         <el-card shadow="hover" class="stat-card">
@@ -21,7 +27,7 @@
       </el-col>
     </el-row>
 
-    <el-card class="table-card">
+    <el-card class="glass table-card">
       <div class="filter-row">
         <el-select v-model="filterKbId" placeholder="选择知识库" clearable filterable style="width: 200px" @change="loadChunks">
           <el-option v-for="kb in kbList" :key="kb.id" :label="kb.kb_name" :value="kb.id" />
