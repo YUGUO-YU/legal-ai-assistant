@@ -233,3 +233,252 @@
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius-sm);
 }
+
+/* ======================
+   毛玻璃组件类
+   ====================== */
+.glass {
+  background: var(--color-bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border-glass);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass);
+}
+
+.glass-light {
+  background: var(--color-bg-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border-glass);
+  border-radius: var(--radius-md);
+}
+
+.glass-hover:hover {
+  border-color: var(--color-border-glass-hover);
+  box-shadow: var(--shadow-glow);
+}
+
+/* ======================
+   全局滚动条样式
+   ====================== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.45);
+}
+
+/* ======================
+   文本选中颜色
+   ====================== */
+::selection {
+  background: rgba(102, 126, 234, 0.4);
+  color: #fff;
+}
+
+/* ======================
+   Focus 可访问性
+   ====================== */
+*:focus-visible {
+  outline: 2px solid rgba(102, 126, 234, 0.6);
+  outline-offset: 2px;
+}
+
+/* ======================
+   渐变文字
+   ====================== */
+.gradient-text {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ======================
+   Element Plus Dialog 毛玻璃
+   ====================== */
+.el-dialog {
+  border-radius: var(--radius-xl) !important;
+  border: 1px solid var(--color-border-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.el-dialog__header {
+  border-bottom: 1px solid var(--color-border-glass);
+  padding: 16px 20px;
+  margin-right: 0 !important;
+}
+.el-dialog__title {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.el-dialog__body {
+  color: var(--color-text-primary);
+}
+.el-overlay {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* ======================
+   Element Plus Message 毛玻璃
+   ====================== */
+.el-message {
+  border-radius: var(--radius-md) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border-glass) !important;
+  background: rgba(30, 27, 75, 0.9) !important;
+}
+
+/* ======================
+   Element Plus Notification
+   ====================== */
+.el-notification {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--color-border-glass);
+  background: rgba(30, 27, 75, 0.95) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ======================
+   Element Plus 按钮渐变
+   ====================== */
+.el-button--primary {
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+}
+.el-button--primary:hover {
+  box-shadow: var(--shadow-glow) !important;
+  transform: translateY(-1px);
+}
+.el-button--primary:active {
+  transform: scale(0.97);
+}
+
+/* ======================
+   Element Plus Card 毛玻璃
+   ====================== */
+.el-card {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--color-border-glass) !important;
+  background: var(--color-bg-card) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-card) !important;
+}
+
+/* ======================
+   Element Plus Table 玻璃风格
+   ====================== */
+.el-table {
+  --el-table-border-color: rgba(255, 255, 255, 0.06);
+  --el-table-header-bg-color: rgba(102, 126, 234, 0.1);
+  --el-table-row-hover-bg-color: rgba(102, 126, 234, 0.06);
+  --el-table-tr-bg-color: transparent;
+  background-color: transparent !important;
+}
+.el-table th.el-table__cell {
+  background-color: rgba(102, 126, 234, 0.1) !important;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.el-table td.el-table__cell {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+.el-table__body tr:hover > td.el-table__cell {
+  background: rgba(102, 126, 234, 0.08) !important;
+}
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ======================
+   Element Plus Input/Select 深色
+   ====================== */
+.el-input__wrapper,
+.el-textarea__inner {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid var(--color-border-glass) !important;
+  box-shadow: none !important;
+  border-radius: var(--radius-md) !important;
+}
+.el-input__wrapper:focus-within,
+.el-textarea__inner:focus {
+  border-color: rgba(102, 126, 234, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+}
+.el-select .el-input__wrapper {
+  border-radius: var(--radius-md) !important;
+}
+
+/* ======================
+   Element Plus Pagination
+   ====================== */
+.el-pagination {
+  --el-pagination-button-bg-color: transparent;
+  --el-pagination-hover-color: var(--color-primary);
+}
+.el-pagination .el-pager li {
+  background: var(--color-bg-glass);
+  border: 1px solid var(--color-border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+}
+.el-pagination .el-pager li.is-active {
+  background: var(--gradient-primary);
+  border-color: transparent;
+  color: #fff;
+}
+.el-pagination .el-pager li:hover {
+  color: var(--color-primary-light);
+}
+
+/* ======================
+   骨架屏 shimmer
+   ====================== */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(102, 126, 234, 0.08) 25%,
+    rgba(102, 126, 234, 0.15) 50%,
+    rgba(102, 126, 234, 0.08) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ======================
+   统计卡片悬浮上浮
+   ====================== */
+.kpi-card-hover {
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  cursor: pointer;
+}
+.kpi-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow);
+}
+
+/* ======================
+   表格卡片
+   ====================== */
+.table-card {
+  overflow: hidden;
+}
