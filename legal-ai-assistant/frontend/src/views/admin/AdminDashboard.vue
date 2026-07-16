@@ -25,15 +25,18 @@
       </template>
     </el-alert>
 
-    <el-row :gutter="14" class="kpi-row">
-      <el-col :xs="12" :sm="6" :md="4" :lg="3" v-for="(m, index) in kpis" :key="m.label">
-        <el-card class="kpi-card" :body-style="{ padding: '14px' }" :class="m.tone">
+    <div class="kpi-grid">
+      <div v-for="(m, index) in kpis" :key="m.label" class="kpi-card glass kpi-card-hover" :class="m.tone">
+        <div class="kpi-icon-wrap">
+          <el-icon class="kpi-icon"><component :is="m.icon || 'Odometer'" /></el-icon>
+        </div>
+        <div class="kpi-body">
           <div class="kpi-label">{{ m.label }}</div>
           <div class="kpi-value">{{ animatedKpis[index]?.value ?? 0 }}</div>
           <div class="kpi-foot">{{ m.foot }}</div>
-        </el-card>
-      </el-col>
-    </el-row>
+        </div>
+      </div>
+    </div>
 
     <el-row :gutter="14" class="activity-row">
       <el-col :xs="24" :md="8">
@@ -592,39 +595,165 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
   }
 }
 
-.kpi-row { margin-bottom: 14px; }
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
 
 .kpi-card {
+  padding: 18px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  cursor: pointer;
+
+  &.tone-purple .kpi-icon-wrap { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+  &.tone-green .kpi-icon-wrap { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+  &.tone-orange .kpi-icon-wrap { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
+  &.tone-blue .kpi-icon-wrap { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+  &.tone-pink .kpi-icon-wrap { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+  &.tone-default .kpi-icon-wrap { background: rgba(102, 126, 234, 0.15); color: #818cf8; }
+
+  .kpi-icon-wrap {
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    .kpi-icon {
+      font-size: 20px;
+    }
+  }
+
+  .kpi-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .kpi-label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .kpi-foot {
+    font-size: 11px;
+    color: var(--color-text-muted);
+  }
+}
+
+.page-header {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+}
+
+.db-alert {
+  margin-bottom: 16px;
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid rgba(251, 191, 36, 0.3) !important;
+  background: rgba(251, 191, 36, 0.08) !important;
+}
+
+.activity-row {
+  margin-bottom: 14px;
+
+  > .el-col > .el-card {
+    height: 100%;
+  }
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.chart-area {
+  height: 220px;
   position: relative;
-  overflow: hidden;
-  border-left: 4px solid var(--color-border-dark);
-  transition: transform 0.2s;
-  opacity: 0;
-  transform: scale(0.9);
-  animation: kpiScaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 
-  &:nth-child(1) { animation-delay: 0.1s; }
-  &:nth-child(2) { animation-delay: 0.15s; }
-  &:nth-child(3) { animation-delay: 0.2s; }
-  &:nth-child(4) { animation-delay: 0.25s; }
-  &:nth-child(5) { animation-delay: 0.3s; }
-  &:nth-child(6) { animation-delay: 0.35s; }
-  &:nth-child(7) { animation-delay: 0.4s; }
-  &:nth-child(8) { animation-delay: 0.45s; }
-  &:nth-child(9) { animation-delay: 0.5s; }
-  &:nth-child(10) { animation-delay: 0.55s; }
-  &:nth-child(11) { animation-delay: 0.6s; }
+  .chart-overlay {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    font-size: 11px;
+    color: var(--color-text-muted);
+    background: rgba(0,0,0,0.3);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+  }
+}
 
-  &:hover { transform: translateY(-2px); }
+.activity-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  text-align: center;
 
-  &.danger { border-left-color: var(--color-danger); }
-  &.warning { border-left-color: var(--color-warning); }
-  &.info { border-left-color: var(--color-info); }
-  &.primary { border-left-color: var(--color-primary); }
+  .activity-kpi-label {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    margin-bottom: 6px;
+  }
 
-  .kpi-label { font-size: 12px; color: var(--color-text-secondary); }
-  .kpi-value { font-size: 24px; font-weight: 700; color: var(--color-text-primary); margin: 4px 0; }
-  .kpi-foot { font-size: 11px; color: var(--color-text-placeholder); }
+  .activity-kpi-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+}
+
+@media (max-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .activity-kpis {
+    grid-template-columns: repeat(3, 1fr);
+    .activity-kpi-value { font-size: 16px; }
+  }
 }
 
 @keyframes kpiScaleIn {
