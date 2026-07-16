@@ -394,8 +394,11 @@ import {
 } from '@element-plus/icons-vue'
 
 import { useUsageMemory } from '@/composables/useUsageMemory'
+import { useStats } from '@/composables/useStats'
 import ContextMenu from '@/components/common/ContextMenu.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
+
+const { stats } = useStats()
 
 const {
   groupByDate: memoryGroups,
@@ -426,11 +429,11 @@ function handleMemoryClick(item) {
     search: '/legal-search',
     document: '/document',
     contract: '/contract-review',
-    company: '/company-search',
+    company: '/company',
     docqa: '/doc-qa',
     law: '/law-search',
     case: '/case-search',
-    ppt: '/ppt',
+    ppt: '/ppt-editor',
     other: '/dashboard'
   }
   router.push(pathMap[item.type] || '/dashboard')
@@ -517,37 +520,11 @@ const statsData = reactive([
   }
 ])
 
-const loadStats = async () => {
-  statsLoading.value = true
-  try {
-    const res = await fetch('/api/v1/user/stats')
-    if (!res.ok) throw new Error('not ok')
-    const data = await res.json()
-    statsData[0].value = String(data.searchCount ?? statsData[0].value)
-    statsData[1].value = String(data.sessionCount ?? statsData[1].value)
-    activeDays.value = data.activeDays ?? activeDays.value
-    if (data.recentActivities?.length) {
-      recentActivities.value = data.recentActivities
-    }
-  } catch {
-    const mockData = {
-      searchCount: 156,
-      sessionCount: 89,
-      activeDays: 5,
-      efficiencyRate: 32,
-      recentActivities: [
-        { id: 1, title: '检索"合同欺诈认定"', desc: '找到了 12 条相关法规和 8 个类案', time: '10分钟前', icon: 'Search', gradient: 'rgba(102, 126, 234, 0.15)' },
-        { id: 2, title: '起草"民事起诉状"', desc: '已生成起诉状模板', time: '30分钟前', icon: 'DocumentCopy', gradient: 'rgba(79, 172, 254, 0.15)' },
-        { id: 3, title: '审查"采购合同"', desc: '发现 3 处风险条款', time: '1小时前', icon: 'Stamp', gradient: 'rgba(161, 140, 209, 0.15)' }
-      ]
-    }
-    statsData[0].value = String(mockData.searchCount)
-    statsData[1].value = String(mockData.sessionCount)
-    activeDays.value = mockData.activeDays
-    recentActivities.value = mockData.recentActivities
-  } finally {
-    statsLoading.value = false
-  }
+const loadStats = () => {
+  statsData[0].value = String(stats.value.searchCount || 0)
+  statsData[1].value = String(stats.value.caseAnalysisCount || 0)
+  statsData[2].value = String(stats.value.documentDraftCount || 0)
+  statsData[3].value = String(stats.value.sessionCount || 0)
 }
 
 const username = computed(() => {
