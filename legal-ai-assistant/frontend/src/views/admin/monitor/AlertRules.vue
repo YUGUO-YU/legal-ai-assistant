@@ -1,8 +1,8 @@
 <template>
-  <div class="alert-rules-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>告警规则管理</h2>
+        <h2 class="gradient-text">告警规则管理</h2>
         <p>监控域 · 指标阈值 / 通知渠道 / 静默期 / 启用停用</p>
       </div>
       <div class="header-actions">
@@ -12,7 +12,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline>
         <el-form-item label="告警级别">
           <el-select v-model="filter.level" clearable placeholder="全部" style="width:130px">
@@ -34,7 +34,7 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <el-card class="glass table-card">
       <template v-if="selectedRows.length > 0">
         <div class="batch-actions">
           <span>已选择 {{ selectedRows.length }} 项</span>

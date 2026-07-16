@@ -1,8 +1,8 @@
 <template>
-  <div class="admin-list-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>告警历史</h2>
+        <h2 class="gradient-text">告警历史</h2>
         <p>触发 / 确认 / 解决 · 支持在线操作</p>
       </div>
       <div class="header-actions">
@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline :model="filter">
         <el-form-item label="状态">
           <el-select v-model="filter.notify" clearable style="width:140px" placeholder="全部">
@@ -38,7 +38,7 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="rule_id" label="规则" width="80" />
