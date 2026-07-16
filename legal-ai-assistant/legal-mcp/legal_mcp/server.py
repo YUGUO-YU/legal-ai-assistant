@@ -5,7 +5,7 @@ Wraps the legal-ai-assistant backend REST APIs as MCP tools for use
 in OpenCode and other MCP-compatible clients.
 
 Usage:
-    uvx legal-mcp
+    uv run --directory legal-mcp legal-mcp
 
 Or install locally:
     pip install -e .
@@ -13,26 +13,40 @@ Or install locally:
 """
 
 import os
+import re
 import httpx
 from typing import Any
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-# Backend API configuration
 API_BASE_URL = os.environ.get("LEGAL_API_BASE_URL", "http://localhost:3001")
-API_TIMEOUT = 60.0
+API_TIMEOUT = 120.0
+MAX_RETRIES = 3
+RETRY_BACKOFF = 1.5
 
-# Initialize HTTP client
-http_client = httpx.AsyncClient(timeout=API_TIMEOUT, base_url=API_BASE_URL)
-
-# Server instance
 server = Server("legal-ai-assistant")
 
 
+def _retry_request(fn):
+    """Decorator for retry with exponential backoff."""
+    import time
+    def wrapper(*args, **kwargs):
+        last_err = None
+        for attempt in range(MAX_RETRIES):
+            try:
+                return fn(*args, **kwargs)
+            except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError) as e:
+                last_err = e
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(RETRY_BACKOFF ** attempt)
+        return {"error": f"Failed after {MAX_RETRIES} retries: {last_err}"}
+    return wrapper
+
+
+@_retry_request
 def _make_request(method: str, path: str, data: dict | None = None, params: dict | None = None) -> dict[str, Any]:
-    """Make synchronous HTTP request (used via asyncio)."""
-    import httpx
+    """Make synchronous HTTP request with retry support."""
     client = httpx.Client(timeout=API_TIMEOUT, base_url=API_BASE_URL)
     try:
         if method.upper() == "GET":
@@ -41,7 +55,6 @@ def _make_request(method: str, path: str, data: dict | None = None, params: dict
             resp = client.post(path, json=data)
         resp.raise_for_status()
         result = resp.json()
-        # Handle ApiResponse wrapper: {code: 200, data: {...}}
         if isinstance(result, dict):
             if result.get("code") == 200:
                 return result.get("data", result)
@@ -52,28 +65,53 @@ def _make_request(method: str, path: str, data: dict | None = None, params: dict
         client.close()
 
 
-async def _async_request(method: str, path: str, data: dict | None = None, params: dict | None = None) -> dict[str, Any]:
-    """Make async HTTP request to backend."""
+def _stream_request(method: str, path: str, data: dict | None = None, params: dict | None = None) -> list[str]:
+    """Make streaming SSE request, return accumulated text chunks."""
+    client = httpx.Client(timeout=API_TIMEOUT, base_url=API_BASE_URL, headers={"Accept": "text/event-stream"})
     try:
         if method.upper() == "GET":
-            resp = await http_client.get(path, params=params)
+            req = client.build_request("GET", path, params=params)
         else:
-            resp = await http_client.post(path, json=data)
+            req = client.build_request("POST", path, json=data)
+        resp = client.send(req, stream=True)
         resp.raise_for_status()
-        result = resp.json()
-        # Handle ApiResponse wrapper: {code: 200, data: {...}}
-        if isinstance(result, dict):
-            if result.get("code") == 200:
-                return result.get("data", result)
-            elif "data" in result:
-                return result["data"]
-        return result
-    except httpx.HTTPStatusError as e:
-        return {"error": f"HTTP {e.response.status_code}: {e.response.text}"}
-    except httpx.ConnectError:
-        return {"error": f"Cannot connect to backend at {API_BASE_URL}. Is the server running?"}
-    except Exception as e:
-        return {"error": str(e)}
+        chunks = []
+        for line in resp.iter_lines():
+            if line.startswith("data:"):
+                chunks.append(line[5:].strip())
+        return chunks
+    finally:
+        client.close()
+
+
+def _parse_sse_events(chunks: list[str]) -> dict[str, Any]:
+    """Parse SSE data chunks into structured result."""
+    result = {"type": "complete", "phases": [], "content": "", "error": None}
+    content_parts = []
+    for chunk in chunks:
+        if not chunk or chunk == "[DONE]":
+            continue
+        try:
+            import json
+            event = json.loads(chunk)
+            t = event.get("type", "")
+            if t == "progress":
+                result["phases"].append({
+                    "phase": event.get("phase", ""),
+                    "progress": event.get("progress", 0),
+                    "message": event.get("message", "")
+                })
+            elif t == "report":
+                content_parts.append(event.get("content", ""))
+            elif t == "report_complete":
+                content_parts.append(event.get("content", ""))
+            elif t == "error":
+                result["error"] = event.get("message", "Unknown error")
+        except (json.JSONDecodeError, Exception):
+            if chunk:
+                content_parts.append(chunk)
+    result["content"] = "".join(content_parts)
+    return result
 
 
 # =============================================================================
@@ -81,6 +119,7 @@ async def _async_request(method: str, path: str, data: dict | None = None, param
 # =============================================================================
 
 TOOLS = [
+    # --- Existing 8 tools (preserved) ---
     Tool(
         name="legal_search",
         description="法规混合检索 - 支持ES全文检索和Milvus向量检索的混合检索。输入关键词查询相关法律法规条文。适用于查找特定法规条款、了解法律条文内容。",
@@ -188,6 +227,202 @@ TOOLS = [
             "required": ["question"]
         }
     ),
+
+    # --- Direction A: case_detail & case_analyze ---
+    Tool(
+        name="case_detail",
+        description="获取案例详情 - 根据案例UUID获取案例的完整信息，包括当事人、案由、审理程序、判决结果等。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "caseUuid": {"type": "string", "description": "案例UUID（从case_search或case_similar结果中获取）"}
+            },
+            "required": ["caseUuid"]
+        }
+    ),
+    Tool(
+        name="case_analyze",
+        description="AI案情分析 - 对案例进行AI智能分析，输出案情摘要、争议焦点、适用法律、判决理由等结构化分析结果。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "caseUuid": {"type": "string", "description": "案例UUID（从case_detail或case_search结果中获取）"}
+            },
+            "required": ["caseUuid"]
+        }
+    ),
+
+    # --- Direction A: contract dimensions, history, risk detail ---
+    Tool(
+        name="contract_dimensions",
+        description="获取合同审查维度 - 查询AI合同审查支持的所有风险维度及其权重，包括主体资格、合同效力、权利义务等。",
+        inputSchema={
+            "type": "object",
+            "properties": {}
+        }
+    ),
+    Tool(
+        name="contract_history",
+        description="获取合同审查历史 - 查询当前用户的合同审查记录列表，包括审查时间、合同摘要、风险等级等。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "返回记录数量，默认20", "default": 20}
+            }
+        }
+    ),
+    Tool(
+        name="contract_risk_detail",
+        description="获取合同审查详情 - 根据审查UUID获取合同审查的完整结果，包括各维度评分、风险条款清单和修改建议。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "reviewUuid": {"type": "string", "description": "审查记录UUID（从contract_history或contract_review返回结果中获取）"}
+            },
+            "required": ["reviewUuid"]
+        }
+    ),
+
+    # --- Direction A: legal research sync + stream ---
+    Tool(
+        name="legal_research",
+        description="法律研究（同步）- 输入法律问题，同步生成结构化法律研究报告，包括问题界定、法律依据、案例参考、风险提示和结论建议。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "question": {"type": "string", "description": "研究问题或法律咨询主题，如'建筑工程合同纠纷中的工期延误责任'"},
+                "depth": {"type": "string", "description": "研究深度：brief（简要）/standard（标准）/comprehensive（全面）", "default": "standard"},
+                "sources": {"type": "array", "items": {"type": "string"}, "description": "指定的法律来源，如['民法典','劳动法']", "default": []}
+            },
+            "required": ["question"]
+        }
+    ),
+    Tool(
+        name="legal_research_stream",
+        description="法律研究（流式）- 同legal_research，但通过SSE流式输出，可实时看到研究进度各阶段（解析问题、检索法规、生成报告等）。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "question": {"type": "string", "description": "研究问题或法律咨询主题"},
+                "depth": {"type": "string", "description": "研究深度：brief（简要）/standard（标准）/comprehensive（全面）", "default": "standard"},
+                "sources": {"type": "array", "items": {"type": "string"}, "description": "指定的法律来源", "default": []}
+            },
+            "required": ["question"]
+        }
+    ),
+
+    # --- Direction A: document drafting ---
+    Tool(
+        name="document_templates",
+        description="获取文书模板列表 - 查询所有可用的法律文书模板，包括起诉状、答辩状、合同协议等各类模板。",
+        inputSchema={
+            "type": "object",
+            "properties": {}
+        }
+    ),
+    Tool(
+        name="document_template_detail",
+        description="获取文书模板详情 - 根据模板代码获取指定文书模板的详细信息，包括模板结构、必填字段说明。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "templateCode": {"type": "string", "description": "模板代码（从document_templates结果中获取）"}
+            },
+            "required": ["templateCode"]
+        }
+    ),
+    Tool(
+        name="document_draft",
+        description="起草法律文书 - 根据模板和案件信息生成法律文书，包括起诉状、答辩状、和解协议等。支持传入当事人信息、诉求金额、事实理由等。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "templateCode": {"type": "string", "description": "模板代码（从document_templates获取，如'民事起诉状'）"},
+                "caseType": {"type": "string", "description": "案件类型，如'民事'、'劳动争议'", "default": ""},
+                "plaintiffName": {"type": "string", "description": "原告姓名", "default": ""},
+                "plaintiffPhone": {"type": "string", "description": "原告电话", "default": ""},
+                "plaintiffIdCard": {"type": "string", "description": "原告身份证号", "default": ""},
+                "plaintiffAddress": {"type": "string", "description": "原告地址", "default": ""},
+                "defendantName": {"type": "string", "description": "被告姓名", "default": ""},
+                "defendantPhone": {"type": "string", "description": "被告电话", "default": ""},
+                "defendantIdCard": {"type": "string", "description": "被告身份证号", "default": ""},
+                "defendantAddress": {"type": "string", "description": "被告地址", "default": ""},
+                "defendantCompany": {"type": "string", "description": "被告公司名称", "default": ""},
+                "claimAmount": {"type": "number", "description": "诉讼金额（元）", "default": None},
+                "claimDescription": {"type": "string", "description": "诉讼请求描述", "default": ""},
+                "facts": {"type": "array", "items": {"type": "string"}, "description": "案件事实列表", "default": []},
+                "evidence": {"type": "array", "items": {"type": "string"}, "description": "证据材料列表", "default": []},
+                "courtName": {"type": "string", "description": "管辖法院名称", "default": ""},
+                "caseCause": {"type": "string", "description": "案由", "default": ""},
+                "includeRiskPrompt": {"type": "boolean", "description": "是否包含风险提示", "default": True}
+            }
+        }
+    ),
+
+    # --- Direction A: law analysis ---
+    Tool(
+        name="law_analyze",
+        description="法规智能分析 - 对指定法规进行AI智能分析，输出法规要点解读、适用场景、关联法规、与相关法律的比较分析等。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "lawUuid": {"type": "string", "description": "法规UUID（从law_search或get_law_detail结果中获取）"},
+                "lawTitle": {"type": "string", "description": "法规标题（可选，与lawUuid二选一）", "default": ""},
+                "articles": {"type": "array", "items": {"type": "object"}, "description": "具体条款内容（可选）", "default": []}
+            }
+        }
+    ),
+
+    # --- Direction A: doc_qa session management ---
+    Tool(
+        name="doc_qa_sessions",
+        description="获取问答会话列表 - 查询当前用户的所有文档问答会话，返回会话ID列表和摘要信息。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "userId": {"type": "string", "description": "用户ID（可选，默认使用default）", "default": "default"}
+            }
+        }
+    ),
+    Tool(
+        name="doc_qa_create_session",
+        description="创建问答会话 - 创建一个新的文档问答会话，返回会话ID，用于后续连续对话。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "userId": {"type": "string", "description": "用户ID（可选，默认使用default）", "default": "default"}
+            }
+        }
+    ),
+    Tool(
+        name="doc_qa_session_history",
+        description="获取会话历史 - 查询指定会话的完整问答历史，包括用户问题和AI回答。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "sessionId": {"type": "string", "description": "会话ID（从doc_qa_sessions或doc_qa_create_session结果中获取）"}
+            },
+            "required": ["sessionId"]
+        }
+    ),
+
+    # --- Direction C: health check ---
+    Tool(
+        name="health_check",
+        description="健康检查 - 检查法律AI助手后端服务的健康状态，包括数据库、Redis缓存等组件的连接状态。",
+        inputSchema={
+            "type": "object",
+            "properties": {}
+        }
+    ),
+    Tool(
+        name="ai_status",
+        description="AI服务状态 - 检查MiniMax AI模型服务的连接状态和可用性，返回online/offline状态。",
+        inputSchema={
+            "type": "object",
+            "properties": {}
+        }
+    ),
 ]
 
 
@@ -197,27 +432,22 @@ TOOLS = [
 
 @server.list_tools()
 async def list_tools() -> list[Tool]:
-    """Return all available MCP tools."""
     return TOOLS
 
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-    """Handle tool calls from MCP clients."""
     result = await _dispatch(name, arguments)
-
     if isinstance(result, dict) and "error" in result:
         return [TextContent(type="text", text=f"Error: {result['error']}")]
-
-    # Format result as readable text
     text = _format_result(name, result)
     return [TextContent(type="text", text=text)]
 
 
 async def _dispatch(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    """Dispatch request to appropriate backend API."""
+    # --- Existing 8 tools ---
     if name == "legal_search":
-        return await _async_request("POST", "/api/v1/legal-search/search", {
+        return _make_request("POST", "/api/v1/legal-search/search", {
             "query": arguments["query"],
             "page": arguments.get("page", 1),
             "pageSize": arguments.get("pageSize", 10),
@@ -225,14 +455,14 @@ async def _dispatch(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         })
 
     elif name == "case_similar":
-        return await _async_request("POST", "/api/v1/case-similar/search", {
+        return _make_request("POST", "/api/v1/case-similar/search", {
             "description": arguments["description"],
             "caseType": arguments.get("caseType", ""),
             "limit": arguments.get("limit", 5)
         })
 
     elif name == "case_search":
-        return await _async_request("POST", "/api/v1/case-search/search", {
+        return _make_request("POST", "/api/v1/case-search/search", {
             "keyword": arguments.get("keyword", ""),
             "caseType": arguments.get("caseType", []),
             "courtLevel": arguments.get("courtLevel", []),
@@ -245,21 +475,21 @@ async def _dispatch(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         })
 
     elif name == "company_query":
-        return await _async_request("POST", "/api/v1/company/query", {
+        return _make_request("POST", "/api/v1/company/query", {
             "companyName": arguments.get("companyName"),
             "unifiedSocialCreditCode": arguments.get("unifiedSocialCreditCode"),
             "enableRiskWarning": arguments.get("enableRiskWarning", True)
         })
 
     elif name == "contract_review":
-        return await _async_request("POST", "/api/v1/contract/review", {
+        return _make_request("POST", "/api/v1/contract/review", {
             "text": arguments["text"],
             "templateCode": arguments.get("templateCode", ""),
             "dimensions": arguments.get("dimensions", [])
         })
 
     elif name == "law_search":
-        return await _async_request("POST", "/api/v1/law-search/search", {
+        return _make_request("POST", "/api/v1/law-search/search", {
             "keyword": arguments.get("keyword", ""),
             "status": arguments.get("status"),
             "page": arguments.get("page", 1),
@@ -267,23 +497,114 @@ async def _dispatch(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         })
 
     elif name == "get_law_detail":
-        return await _async_request("GET", f"/api/v1/law-search/laws/{arguments['lawUuid']}")
+        return _make_request("GET", f"/api/v1/law-search/laws/{arguments['lawUuid']}")
 
     elif name == "doc_qa_ask":
-        return await _async_request("POST", "/api/v1/doc-qa/ask", {
+        return _make_request("POST", "/api/v1/doc-qa/ask", {
             "question": arguments["question"],
             "kbId": arguments.get("kbId", ""),
             "sessionId": arguments.get("sessionId", "")
         })
 
+    # --- Direction A: case ---
+    elif name == "case_detail":
+        return _make_request("GET", f"/api/v1/case-search/cases/{arguments['caseUuid']}")
+
+    elif name == "case_analyze":
+        return _make_request("GET", f"/api/v1/case-search/cases/{arguments['caseUuid']}/analysis")
+
+    # --- Direction A: contract ---
+    elif name == "contract_dimensions":
+        return _make_request("GET", "/api/v1/contract/dimensions")
+
+    elif name == "contract_history":
+        return _make_request("GET", "/api/v1/contract/reviews", params={"limit": arguments.get("limit", 20)})
+
+    elif name == "contract_risk_detail":
+        return _make_request("GET", f"/api/v1/contract/reviews/{arguments['reviewUuid']}")
+
+    # --- Direction A: legal research ---
+    elif name == "legal_research":
+        return _make_request("POST", "/api/v1/legal-research/generate", {
+            "question": arguments["question"],
+            "depth": arguments.get("depth", "standard"),
+            "sources": arguments.get("sources", [])
+        })
+
+    elif name == "legal_research_stream":
+        chunks = _stream_request("POST", "/api/v1/legal-research/generate/stream", {
+            "question": arguments["question"],
+            "depth": arguments.get("depth", "standard"),
+            "sources": arguments.get("sources", [])
+        })
+        parsed = _parse_sse_events(chunks)
+        return parsed
+
+    # --- Direction A: document ---
+    elif name == "document_templates":
+        return _make_request("GET", "/api/v1/document/templates")
+
+    elif name == "document_template_detail":
+        return _make_request("GET", f"/api/v1/document/templates/{arguments['templateCode']}")
+
+    elif name == "document_draft":
+        case_data = {}
+        for field in ["plaintiffName", "plaintiffPhone", "plaintiffIdCard", "plaintiffAddress",
+                      "defendantName", "defendantPhone", "defendantIdCard", "defendantAddress",
+                      "defendantCompany", "claimAmount", "claimDescription", "facts",
+                      "evidence", "courtName", "caseCause"]:
+            if field in arguments and arguments[field] not in (None, ""):
+                case_data[field] = arguments[field]
+        payload = {
+            "templateCode": arguments.get("templateCode", ""),
+            "caseType": arguments.get("caseType", ""),
+            "caseData": case_data if case_data else None,
+            "includeRiskPrompt": arguments.get("includeRiskPrompt", True)
+        }
+        return _make_request("POST", "/api/v1/document/draft", payload)
+
+    # --- Direction A: law analysis ---
+    elif name == "law_analyze":
+        payload = {}
+        if arguments.get("lawUuid"):
+            payload["lawUuid"] = arguments["lawUuid"]
+        if arguments.get("lawTitle"):
+            payload["lawTitle"] = arguments["lawTitle"]
+        if arguments.get("articles"):
+            payload["articles"] = arguments["articles"]
+        return _make_request("POST", "/api/v1/law-analysis/analyze", payload)
+
+    # --- Direction A: doc_qa sessions ---
+    elif name == "doc_qa_sessions":
+        return _make_request("GET", "/api/v1/doc-qa/sessions", params={"userId": arguments.get("userId", "default")})
+
+    elif name == "doc_qa_create_session":
+        return _make_request("POST", "/api/v1/doc-qa/sessions", params={"userId": arguments.get("userId", "default")})
+
+    elif name == "doc_qa_session_history":
+        return _make_request("GET", f"/api/v1/doc-qa/sessions/{arguments['sessionId']}/history")
+
+    # --- Direction C: health ---
+    elif name == "health_check":
+        return _make_request("GET", "/api/v1/health")
+
+    elif name == "ai_status":
+        return _make_request("GET", "/api/v1/ai-status")
+
     else:
         return {"error": f"Unknown tool: {name}"}
 
 
+# =============================================================================
+# Formatters
+# =============================================================================
+
 def _format_result(name: str, result: Any) -> str:
-    """Format API result as readable text for the user."""
     if not result:
         return "未找到相关结果"
+
+    if isinstance(result, dict) and result.get("error"):
+        return f"错误: {result['error']}"
 
     if name == "legal_search":
         items = result.get("items", [])
@@ -350,7 +671,6 @@ def _format_result(name: str, result: Any) -> str:
                 lines.append(f"  经营状态：{status}")
             if risk_level:
                 lines.append(f"  风险等级：{risk_level}")
-            # Key risks
             risks = result.get("risks", result.get("keyRisks", {}))
             if isinstance(risks, dict):
                 for k, v in risks.items():
@@ -430,6 +750,253 @@ def _format_result(name: str, result: Any) -> str:
             return "\n".join(lines)
         return str(result)
 
+    # --- Direction A: case ---
+    elif name == "case_detail":
+        if isinstance(result, dict):
+            title = result.get("caseName", result.get("title", ""))
+            court = result.get("court", "")
+            case_type = result.get("caseType", "")
+            procedure = result.get("trialProcedure", "")
+            date = result.get("judgmentDate", "")
+            judgment = result.get("judgmentResult", "")
+            lines = [f"案例详情：{title}\n"]
+            if case_type:
+                lines.append(f"  案件类型：{case_type}")
+            if court:
+                lines.append(f"  审理法院：{court}")
+            if procedure:
+                lines.append(f"  审理程序：{procedure}")
+            if date:
+                lines.append(f"  判决日期：{date}")
+            if judgment:
+                lines.append(f"\n判决结果：\n{judgment}")
+            return "\n".join(lines)
+        return str(result)
+
+    elif name == "case_analyze":
+        if isinstance(result, dict):
+            summary = result.get("summary", result.get("caseSummary", ""))
+            focus = result.get("disputeFocus", result.get("争议焦点", ""))
+            laws = result.get("applicableLaws", result.get("适用法律", []))
+            reasoning = result.get("judgmentReason", result.get("判决理由", ""))
+            lines = ["AI案情分析：\n"]
+            if summary:
+                lines.append(f"一、案情摘要\n{summary}\n")
+            if focus:
+                lines.append(f"二、争议焦点\n{focus}\n")
+            if laws:
+                law_text = "\n".join(f"  - {l}" for l in (laws if isinstance(laws, list) else [laws])) if isinstance(laws, list) else f"  {laws}"
+                lines.append(f"三、适用法律\n{laws}\n")
+            if reasoning:
+                lines.append(f"四、判决理由\n{reasoning}\n")
+            return "\n".join(lines)
+        if isinstance(result, str):
+            return f"AI案情分析：\n{result}"
+        return str(result)
+
+    # --- Direction A: contract ---
+    elif name == "contract_dimensions":
+        if isinstance(result, list):
+            lines = ["合同审查维度（风险权重）：\n"]
+            for dim in result:
+                code = dim.get("dimensionCode", "")
+                name_d = dim.get("dimensionName", "")
+                weight = dim.get("weight", 0)
+                lines.append(f"  【{name_d}】{weight}% ({code})")
+            return "\n".join(lines)
+        return str(result)
+
+    elif name == "contract_history":
+        if isinstance(result, list):
+            if not result:
+                return "暂无合同审查记录"
+            lines = ["合同审查历史：\n"]
+            for item in result[:10]:
+                date = item.get("createdAt", item.get("createTime", ""))
+                risk = item.get("overallRisk", item.get("riskLevel", ""))
+                text = item.get("contractText", item.get("text", ""))[:50]
+                lines.append(f"  [{date}] 风险:{risk} | {text}...")
+            return "\n".join(lines)
+        return str(result)
+
+    elif name == "contract_risk_detail":
+        if isinstance(result, dict):
+            return _format_result("contract_review", result)
+        return str(result)
+
+    # --- Direction A: legal research ---
+    elif name == "legal_research":
+        if isinstance(result, dict):
+            question = result.get("question", "")
+            definition = result.get("definition", result.get("问题界定", ""))
+            laws = result.get("legalBasis", result.get("法律依据", []))
+            cases = result.get("caseReferences", result.get("案例参考", []))
+            risks = result.get("risk提示", result.get("riskWarnings", []))
+            conclusion = result.get("conclusion", result.get("结论建议", ""))
+            lines = [f"法律研究报告：{question}\n"]
+            if definition:
+                lines.append(f"\n一、问题界定\n{definition}\n")
+            if laws:
+                laws_text = "\n".join(f"  - {l}" for l in (laws if isinstance(laws, list) else [laws])) if isinstance(laws, list) else f"  {laws}"
+                lines.append(f"二、法律依据\n{laws_text}\n")
+            if cases:
+                cases_text = "\n".join(f"  - {c}" for c in (cases if isinstance(cases, list) else [cases])) if isinstance(cases, list) else f"  {cases}"
+                lines.append(f"三、案例参考\n{cases_text}\n")
+            if risks:
+                risks_text = "\n".join(f"  - {r}" for r in (risks if isinstance(risks, list) else [risks])) if isinstance(risks, list) else f"  {risks}"
+                lines.append(f"四、风险提示\n{risks_text}\n")
+            if conclusion:
+                lines.append(f"五、结论建议\n{conclusion}\n")
+            return "\n".join(lines)
+        if isinstance(result, str):
+            return f"法律研究报告：\n{result}"
+        return str(result)
+
+    elif name == "legal_research_stream":
+        phases = result.get("phases", [])
+        content = result.get("content", "")
+        error = result.get("error")
+        if error:
+            return f"法律研究错误：{error}"
+        lines = ["法律研究进度：\n"]
+        for ph in phases:
+            phase = ph.get("phase", "")
+            progress = ph.get("progress", 0)
+            message = ph.get("message", "")
+            phase_map = {"parse": "解析问题", "search_laws": "检索法规", "search_cases": "检索案例",
+                         "generate_def": "生成问题界定", "generate_basis": "生成法律依据",
+                         "generate_risk": "生成风险提示", "generate_conclusion": "生成结论建议",
+                         "complete": "完成"}
+            lines.append(f"  [{progress:3d}%] {phase_map.get(phase, phase)} - {message}")
+        if content:
+            lines.append(f"\n研究报告：\n{content[:2000]}")
+        return "\n".join(lines)
+
+    # --- Direction A: document ---
+    elif name == "document_templates":
+        if isinstance(result, list):
+            lines = ["法律文书模板：\n"]
+            for t in result:
+                code = t.get("templateCode", "")
+                name_d = t.get("templateName", t.get("name", ""))
+                category = t.get("category", "")
+                lines.append(f"  【{name_d}】{category} ({code})")
+            return "\n".join(lines)
+        return str(result)
+
+    elif name == "document_template_detail":
+        if isinstance(result, dict):
+            code = result.get("templateCode", "")
+            name_d = result.get("templateName", result.get("name", ""))
+            desc = result.get("description", result.get("desc", ""))
+            fields = result.get("fields", result.get("requiredFields", []))
+            lines = [f"模板：{name_d} ({code})\n"]
+            if desc:
+                lines.append(f"说明：{desc}\n")
+            if fields:
+                fields_text = "\n".join(f"  - {f}" for f in (fields if isinstance(fields, list) else [fields])) if isinstance(fields, list) else f"  {fields}"
+                lines.append(f"必填字段：\n{fields_text}")
+            return "\n".join(lines)
+        return str(result)
+
+    elif name == "document_draft":
+        if isinstance(result, dict):
+            content = result.get("documentContent", "")
+            risk = result.get("riskPrompt", "")
+            disclaimer = result.get("disclaimer", "")
+            laws = result.get("referencedLaws", [])
+            lines = ["起草的法律文书：\n"]
+            lines.append(f"{content}\n")
+            if risk:
+                lines.append(f"\n风险提示：{risk}\n")
+            if disclaimer:
+                lines.append(f"免责声明：{disclaimer}\n")
+            if laws:
+                laws_text = "\n".join(f"  - {l}" for l in laws) if isinstance(laws, list) else f"  {laws}"
+                lines.append(f"\n引用法规：\n{laws_text}")
+            return "\n".join(lines)
+        return str(result)
+
+    # --- Direction A: law analysis ---
+    elif name == "law_analyze":
+        if isinstance(result, dict):
+            key_points = result.get("keyPoints", result.get("要点解读", ""))
+            scenarios = result.get("applicableScenarios", result.get("适用场景", []))
+            related = result.get("relatedLaws", result.get("关联法规", []))
+            comparison = result.get("comparison", result.get("比较分析", ""))
+            lines = ["法规分析结果：\n"]
+            if key_points:
+                lines.append(f"一、要点解读\n{key_points}\n")
+            if scenarios:
+                scenes_text = "\n".join(f"  - {s}" for s in (scenarios if isinstance(scenarios, list) else [scenarios])) if isinstance(scenarios, list) else f"  {scenarios}"
+                lines.append(f"二、适用场景\n{scenes_text}\n")
+            if related:
+                related_text = "\n".join(f"  - {r}" for r in (related if isinstance(related, list) else [related])) if isinstance(related, list) else f"  {related}"
+                lines.append(f"三、关联法规\n{related_text}\n")
+            if comparison:
+                lines.append(f"四、比较分析\n{comparison}\n")
+            return "\n".join(lines)
+        if isinstance(result, str):
+            return f"法规分析结果：\n{result}"
+        return str(result)
+
+    # --- Direction A: doc_qa sessions ---
+    elif name == "doc_qa_sessions":
+        if isinstance(result, list):
+            if not result:
+                return "暂无问答会话"
+            lines = ["问答会话列表：\n"]
+            for s in result[:10]:
+                sid = s.get("sessionId", s.get("id", ""))
+                updated = s.get("updatedAt", s.get("lastMessage", ""))
+                preview = s.get("lastMessage", s.get("preview", ""))[:50]
+                lines.append(f"  [{sid}] {updated} - {preview}...")
+            return "\n".join(lines)
+        return str(result)
+
+    elif name == "doc_qa_create_session":
+        if isinstance(result, dict):
+            sid = result.get("sessionId", result.get("id", ""))
+            return f"新会话已创建，sessionId：{sid}"
+        return str(result)
+
+    elif name == "doc_qa_session_history":
+        if isinstance(result, list):
+            if not result:
+                return "该会话暂无历史记录"
+            lines = ["会话历史：\n"]
+            for msg in result:
+                role = msg.get("role", "")
+                content = msg.get("content", "")
+                label = "用户" if role == "user" else "AI"
+                lines.append(f"【{label}】：{content}\n")
+            return "\n".join(lines)
+        return str(result)
+
+    # --- Direction C: health ---
+    elif name == "health_check":
+        if isinstance(result, dict):
+            status = result.get("status", result.get("health", ""))
+            db = result.get("database", result.get("db", ""))
+            redis = result.get("redis", result.get("cache", ""))
+            lines = [f"服务健康状态：{status}\n"]
+            if db:
+                lines.append(f"  数据库：{db}")
+            if redis:
+                lines.append(f"  缓存：{redis}")
+            return "\n".join(lines)
+        return str(result)
+
+    elif name == "ai_status":
+        if isinstance(result, dict):
+            ai_status = result.get("status", result.get("aiStatus", ""))
+            model = result.get("model", result.get("currentModel", ""))
+            lines = [f"AI服务状态：{ai_status}"]
+            if model:
+                lines.append(f"  当前模型：{model}")
+            return "\n".join(lines)
+        return str(result)
+
     else:
         return str(result)
 
@@ -442,7 +1009,6 @@ mcp = server
 
 
 async def main():
-    """Run the MCP server."""
     async with stdio_server() as (read_stream, write_stream):
         await server.run(
             read_stream,

@@ -1,7 +1,7 @@
 [project]
 name = "legal-mcp"
-version = "0.1.0"
-description = "MCP server for Legal AI Assistant - exposes legal search, company query, contract review and other AI tools as MCP tools"
+version = "0.2.0"
+description = "MCP server for Legal AI Assistant - 22 tools including legal search, case search, company query, contract review, document drafting, legal research and more"
 authors = [{name = "Legal AI Team"}]
 readme = "README.md"
 requires-python = ">=3.10"
