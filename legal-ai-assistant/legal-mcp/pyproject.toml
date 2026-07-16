@@ -1,0 +1,33 @@
+[project]
+name = "legal-mcp"
+version = "0.1.0"
+description = "MCP server for Legal AI Assistant - exposes legal search, company query, contract review and other AI tools as MCP tools"
+authors = [{name = "Legal AI Team"}]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27.0",
+    "mcp>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+legal-mcp = "legal_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["legal_mcp"]
+
+[tool.uvx]
+src = "legal_mcp"
+
+[tool.mcp]
+name = "legal-mcp"
+description = "Legal AI Assistant MCP Server"
