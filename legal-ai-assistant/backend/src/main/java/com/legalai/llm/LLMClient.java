@@ -346,12 +346,20 @@ public class LLMClient {
 
     /**
      * 联网搜索 + 结构化输出：先用 web_search 获取信息，再调用一次让 AI 整理为结构化 JSON。
+     * 失败时自动降级到 DuckDuckGo 直连搜索。
      */
     public String searchAndStructure(String searchPrompt, String structurePrompt) throws IOException {
         log.info("调用 MiniMax(搜索+结构化): 两步流程");
 
-        String searchResult = searchWeb(searchPrompt);
-        log.info("联网搜索完成，结果长度={}", searchResult != null ? searchResult.length() : 0);
+        String searchResult = null;
+        try {
+            searchResult = searchWeb(searchPrompt);
+            log.info("MiniMax联网搜索完成，结果长度={}", searchResult != null ? searchResult.length() : 0);
+        } catch (IOException e) {
+            log.warn("MiniMax联网搜索失败，降级到DuckDuckGo直连: {}", e.getMessage());
+            searchResult = directWebSearch(searchPrompt);
+            log.info("DuckDuckGo直连搜索完成，结果长度={}", searchResult != null ? searchResult.length() : 0);
+        }
 
         List<Map<String, String>> messages = List.of(
             Map.of("role", "system", "content", searchPrompt),
@@ -360,6 +368,118 @@ public class LLMClient {
         );
 
         return chatWithMessages(messages);
+    }
+
+    /**
+     * DuckDuckGo 直连搜索（DuckDuckGo HTML 页面抓取）。
+     * 当 MiniMax 联网搜索失败时降级使用。
+     */
+    public String directWebSearch(String query) throws IOException {
+        String encodedQuery = java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8);
+
+        // 策略1: DuckDuckGo 即时答案 API
+        String result = ddgInstantAnswer(encodedQuery);
+        if (result != null && !result.isEmpty()) {
+            return result;
+        }
+
+        // 策略2: DuckDuckGo HTML 抓取（更全面）
+        result = ddgHtmlSearch(encodedQuery);
+        if (result != null && !result.isEmpty()) {
+            return result;
+        }
+
+        return "未获取到搜索结果";
+    }
+
+    private String ddgInstantAnswer(String encodedQuery) throws IOException {
+        String url = "https://api.duckduckgo.com/?q=" + encodedQuery + "&format=json&no_html=1&skip_disambig=1&hl=zh-cn";
+        Request request = new Request.Builder()
+                .url(url)
+                .header("User-Agent", "Mozilla/5.0 (compatible; LegalAI/1.0)")
+                .get()
+                .build();
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                log.warn("DuckDuckGo即时搜索失败: code={}", response.code());
+                return null;
+            }
+            String body = response.body() != null ? response.body().string() : "";
+            if (body.isEmpty()) return null;
+            JsonNode node = objectMapper.readTree(body);
+            StringBuilder sb = new StringBuilder();
+            if (node.has("AbstractText") && !node.get("AbstractText").isNull()) {
+                sb.append(node.get("AbstractText").asText());
+            }
+            if (node.has("RelatedTopics")) {
+                for (JsonNode topic : node.get("RelatedTopics")) {
+                    if (topic.has("Text")) {
+                        sb.append("\n").append(topic.get("Text").asText());
+                    }
+                    if (sb.length() > 3000) break;
+                }
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            log.warn("DuckDuckGo即时搜索异常: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String ddgHtmlSearch(String encodedQuery) throws IOException {
+        String url = "https://html.duckduckgo.com/html/?q=" + encodedQuery + "&kl=zh-cn";
+        Request request = new Request.Builder()
+                .url(url)
+                .header("User-Agent", "Mozilla/5.0 (compatible; LegalAI/1.0)")
+                .get()
+                .build();
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                log.warn("DuckDuckGo HTML搜索失败: code={}", response.code());
+                return null;
+            }
+            String html = response.body() != null ? response.body().string() : "";
+            if (html.isEmpty()) return null;
+            return parseDdgHtml(html);
+        } catch (Exception e) {
+            log.warn("DuckDuckGo HTML搜索异常: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String parseDdgHtml(String html) {
+        StringBuilder sb = new StringBuilder();
+        java.util.regex.Pattern linkPattern = java.util.regex.Pattern.compile(
+                "<a class=\"result__a\"[^>]*href=\"([^\"]*)\"[^>]*>(.*?)</a>",
+                java.util.regex.Pattern.DOTALL);
+        java.util.regex.Pattern snippetPattern = java.util.regex.Pattern.compile(
+                "<a class=\"result__snippet\"[^>]*>(.*?)</a>",
+                java.util.regex.Pattern.DOTALL);
+        java.util.regex.Matcher linkMatcher = linkPattern.matcher(html);
+        java.util.regex.Matcher snippetMatcher = snippetPattern.matcher(html);
+        java.util.List<String> links = new java.util.ArrayList<>();
+        java.util.List<String> titles = new java.util.ArrayList<>();
+        while (linkMatcher.find()) {
+            String href = linkMatcher.group(1);
+            String title = linkMatcher.group(2).replaceAll("<[^>]+>", "").trim();
+            if (!title.isEmpty()) {
+                links.add(href);
+                titles.add(title);
+            }
+            if (links.size() >= 10) break;
+        }
+        int snippetCount = 0;
+        while (snippetMatcher.find()) {
+            String snippet = snippetMatcher.group(1).replaceAll("<[^>]+>", "").trim();
+            if (snippetCount < links.size()) {
+                sb.append("【").append(titles.get(snippetCount)).append("】")
+                  .append(snippet).append("\n来源: ").append(links.get(snippetCount)).append("\n\n");
+            }
+            snippetCount++;
+            if (sb.length() > 4000) break;
+        }
+        log.info("DuckDuckGo HTML解析提取 {} 条结果", snippetCount);
+        return sb.toString();
     }
 
     /**

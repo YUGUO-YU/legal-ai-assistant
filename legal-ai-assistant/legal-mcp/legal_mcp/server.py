@@ -117,22 +117,108 @@ def _parse_sse_events(chunks: list[str]) -> dict[str, Any]:
 
 
 def _search_web(query: str) -> str:
-    """Perform real web search using configured search API or free DuckDuckGo JSON API."""
+    """Perform real web search with multi-source fallback for maximum data authenticity.
+
+    Strategy:
+    1. If SEARCH_API_KEY is configured, use paid search API (SerpAPI etc.)
+    2. DuckDuckGo Instant Answer API (fast, structured)
+    3. DuckDuckGo HTML scrape (more results, needs parsing)
+    4. Google search via SERP proxy if configured
+    """
+    # --- Strategy 1: Paid API (SerpAPI or compatible) ---
+    if SEARCH_API_KEY and SEARCH_API_URL:
+        try:
+            params = {"q": query, "api_key": SEARCH_API_KEY}
+            resp = httpx.get(SEARCH_API_URL, params=params, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            results = _parse_serp_results(data)
+            if results:
+                return results
+        except Exception:
+            pass
+
+    # --- Strategy 2: DuckDuckGo Instant Answer (primary) ---
+    result = _ddg_instant_answer(query)
+    if result and result != f"未找到关于'{query}'的相关信息":
+        return result
+
+    # --- Strategy 3: DuckDuckGo HTML (fallback) ---
+    result = _ddg_html_search(query)
+    if result:
+        return result
+
+    return f"未找到关于'{query}'的相关信息"
+
+
+def _ddg_instant_answer(query: str, timeout: float = 20.0) -> str:
+    """DuckDuckGo Instant Answer API - fast, structured results."""
     try:
-        ddg_url = f"https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1"
-        resp = httpx.get(ddg_url, timeout=30)
+        url = f"https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1&hl=zh-cn"
+        resp = httpx.get(url, timeout=timeout)
         resp.raise_for_status()
         data = resp.json()
         lines = []
         if data.get("AbstractText"):
-            heading = data.get("Heading", query)
-            lines.append(f"【{heading}】\n{data['AbstractText']}\n来源: {data.get('AbstractURL', '')}\n")
+            heading = data.get("Heading") or query
+            lines.append(f"【{heading}】\n{data['AbstractText']}\n来源: {data.get('AbstractURL', 'https://duckduckgo.com')}\n")
         for topic in data.get("RelatedTopics", [])[:15]:
             if topic.get("Text"):
                 lines.append(f"- {topic['Text']}")
         return "\n".join(lines) if lines else f"未找到关于'{query}'的相关信息"
-    except Exception as e:
-        return f"网络搜索失败: {e}"
+    except Exception:
+        return f"未找到关于'{query}'的相关信息"
+
+
+def _ddg_html_search(query: str, timeout: float = 20.0) -> str:
+    """DuckDuckGo HTML page scrape - returns more results than Instant Answer API."""
+    try:
+        encoded = httpx.utils.encode_url(query, safe="/:")
+        url = f"https://html.duckduckgo.com/html/?q={encoded}&kl=zh-cn"
+        resp = httpx.get(url, timeout=timeout, headers={
+            "User-Agent": "Mozilla/5.0 (compatible; LegalAI/1.0)"
+        })
+        resp.raise_for_status()
+        html = resp.text
+        return _parse_ddg_html(html, query)
+    except Exception:
+        return ""
+
+
+def _parse_ddg_html(html: str, query: str) -> str:
+    """Parse DuckDuckGo HTML results page."""
+    try:
+        lines = []
+        import re
+        results = re.findall(r'<a class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)</a>', html, re.DOTALL)
+        snippets = re.findall(r'<a class="result__snippet"[^>]*>(.*?)</a>', html, re.DOTALL)
+        for i, (href, title) in enumerate(results[:10]):
+            title_clean = re.sub(r'<[^>]+>', '', title).strip()
+            snippet = re.sub(r'<[^>]+>', '', snippets[i]) if i < len(snippets) else ""
+            if title_clean and title_clean.lower() != query.lower():
+                lines.append(f"【{title_clean}】{snippet}\n来源: {href}\n")
+        return "\n".join(lines) if lines else ""
+    except Exception:
+        return ""
+
+
+def _parse_serp_results(data: dict) -> str:
+    """Parse results from paid search API (SerpAPI format)."""
+    try:
+        lines = []
+        if "organic_results" in data:
+            for item in data["organic_results"][:10]:
+                title = item.get("title", "")
+                snippet = item.get("snippet", "")
+                link = item.get("link", "")
+                if title:
+                    lines.append(f"【{title}】{snippet}\n来源: {link}\n")
+        elif "results" in data:
+            for item in data["results"][:10]:
+                lines.append(f"【{item.get('title', '')}】{item.get('snippet', '')}\n来源: {item.get('link', '')}\n")
+        return "\n".join(lines) if lines else ""
+    except Exception:
+        return ""
 
 
 # =============================================================================
