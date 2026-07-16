@@ -167,9 +167,16 @@
             </el-breadcrumb>
           </div>
 
-            <div class="header-actions">
-              <el-button :icon="Bell" circle class="header-btn" />
-              <el-button :icon="Setting" circle class="header-btn" />
+            <div class="header-actions" style="position: relative;">
+              <el-button :icon="Bell" circle class="header-btn" @click="toggleNotificationPanel" />
+              <sup v-if="unreadCount > 0" class="notification-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</sup>
+              <NotificationPanel
+                v-if="showNotificationPanel"
+                :visible="showNotificationPanel"
+                @close="closeNotificationPanel"
+                style="position: absolute; top: calc(100% + 8px); right: 40px;"
+              />
+              <el-button :icon="Setting" circle class="header-btn" @click="$router.push('/profile')" />
 
               <el-dropdown @command="handleCommand" trigger="click">
                 <div class="user-info">
@@ -251,6 +258,8 @@ import {
   Expand
 } from '@element-plus/icons-vue'
 import { useKeyboardShortcuts, isInputFocused } from './composables/useKeyboardShortcuts'
+import NotificationPanel from '@/components/common/NotificationPanel.vue'
+import { useNotificationCenter } from '@/composables/useNotificationCenter'
 import NotificationToast from '@/components/common/NotificationToast.vue'
 import SRAnnouncer from '@/components/common/SRAnnouncer.vue'
 import OperationReplay from '@/components/common/OperationReplay.vue'
@@ -350,11 +359,36 @@ onMounted(() => {
   if (!import.meta.env.DEV) {
     wsService.connect().catch(console.error)
   }
+
+  document.addEventListener('click', handleDocClick)
 })
 
 onUnmounted(() => {
   if (themeTimer) clearTimeout(themeTimer)
+  document.removeEventListener('click', handleDocClick)
 })
+
+function handleDocClick(e) {
+  if (showNotificationPanel.value) {
+    const panel = document.querySelector('.notification-panel')
+    const btn = e.target.closest('.header-btn')
+    if (panel && !panel.contains(e.target) && !btn) {
+      showNotificationPanel.value = false
+    }
+  }
+}
+
+const { unreadCount } = useNotificationCenter()
+const showNotificationPanel = ref(false)
+const notificationPanelRef = ref(null)
+
+function toggleNotificationPanel() {
+  showNotificationPanel.value = !showNotificationPanel.value
+}
+
+function closeNotificationPanel() {
+  showNotificationPanel.value = false
+}
 
 window.addEventListener('login-state-change', () => {
   isLoggedIn.value = !!localStorage.getItem('token')
@@ -777,6 +811,24 @@ useKeyboardShortcuts([
         color: #667eea;
         background: rgba(102, 126, 234, 0.05);
       }
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      background: #f56c6c;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #fff;
     }
   }
 
