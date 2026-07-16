@@ -789,7 +789,7 @@ useKeyboardShortcuts([
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }
@@ -806,14 +806,16 @@ useKeyboardShortcuts([
 
 .input-card,
 .result-card {
-  border: none;
+  border: 1px solid rgba(102, 126, 234, 0.15);
   border-radius: 20px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+  background: rgba(19, 17, 28, 0.7);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   height: 100%;
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid rgba(102, 126, 234, 0.12);
   }
 
   :deep(.el-card__body) {
@@ -832,11 +834,11 @@ useKeyboardShortcuts([
     gap: 10px;
     font-size: 16px;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text-primary);
 
     .el-icon {
       font-size: 20px;
-      color: #667eea;
+      color: var(--color-primary-light);
     }
   }
 }
@@ -850,9 +852,12 @@ useKeyboardShortcuts([
     font-size: 14px;
     line-height: 1.8;
     resize: none;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(102, 126, 234, 0.15);
+    color: var(--color-text-primary);
 
     &::placeholder {
-      color: #9ca3af;
+      color: var(--color-text-muted);
     }
   }
 }
@@ -864,21 +869,21 @@ useKeyboardShortcuts([
     :deep(.el-upload-dragger) {
       padding: 40px;
       border-radius: 16px;
-      border: 2px dashed #e5e7eb;
-      background: #f9fafb;
+      border: 2px dashed rgba(102, 126, 234, 0.3);
+      background: rgba(102, 126, 234, 0.06);
       transition: all 0.3s;
       position: relative;
 
       &:hover {
-        border-color: #667eea;
-        background: rgba(102, 126, 234, 0.05);
+        border-color: rgba(102, 126, 234, 0.6);
+        background: rgba(102, 126, 234, 0.1);
 
         &::after {
           content: '';
           position: absolute;
           inset: -2px;
           border-radius: 16px;
-          border: 2px dashed #667eea;
+          border: 2px dashed rgba(102, 126, 234, 0.6);
           animation: dashFlow 0.8s linear infinite;
           pointer-events: none;
         }

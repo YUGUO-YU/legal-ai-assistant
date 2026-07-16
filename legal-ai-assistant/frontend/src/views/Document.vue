@@ -637,16 +637,18 @@ onMounted(() => {
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }
 }
 
 .template-card {
-  border: none;
+  border: 1px solid rgba(102, 126, 234, 0.15);
   border-radius: 20px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+  background: rgba(19, 17, 28, 0.7);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 
   :deep(.el-card__body) {
     padding: 20px;

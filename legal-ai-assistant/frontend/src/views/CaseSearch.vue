@@ -336,9 +336,10 @@ const copyCaseNo = (caseNo) => {
 
 .skeleton-case-card {
   padding: 20px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(102, 126, 234, 0.1);
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 
   .skeleton-case-header {
     height: 60px;
@@ -353,7 +354,7 @@ const copyCaseNo = (caseNo) => {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, rgba(102,126,234,0.08) 25%, rgba(102,126,234,0.15) 50%, rgba(102,126,234,0.08) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -390,16 +391,18 @@ const copyCaseNo = (caseNo) => {
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }
 }
 
 .filter-card {
-  border: none;
+  border: 1px solid rgba(102, 126, 234, 0.15);
   border-radius: 20px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+  background: rgba(19, 17, 28, 0.7);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   margin-bottom: 24px;
 
   :deep(.el-card__body) {
@@ -430,10 +433,10 @@ const copyCaseNo = (caseNo) => {
       gap: 8px;
       font-size: 13px;
       font-weight: 500;
-      color: #4b5563;
+      color: var(--color-text-secondary);
 
       .el-icon {
-        color: #667eea;
+        color: var(--color-primary-light);
       }
     }
   }

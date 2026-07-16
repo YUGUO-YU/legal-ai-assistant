@@ -450,7 +450,7 @@ useKeyboardShortcuts([
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }
@@ -461,31 +461,33 @@ useKeyboardShortcuts([
 }
 
 .search-box {
-  background: #fff;
+  background: rgba(19, 17, 28, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(102, 126, 234, 0.15);
   border-radius: 20px;
   padding: 24px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .search-input-wrapper {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #f9fafb;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 14px;
   padding: 6px 6px 6px 20px;
-  border: 2px solid transparent;
+  border: 2px solid rgba(102, 126, 234, 0.15);
   transition: all 0.3s;
 
   &:focus-within {
-    border-color: #667eea;
-    background: #fff;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    border-color: rgba(102, 126, 234, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12);
   }
 
   .search-icon {
     font-size: 20px;
-    color: #667eea;
+    color: var(--color-primary-light);
   }
 
   :deep(.el-input__wrapper) {
@@ -495,6 +497,7 @@ useKeyboardShortcuts([
 
     .el-input__inner {
       font-size: 16px;
+      color: var(--color-text-primary);
     }
   }
 
