@@ -632,7 +632,11 @@ const lightTooltip = computed(() => {
 
 const loadAiStatus = async () => {
   try {
-    const res = await fetch('/api/v1/ai-status')
+    const token = localStorage.getItem('token')
+    const headers = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    const res = await fetch('/api/v1/ai-status', { headers })
+    if (!res.ok) throw new Error('not ok')
     const data = await res.json()
     const status = data.status === 'online' ? 'online' : 'offline'
     aiStatusData.value = {

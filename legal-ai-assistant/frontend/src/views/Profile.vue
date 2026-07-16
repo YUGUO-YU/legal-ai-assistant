@@ -386,31 +386,30 @@ const loadPreferences = () => {
 }
 
 const saveProfile = async () => {
-  await profileFormRef.value?.validate(async (valid) => {
+  try {
+    const valid = await profileFormRef.value?.validate().catch(() => false)
     if (!valid) return
 
     saving.value = true
-    try {
-      await api.auth.updateProfile({
-        realName: profileForm.nickname,
-        email: profileForm.email,
-        phone: profileForm.phone,
-        bio: profileForm.bio
-      })
-      Object.assign(userInfo, {
-        nickname: profileForm.nickname,
-        email: profileForm.email,
-        phone: profileForm.phone,
-        bio: profileForm.bio
-      })
-      localStorage.setItem('userInfo', JSON.stringify(userInfo))
-      ElMessage.success('个人信息已保存')
-    } catch (e) {
-      ElMessage.error(e?.message || '保存失败')
-    } finally {
-      saving.value = false
-    }
-  })
+    await api.auth.updateProfile({
+      realName: profileForm.nickname,
+      email: profileForm.email,
+      phone: profileForm.phone,
+      bio: profileForm.bio
+    })
+    Object.assign(userInfo, {
+      nickname: profileForm.nickname,
+      email: profileForm.email,
+      phone: profileForm.phone,
+      bio: profileForm.bio
+    })
+    localStorage.setItem('userInfo', JSON.stringify(userInfo))
+    ElMessage.success('个人信息已保存')
+  } catch (e) {
+    ElMessage.error(e?.message || '保存失败')
+  } finally {
+    saving.value = false
+  }
 }
 
 const verifyEmail = () => {
