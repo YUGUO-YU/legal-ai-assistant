@@ -221,22 +221,7 @@
   animation: dashFlow 0.8s linear infinite;
 }
 
-/* 骨架屏 shimmer */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-bg-secondary) 25%,
-    var(--color-border) 50%,
-    var(--color-bg-secondary) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-sm);
-}
+/* 骨架屏 shimmer (moved to line ~455 to join Task 2 additions) */
 
 /* ======================
    毛玻璃组件类

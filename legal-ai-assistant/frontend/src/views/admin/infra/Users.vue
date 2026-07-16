@@ -43,10 +43,10 @@
           <el-button size="small" @click="selectedRows = []">取消选择</el-button>
         </div>
       </template>
-      <el-table v-else :data="rows" v-loading="loading" stripe border @selection-change="handleSelectionChange">
+      <el-table v-else :data="displayRows" v-loading="loading" stripe border @selection-change="handleSelectionChange" @sort-change="handleSortChange">
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="username" label="用户名" min-width="130" />
+        <el-table-column prop="id" label="ID" width="70" sortable="custom" />
+        <el-table-column prop="username" label="用户名" min-width="130" sortable="custom" />
         <el-table-column prop="real_name" label="姓名" width="120" />
         <el-table-column prop="mobile" label="手机" width="130" />
         <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
@@ -66,7 +66,7 @@
             <div class="login-ip" v-if="row.last_login_ip">{{ row.last_login_ip }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="170" />
+        <el-table-column prop="created_at" label="创建时间" width="170" sortable="custom" />
         <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
@@ -149,7 +149,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../../api'
@@ -165,6 +165,21 @@ const form = reactive({ id: null, username: '', password: '', real_name: '', mob
 const roleForm = reactive({ userId: null, username: '', realName: '', selectedRoles: [] })
 const allRoles = ref([])
 const selectedRows = ref([])
+const sortState = ref({ prop: '', order: '' })
+
+const displayRows = computed(() => {
+  if (!sortState.value.prop || !sortState.value.order) return rows.value
+  return [...rows.value].sort((a, b) => {
+    const valA = a[sortState.value.prop] ?? ''
+    const valB = b[sortState.value.prop] ?? ''
+    const cmp = String(valA).localeCompare(String(valB), 'zh-CN', { numeric: true })
+    return sortState.value.order === 'ascending' ? cmp : -cmp
+  })
+})
+
+const handleSortChange = ({ prop, order }) => {
+  sortState.value = { prop, order }
+}
 
 const handleSelectionChange = (selection) => {
   selectedRows.value = selection

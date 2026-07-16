@@ -33,10 +33,10 @@
           <el-button size="small" @click="selectedRows = []">取消选择</el-button>
         </div>
       </template>
-      <el-table v-else :data="rows" v-loading="loading" stripe border @selection-change="handleSelectionChange">
+      <el-table v-else :data="displayRows" v-loading="loading" stripe border @selection-change="handleSelectionChange" @sort-change="handleSortChange">
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="id" label="ID" width="70" sortable="custom" />
+        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip sortable="custom" />
         <el-table-column label="类型" width="110">
           <template #default="{ row }">
             <el-tag size="small" :type="typeTag(row.type)">{{ typeLabel(row.type) }}</el-tag>
@@ -134,7 +134,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../../api'
@@ -148,6 +148,21 @@ const filter = reactive({ keyword: '' })
 const showDialog = ref(false)
 const form = reactive({ id: null, title: '', content: '', type: 1, priority: 0, status: 1, published_at: '', expired_at: '', created_by: 'admin' })
 const selectedRows = ref([])
+const sortState = ref({ prop: '', order: '' })
+
+const displayRows = computed(() => {
+  if (!sortState.value.prop || !sortState.value.order) return rows.value
+  return [...rows.value].sort((a, b) => {
+    const valA = a[sortState.value.prop] ?? ''
+    const valB = b[sortState.value.prop] ?? ''
+    const cmp = String(valA).localeCompare(String(valB), 'zh-CN', { numeric: true })
+    return sortState.value.order === 'ascending' ? cmp : -cmp
+  })
+})
+
+const handleSortChange = ({ prop, order }) => {
+  sortState.value = { prop, order }
+}
 
 const handleSelectionChange = (selection) => {
   selectedRows.value = selection

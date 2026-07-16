@@ -63,12 +63,14 @@
       <div class="pagination-container">
         <el-pagination
           v-model:current-page="filter.page"
-          :page-size="filter.pageSize"
+          v-model:page-size="filter.pageSize"
           :total="total"
           :page-sizes="[20, 50, 100]"
-          layout="total, prev, pager, next"
+          layout="total, sizes, prev, pager, next, jumper"
           :background="true"
           style="margin-top:16px;justify-content:center;"
+          @size-change="load"
+          @current-change="load"
         />
       </div>
     </el-card>

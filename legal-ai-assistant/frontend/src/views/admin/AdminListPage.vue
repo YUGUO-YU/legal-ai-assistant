@@ -223,7 +223,7 @@ const savedFilters = ref([])
 const handleAdvancedSearch = ({ filters, query }) => {
   Object.keys(query).forEach(key => {
     const { operator, value } = query[key]
-    filter[key] = operator === 'contains' ? value : value
+    filter[key] = value
   })
   filter.page = 1
   load()
