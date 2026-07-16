@@ -32,16 +32,19 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          'element-plus': ['element-plus'],
-          'vue-core': ['vue', 'vue-router', 'pinia'],
-          'echarts': ['echarts', 'vue-echarts']
+        manualChunks(id) {
+          if (id.includes('node_modules/echarts')) return 'echarts'
+          if (id.includes('vue-pdf-embed')) return 'pdf-lib'
+          if (id.includes('node_modules/element-plus')) return 'element-plus'
+          if (id.includes('node_modules/vue')) return 'vue-runtime'
+          if (id.includes('node_modules/pinia')) return 'pinia'
+          if (id.includes('node_modules/vue-router')) return 'vue-router'
         }
       }
     },
     chunkSizeWarningLimit: 1500
   },
   optimizeDeps: {
-    include: ['vue', 'vue-router', 'pinia', 'element-plus', 'axios', 'echarts']
+    include: ['vue', 'vue-router', 'pinia', 'axios']
   }
 })
