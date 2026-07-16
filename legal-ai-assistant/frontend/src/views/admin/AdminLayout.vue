@@ -453,11 +453,11 @@ onUnmounted(() => {
 
 // ======== 主内容区 ========
 .right-area {
-  flex: 1;
   margin-left: 240px;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -540,6 +540,8 @@ onUnmounted(() => {
 // ======== 主内容 ========
 .main {
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 20px 24px;
   background: var(--color-bg-page);
 }
