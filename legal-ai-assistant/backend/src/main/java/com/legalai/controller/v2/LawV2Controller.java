@@ -66,6 +66,10 @@ public class LawV2Controller {
             } else {
                 sortField = sort;
             }
+            Set<String> allowedFields = Set.of("created_at", "updated_at", "title", "doc_uuid", "status");
+            if (!allowedFields.contains(sortField)) {
+                sortField = "created_at";
+            }
             sql.append(" ORDER BY ").append(sortField).append(" ").append(sortOrder);
         } else {
             sql.append(" ORDER BY created_at DESC");

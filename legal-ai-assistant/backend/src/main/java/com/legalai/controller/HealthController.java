@@ -68,8 +68,6 @@ public class HealthController {
     @GetMapping("/ai-status")
     public Map<String, Object> aiStatus() {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("model", llmClient.getModel());
-        result.put("baseUrl", llmClient.getBaseUrl());
         result.put("timestamp", System.currentTimeMillis());
 
         if (!llmClient.isApiKeyConfigured()) {
@@ -82,6 +80,7 @@ public class HealthController {
             if (llmClient.ping()) {
                 String firstModel = llmClient.firstModel();
                 result.put("model", firstModel != null ? firstModel : llmClient.getModel());
+                result.put("baseUrl", llmClient.getBaseUrl());
                 result.put("status", "online");
                 result.put("message", "AI 服务在线");
             } else {
