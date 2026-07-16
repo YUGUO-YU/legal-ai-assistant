@@ -330,6 +330,8 @@ const scheduleNextThemeSwitch = () => {
   }, ms)
 }
 
+const isLoggedIn = ref(!!localStorage.getItem('token'))
+
 onMounted(() => {
   const theme = getInitialTheme()
   applyTheme(theme)
@@ -353,8 +355,6 @@ onMounted(() => {
 onUnmounted(() => {
   if (themeTimer) clearTimeout(themeTimer)
 })
-
-const isLoggedIn = ref(!!localStorage.getItem('token'))
 
 window.addEventListener('login-state-change', () => {
   isLoggedIn.value = !!localStorage.getItem('token')

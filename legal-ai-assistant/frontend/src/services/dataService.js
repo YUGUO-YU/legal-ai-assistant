@@ -102,6 +102,4 @@ export async function initializeApp() {
   )
   
   await Promise.allSettled(tasks)
-  
-  cacheService.clear()
 }
