@@ -26,7 +26,19 @@
     </el-alert>
 
     <div class="kpi-grid">
-      <div v-for="(m, index) in kpis" :key="m.label" class="kpi-card glass kpi-card-hover" :class="m.tone">
+      <template v-if="loading">
+        <div v-for="i in 11" :key="i" class="kpi-card glass skeleton" style="height:88px">
+          <div style="display:flex;align-items:center;gap:12px;padding:4px 0">
+            <div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0" />
+            <div style="flex:1">
+              <div class="skeleton" style="height:12px;width:60%;margin-bottom:10px;border-radius:4px" />
+              <div class="skeleton" style="height:20px;width:40%;margin-bottom:8px;border-radius:4px" />
+              <div class="skeleton" style="height:10px;width:50%;border-radius:4px" />
+            </div>
+          </div>
+        </div>
+      </template>
+      <div v-else v-for="(m, index) in kpis" :key="m.label" class="kpi-card glass kpi-card-hover" :class="m.tone">
         <div class="kpi-icon-wrap">
           <el-icon class="kpi-icon"><component :is="m.icon || 'Odometer'" /></el-icon>
         </div>
