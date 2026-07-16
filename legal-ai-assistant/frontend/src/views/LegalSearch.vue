@@ -217,12 +217,14 @@ import SearchEmptyState from '@/components/common/SearchEmptyState.vue'
 import PptProgressDialog from '../components/PptProgressDialog.vue'
 import { useUsageMemory } from '@/composables/useUsageMemory'
 import { useKeyboardShortcuts, matchShortcut, isInputFocused } from '@/composables/useKeyboardShortcuts'
+import { useStats } from '@/composables/useStats'
 import { lazyLoad } from '@/directives/lazyLoad'
 
 const vLazyLoad = lazyLoad
 
 const router = useRouter()
 const { addRecord } = useUsageMemory()
+const { increment } = useStats()
 const query = ref('')
 const loading = ref(false)
 const results = ref([])
@@ -270,6 +272,7 @@ const handleSearch = async () => {
     if (page.value === 1 && res?.items?.length > 0) {
       loadSuggestedQueries()
       addRecord('search', query.value, `找到 ${res.items.length} 条相关法规`)
+      increment('searchCount')
     }
   } catch (e) {
     console.error(e)
@@ -326,7 +329,7 @@ const generatePpt = async () => {
     })
     pptProgressRef.value?.markComplete()
     setTimeout(() => {
-      router.push({ path: '/ppt-editor', query: { id: response.data.id, title } })
+      router.push({ path: '/ppt-editor', query: { id: response.id, title } })
     }, 400)
   } catch (error) {
     pptProgressRef.value?.markError(2)

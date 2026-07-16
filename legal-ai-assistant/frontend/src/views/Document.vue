@@ -326,8 +326,10 @@ import {
 import api from '../api'
 import Loading from '../components/Loading.vue'
 import { useUsageMemory } from '@/composables/useUsageMemory'
+import { useStats } from '@/composables/useStats'
 
 const { addRecord } = useUsageMemory()
+const { increment } = useStats()
 
 const formRef = ref(null)
 const loading = ref(false)
@@ -446,6 +448,7 @@ const handleDraft = async () => {
       activeTab.value = 'content'
       ElMessage.success('文书生成成功')
       addRecord('document', `起草"${selectedTemplate.value}"`, '文书生成成功')
+      increment('documentDraftCount')
     } catch (e) {
       console.error(e)
       ElMessage.error('生成失败，请稍后重试')

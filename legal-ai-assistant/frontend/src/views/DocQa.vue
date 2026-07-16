@@ -263,9 +263,11 @@ import {
 } from '@element-plus/icons-vue'
 import api from '../api'
 import { useKeyboardShortcuts, matchShortcut, isInputFocused } from '@/composables/useKeyboardShortcuts'
+import { useStats } from '@/composables/useStats'
 
 const router = useRouter()
 const route = useRoute()
+const { increment } = useStats()
 const question = ref('')
 const messages = ref([])
 const chatContainer = ref(null)
@@ -396,7 +398,9 @@ const handleAsk = async () => {
       throw new Error('请求失败')
     }
 
+    const isNewSession = !sessionId.value
     sessionId.value = sessionId.value || `session-${Date.now()}`
+    if (isNewSession) increment('sessionCount')
 
     const reader = response.body.getReader()
     const decoder = new TextDecoder()

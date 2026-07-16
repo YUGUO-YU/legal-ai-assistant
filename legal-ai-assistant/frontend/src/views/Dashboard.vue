@@ -659,7 +659,7 @@ const loadAiStatus = async () => {
 
 onMounted(() => {
   loadAiStatus()
-  setInterval(loadAiStatus, 15000)
+  setInterval(loadAiStatus, 60000)
 })
 
 const detailDrawerVisible = ref(false)

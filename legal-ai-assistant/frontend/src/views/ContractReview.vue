@@ -339,6 +339,7 @@ import api from '../api'
 import LocalLoading from '../components/Loading.vue'
 import { useUsageMemory } from '@/composables/useUsageMemory'
 import { useKeyboardShortcuts, matchShortcut, isInputFocused } from '@/composables/useKeyboardShortcuts'
+import { useStats } from '@/composables/useStats'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -349,6 +350,7 @@ use([CanvasRenderer, RadarChart, TitleComponent, TooltipComponent, LegendCompone
 
 const router = useRouter()
 const { addRecord } = useUsageMemory()
+const { increment } = useStats()
 
 const inputMode = ref('paste')
 const contractText = ref('')
@@ -378,6 +380,7 @@ const handleReview = async () => {
     ElMessage.success('审查完成')
     const riskCount = res?.risks?.length || 0
     addRecord('contract', `审查"${reviewOptions.contractType}"合同`, `发现 ${riskCount} 处风险`)
+    increment('caseAnalysisCount')
   } catch (e) {
     console.error(e)
     ElMessage.error('审查失败，请稍后重试')

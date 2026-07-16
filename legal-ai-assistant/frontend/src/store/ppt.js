@@ -27,8 +27,8 @@ export const usePptStore = defineStore('ppt', {
           templateId,
           userId: localStorage.getItem('userId') || 'default'
         })
-        this.currentDocument = response.data
-        return response.data
+        this.currentDocument = response
+        return response
       } catch (error) {
         this.error = error.message
         throw error
@@ -42,8 +42,8 @@ export const usePptStore = defineStore('ppt', {
       this.error = null
       try {
         const response = await api.ppt.getById(id)
-        this.currentDocument = response.data
-        return response.data
+        this.currentDocument = response
+        return response
       } catch (error) {
         this.error = error.message
         throw error
@@ -57,8 +57,8 @@ export const usePptStore = defineStore('ppt', {
       this.error = null
       try {
         const response = await api.ppt.getByUuid(uuid)
-        this.currentDocument = response.data
-        return response.data
+        this.currentDocument = response
+        return response
       } catch (error) {
         this.error = error.message
         throw error
@@ -72,8 +72,8 @@ export const usePptStore = defineStore('ppt', {
       this.error = null
       try {
         const response = await api.ppt.update(id, data)
-        this.currentDocument = response.data
-        return response.data
+        this.currentDocument = response
+        return response
       } catch (error) {
         this.error = error.message
         throw error
@@ -105,7 +105,7 @@ export const usePptStore = defineStore('ppt', {
       this.error = null
       try {
         const response = await api.ppt.list()
-        this.documents = response.data || []
+        this.documents = response || []
         return this.documents
       } catch (error) {
         this.error = error.message
@@ -118,7 +118,7 @@ export const usePptStore = defineStore('ppt', {
     async loadTemplates() {
       try {
         const response = await api.ppt.getTemplates()
-        this.templates = response.data || []
+        this.templates = response || []
         return this.templates
       } catch (error) {
         this.error = error.message
@@ -129,7 +129,7 @@ export const usePptStore = defineStore('ppt', {
     async recommendTemplates(scenario) {
       try {
         const response = await api.ppt.recommendTemplates(scenario)
-        return response.data || []
+        return response || []
       } catch (error) {
         this.error = error.message
         throw error

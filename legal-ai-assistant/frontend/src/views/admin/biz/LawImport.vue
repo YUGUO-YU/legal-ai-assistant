@@ -127,7 +127,17 @@
       <template #header>
         <span>导入历史</span>
       </template>
-      <el-table :data="historyData" stripe>
+      <el-table :data="historyData" stripe />
+      <el-pagination
+        v-if="historyTotal > historyPageSize"
+        background
+        layout="prev, pager, next"
+        :total="historyTotal"
+        :page-size="historyPageSize"
+        :current-page="historyPage"
+        @current-change="(p) => loadHistory(p)"
+        style="margin-top: 16px; justify-content: flex-end;"
+      />
         <el-table-column prop="lawName" label="法规标题" />
         <el-table-column label="状态" width="140">
           <template #default="{ row }">
@@ -176,6 +186,9 @@ const previewForm = ref({})
 const selectedCategoryIds = ref([])
 const categoryList = ref([])
 const historyData = ref([])
+const historyTotal = ref(0)
+const historyPage = ref(1)
+const historyPageSize = ref(20)
 const pollTimers = ref({})
 const uploading = ref(false)
 const selectedFileType = ref('pdf')
@@ -336,10 +349,12 @@ const pollJobStatus = (jobId) => {
   }, 3000)
 }
 
-const loadHistory = async () => {
+const loadHistory = async (page = 1) => {
   try {
-    const res = await api.lawImport.history(1, 20)
-    historyData.value = res || []
+    const res = await api.lawImport.history(page, historyPageSize.value)
+    historyData.value = res?.items || []
+    historyTotal.value = res?.total || 0
+    historyPage.value = page
   } catch (e) {
     ElMessage.error('加载历史失败')
   }
