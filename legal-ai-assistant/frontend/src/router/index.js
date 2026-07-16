@@ -190,6 +190,11 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/help',
+    component: () => import('../views/Help.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/error/:code',
     name: 'Error',
     component: () => import('../views/ErrorPage.vue'),

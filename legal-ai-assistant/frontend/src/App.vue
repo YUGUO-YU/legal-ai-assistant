@@ -420,7 +420,8 @@ const pageTitle = computed(() => {
     '/doc-qa': 'AI文件问答',
     '/ppt-editor': 'PPT编辑器',
     '/ppt-files': 'PPT文件管理',
-    '/profile': '个人设置'
+    '/profile': '个人设置',
+    '/help': '使用帮助'
   }
   return titles[route.path] || '法律AI助手'
 })
@@ -439,7 +440,7 @@ const handleCommand = (command) => {
       router.push('/profile')
       break
     case 'help':
-      ElMessage.info('帮助功能开发中...')
+      router.push('/help')
       break
   }
 }
