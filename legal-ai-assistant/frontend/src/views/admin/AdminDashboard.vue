@@ -91,6 +91,25 @@
     </el-row>
 
     <el-row :gutter="14" class="activity-row">
+      <el-col :span="24">
+        <el-card>
+          <template #header>
+            <div class="card-header">
+              <span>今日访问趋势（24小时）</span>
+              <el-tag size="small" type="info">每小时更新</el-tag>
+            </div>
+          </template>
+          <template v-if="loading">
+            <div class="skeleton" style="height:240px;border-radius:8px" />
+          </template>
+          <div v-else class="chart-area" style="position:relative">
+            <v-chart :option="hourlyAccessOption" autoresize />
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="14" class="activity-row">
       <el-col :xs="24" :md="12">
         <el-card>
           <template #header>
@@ -260,6 +279,7 @@ const aiStatus = ref({ status: 'checking', model: '', baseUrl: '', message: '', 
 const dbStatus = ref({ connected: false, message: '' })
 const userActivity = ref({})
 const lawUsage = ref({})
+const hourlyAccess = ref({ today: Array(24).fill(0), yesterday: Array(24).fill(0) })
 let timer = null
 
 const animatedKpis = ref([
@@ -437,6 +457,57 @@ const topUsersOption = computed(() => {
   }
 })
 
+const hourlyAccessOption = computed(() => {
+  const today = hourlyAccess.value.today || Array(24).fill(0)
+  const yesterday = hourlyAccess.value.yesterday || Array(24).fill(0)
+  const palette = adminChartPalette
+  const hours = Array.from({ length: 24 }, (_, i) => `${i}时`)
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params) => {
+        const h = params[0].name
+        const todayVal = params[0]?.value ?? 0
+        const yesterdayVal = params[1]?.value ?? 0
+        return `${h}<br/>今日: ${todayVal}次<br/>昨日: ${yesterdayVal}次`
+      }
+    },
+    legend: { data: ['今日', '昨日'], top: 0, right: 8, textStyle: { color: '#64748b', fontSize: 11 } },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '36px', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: hours,
+      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisLabel: { color: '#64748b', fontSize: 10, interval: 2 }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10 }
+    },
+    series: [
+      {
+        name: '今日',
+        type: 'bar',
+        data: today,
+        itemStyle: { color: palette[0], borderRadius: [4, 4, 0, 0] }
+      },
+      {
+        name: '昨日',
+        type: 'line',
+        data: yesterday,
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 4,
+        lineStyle: { color: '#94a3b8', width: 1.5, type: 'dashed' },
+        itemStyle: { color: '#94a3b8' }
+      }
+    ]
+  }
+})
+
 const quickModules = [
   { code: 'M01', name: '法规主数据', desc: '法规/爬虫/版本', path: '/admin/biz/mod01', tag: 'm01' },
   { code: 'M02', name: '案件主数据', desc: '案件/要素/标签', path: '/admin/biz/mod02', tag: 'm02' },
@@ -515,9 +586,18 @@ async function loadLawUsage() {
   }
 }
 
+async function loadHourlyAccess() {
+  try {
+    const res = await api.stats.hourlyAccess()
+    hourlyAccess.value = res?.data || { today: Array(24).fill(0), yesterday: Array(24).fill(0) }
+  } catch (e) {
+    hourlyAccess.value = { today: Array(24).fill(0), yesterday: Array(24).fill(0) }
+  }
+}
+
 async function loadAll() {
   loading.value = true
-  await Promise.all([checkDbStatus(), loadStats(), loadOverview(), loadAiStatus(), loadUserActivity(), loadLawUsage()])
+  await Promise.all([checkDbStatus(), loadStats(), loadOverview(), loadAiStatus(), loadUserActivity(), loadLawUsage(), loadHourlyAccess()])
   loading.value = false
 }
 

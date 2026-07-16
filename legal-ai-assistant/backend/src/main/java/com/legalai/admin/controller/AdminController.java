@@ -99,6 +99,12 @@ public class AdminController {
         return ApiResponse.success(adminDataService.userActivityStats(startDate, endDate));
     }
 
+    @Operation(summary = "24小时访问趋势", description = "返回今日和昨日各小时登录次数")
+    @GetMapping("/stats/hourly-access")
+    public ApiResponse<Map<String, Object>> hourlyAccess() {
+        return ApiResponse.success(adminDataService.getHourlyAccess());
+    }
+
     @Operation(summary = "法规使用统计", description = "统计法规的查询和使用频次")
     @GetMapping("/stats/law-usage")
     public ApiResponse<Map<String, Object>> lawUsageStats(

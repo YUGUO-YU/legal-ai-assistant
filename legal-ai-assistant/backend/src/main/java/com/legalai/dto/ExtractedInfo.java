@@ -1,6 +1,7 @@
 package com.legalai.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class ExtractedInfo {
     private boolean success;

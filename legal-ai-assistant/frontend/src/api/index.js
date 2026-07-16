@@ -292,6 +292,7 @@ export default {
   },
   stats: {
     userActivity: (params) => withRetry(() => apiClient.get('/admin/stats/user-activity', { params })),
-    lawUsage: (params) => withRetry(() => apiClient.get('/admin/stats/law-usage', { params }))
+    lawUsage: (params) => withRetry(() => apiClient.get('/admin/stats/law-usage', { params })),
+    hourlyAccess: () => withRetry(() => apiClient.get('/admin/stats/hourly-access'))
   }
 }

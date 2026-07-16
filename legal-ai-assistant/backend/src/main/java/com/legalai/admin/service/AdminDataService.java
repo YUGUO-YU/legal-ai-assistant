@@ -1326,6 +1326,36 @@ public class AdminDataService {
         return result;
     }
 
+    public Map<String, Object> getHourlyAccess() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            int[] today = new int[24];
+            int[] yesterday = new int[24];
+
+            List<Map<String, Object>> todayRows = jdbc.queryForList(
+                "SELECT HOUR(login_at) AS hour, COUNT(*) AS cnt FROM user_login_history WHERE DATE(login_at) = CURDATE() GROUP BY HOUR(login_at)");
+            for (Map<String, Object> row : todayRows) {
+                int h = ((Number) row.get("hour")).intValue();
+                today[h] = ((Number) row.get("cnt")).intValue();
+            }
+
+            List<Map<String, Object>> yesterdayRows = jdbc.queryForList(
+                "SELECT HOUR(login_at) AS hour, COUNT(*) AS cnt FROM user_login_history WHERE DATE(login_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) GROUP BY HOUR(login_at)");
+            for (Map<String, Object> row : yesterdayRows) {
+                int h = ((Number) row.get("hour")).intValue();
+                yesterday[h] = ((Number) row.get("cnt")).intValue();
+            }
+
+            result.put("today", today);
+            result.put("yesterday", yesterday);
+        } catch (Exception e) {
+            log.warn("[Admin] getHourlyAccess 失败: {}", e.getMessage());
+            result.put("today", new int[24]);
+            result.put("yesterday", new int[24]);
+        }
+        return result;
+    }
+
     public Map<String, Object> lawUsageStats(String startDate, String endDate, int topN) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
