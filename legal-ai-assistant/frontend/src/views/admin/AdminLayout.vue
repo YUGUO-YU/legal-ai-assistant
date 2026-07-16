@@ -292,7 +292,7 @@ const handleLogout = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('userInfo')
   ElMessage.success('已退出后台管理')
-  window.location.href = '/'
+  window.location.hash = '#/'
 }
 
 onUnmounted(() => {

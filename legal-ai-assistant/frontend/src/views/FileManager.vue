@@ -186,7 +186,7 @@ const loadDocuments = async () => {
   loading.value = true
   try {
     const response = await api.ppt.list()
-    documents.value = response.data || []
+    documents.value = response || []
   } catch (error) {
     ElMessage.error('加载失败')
   } finally {

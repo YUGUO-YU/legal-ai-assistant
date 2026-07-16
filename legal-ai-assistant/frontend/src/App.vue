@@ -442,7 +442,7 @@ const handleCommand = (command) => {
       localStorage.removeItem('admin_token')
       localStorage.removeItem('admin_user')
       ElMessage.success('已退出登录')
-      window.location.href = '/'
+      window.location.hash = '#/'
       break
     case 'profile':
       router.push('/profile')
