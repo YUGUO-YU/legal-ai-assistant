@@ -266,9 +266,9 @@ async function loadAnnouncements(page = 1) {
   announcementsLoading.value = true
   try {
     currentPage.value = page
-    const res = await api.get('/api/v1/announcements', { params: { page, pageSize: pageSize.value } })
-    announcements.value = res.data?.list || []
-    total.value = res.data?.total || 0
+    const res = await api.get('/announcements', { params: { page, pageSize: pageSize.value } })
+    announcements.value = res?.list || []
+    total.value = res?.total || 0
     expandedAnnouncements.value = announcements.value.filter(a => a.priority === 2).map(a => a.id)
   } catch (e) {
     announcements.value = []
