@@ -1,8 +1,8 @@
 <template>
-  <div class="page-container">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>应用日志</h2>
+        <h2 class="gradient-text">应用日志</h2>
         <p>运营分析域 · 应用运行日志 · 问题排查</p>
       </div>
       <div class="header-actions">
@@ -18,7 +18,7 @@
       </div>
     </div>
 
-    <el-card>
+    <el-card class="glass table-card">
       <div v-if="error" class="error-tip">
         <el-alert type="error" :title="error" :closable="false" show-icon />
       </div>

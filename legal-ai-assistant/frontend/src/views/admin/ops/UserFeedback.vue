@@ -1,8 +1,8 @@
 <template>
-  <div class="feedback-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>用户反馈 · SLA 工作台</h2>
+        <h2 class="gradient-text">用户反馈 · SLA 工作台</h2>
         <p>运营分析域 · 实时 SLA 倒计时 · 处理状态流转</p>
       </div>
       <div class="header-actions">
@@ -15,7 +15,7 @@
       </div>
     </div>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="displayRows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column label="优先级" width="90">

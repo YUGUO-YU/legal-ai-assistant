@@ -1,8 +1,8 @@
 <template>
-  <div class="search-logs-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>搜索分析 · 查询日志</h2>
+        <h2 class="gradient-text">搜索分析 · 查询日志</h2>
         <p>运营分析域 · 意图分布 / 响应耗时 / 源关键词 TOP N</p>
       </div>
       <div class="header-actions">
@@ -64,7 +64,7 @@
       </el-col>
     </el-row>
 
-    <el-card style="margin-top:16px">
+    <el-card class="glass table-card" style="margin-top:16px">
       <el-table :data="rows" v-loading="loading" stripe border size="small" max-height="420">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="query_text" label="检索关键词" min-width="280" show-overflow-tooltip />
