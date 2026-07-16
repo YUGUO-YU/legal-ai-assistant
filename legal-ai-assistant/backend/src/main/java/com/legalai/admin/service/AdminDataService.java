@@ -948,20 +948,20 @@ public class AdminDataService {
     public Map<String, Object> auditLaw(Long lawId, int action, Long auditorId) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
-            List<Map<String, Object>> rows = jdbc.queryForList("SELECT id, audit_status FROM law_document WHERE id = ?", lawId);
+            List<Map<String, Object>> rows = jdbc.queryForList("SELECT id, status FROM law_document WHERE id = ?", lawId);
             if (rows.isEmpty()) { result.put("ok", false); result.put("error", "法规不存在"); return result; }
-            int cur = Integer.parseInt(String.valueOf(rows.get(0).get("audit_status")));
+            int cur = Integer.parseInt(String.valueOf(rows.get(0).get("status")));
             int next;
             String err = null;
             if (action == 1) {
-                if (cur == 0) next = 1;
+                if (cur == 3) next = 1;
                 else if (cur == 1) next = 2;
                 else { err = "当前状态不允许通过"; next = cur; }
             } else if (action == 2) {
                 next = 3;
             } else { result.put("ok", false); result.put("error", "未知动作"); return result; }
             if (err != null) { result.put("ok", false); result.put("error", err); return result; }
-            jdbc.update("UPDATE law_document SET audit_status = ?, auditor_id = ?, audit_time = NOW() WHERE id = ?", next, auditorId, lawId);
+            jdbc.update("UPDATE law_document SET status = ? WHERE id = ?", next, lawId);
             result.put("ok", true);
             result.put("fromStatus", cur);
             result.put("toStatus", next);
@@ -1061,7 +1061,7 @@ public class AdminDataService {
         try {
             Integer activeAlerts = jdbc.queryForObject("SELECT COUNT(*) FROM alert_history WHERE resolved_at IS NULL", Integer.class);
             Integer pendingDrafts = jdbc.queryForObject("SELECT COUNT(*) FROM doc_draft WHERE review_status = 0", Integer.class);
-            Integer pendingLaws = jdbc.queryForObject("SELECT COUNT(*) FROM law_document WHERE audit_status = 0", Integer.class);
+            Integer pendingLaws = jdbc.queryForObject("SELECT COUNT(*) FROM law_document WHERE status = 3", Integer.class);
             Integer pendingFeedback = jdbc.queryForObject("SELECT COUNT(*) FROM user_feedback WHERE status = 0", Integer.class);
             Integer totalTokens = jdbc.queryForObject("SELECT COALESCE(SUM(total_tokens), 0) FROM llm_token_usage WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", Integer.class);
             Integer totalCost = jdbc.queryForObject("SELECT COALESCE(SUM(cost_cny), 0) FROM llm_token_usage WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", Integer.class);
@@ -1384,10 +1384,10 @@ public class AdminDataService {
             List<Map<String, Object>> topLawsSearch = jdbc.queryForList(topLawsSearchSql, searchArgs.toArray());
 
             String topLawsFavoriteSql = """
-                SELECT la.title, COUNT(*) AS count
+                SELECT lf.law_title AS title, COUNT(*) AS count
                 FROM law_favorite lf
-                JOIN law_article la ON lf.article_id = la.id
-                GROUP BY la.id, la.title
+                WHERE lf.law_title IS NOT NULL AND lf.law_title != ''
+                GROUP BY lf.law_uuid, lf.law_title
                 ORDER BY count DESC
                 LIMIT ?
                 """;
@@ -2485,10 +2485,9 @@ public class AdminDataService {
 
             StringBuilder q = new StringBuilder();
             q.append("SELECT sf.id, sf.search_log_id, sf.article_id, sf.is_helpful, sf.user_comment, sf.created_at, ");
-            q.append("COALESCE(la.title, ld.title) AS article_title ");
+            q.append("la.title AS article_title, la.law_id ");
             q.append("FROM search_feedback sf ");
             q.append("LEFT JOIN law_article la ON sf.article_id = la.id ");
-            q.append("LEFT JOIN law_document ld ON sf.article_id = ld.id ");
             q.append(where);
             q.append(" ORDER BY sf.id DESC LIMIT ? OFFSET ?");
             args.add(pageSize);
@@ -2577,12 +2576,12 @@ public class AdminDataService {
                 args.add(userId);
             }
             if (username != null && !username.isEmpty()) {
-                where.append(" AND lf.username LIKE ? ");
+                where.append(" AND lf.user_id LIKE ? ");
                 args.add("%" + username + "%");
             }
             if (articleId != null) {
-                where.append(" AND lf.article_id = ? ");
-                args.add(articleId);
+                where.append(" AND lf.law_uuid = ? ");
+                args.add(articleId.toString());
             }
 
             String countSql = "SELECT COUNT(*) FROM law_favorite lf " + where;
@@ -2590,11 +2589,8 @@ public class AdminDataService {
             int offset = Math.max(0, (page - 1) * pageSize);
 
             StringBuilder q = new StringBuilder();
-            q.append("SELECT lf.id, lf.user_id, lf.username, lf.article_id, lf.created_at, ");
-            q.append("COALESCE(la.title, ld.title) AS article_title ");
+            q.append("SELECT lf.id, lf.user_id, lf.law_uuid, lf.law_title, lf.created_at ");
             q.append("FROM law_favorite lf ");
-            q.append("LEFT JOIN law_article la ON lf.article_id = la.id ");
-            q.append("LEFT JOIN law_document ld ON lf.article_id = ld.id ");
             q.append(where);
             q.append(" ORDER BY lf.id DESC LIMIT ? OFFSET ?");
             args.add(pageSize);
@@ -2639,18 +2635,17 @@ public class AdminDataService {
             Integer todayNew = jdbc.queryForObject("SELECT COUNT(*) FROM law_favorite WHERE DATE(created_at) = CURDATE()", Integer.class);
 
             List<Map<String, Object>> topArticles = jdbc.queryForList(
-                "SELECT lf.article_id, COALESCE(la.title, ld.title) AS article_title, COUNT(*) AS favorite_count " +
+                "SELECT lf.law_uuid, lf.law_title AS article_title, COUNT(*) AS favorite_count " +
                 "FROM law_favorite lf " +
-                "LEFT JOIN law_article la ON lf.article_id = la.id " +
-                "LEFT JOIN law_document ld ON lf.article_id = ld.id " +
-                "GROUP BY lf.article_id " +
+                "WHERE lf.law_title IS NOT NULL AND lf.law_title != '' " +
+                "GROUP BY lf.law_uuid, lf.law_title " +
                 "ORDER BY favorite_count DESC LIMIT 10"
             );
 
             List<Map<String, Object>> topUsers = jdbc.queryForList(
-                "SELECT user_id, username, COUNT(*) AS favorite_count " +
+                "SELECT user_id, COUNT(*) AS favorite_count " +
                 "FROM law_favorite " +
-                "GROUP BY user_id, username " +
+                "GROUP BY user_id " +
                 "ORDER BY favorite_count DESC LIMIT 10"
             );
 
