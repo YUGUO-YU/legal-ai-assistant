@@ -1,8 +1,8 @@
 <template>
-  <div class="law-audit-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>法规主数据 · 审核工作台</h2>
+        <h2 class="gradient-text">法规主数据 · 审核工作台</h2>
         <p>MOD-01 · 4 态状态机：待审核 → 初审通过 → 已发布；任意环节可驳回</p>
       </div>
       <div class="header-actions">
@@ -13,7 +13,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline :model="filter">
         <el-form-item label="关键词">
           <el-input v-model="filter.keyword" placeholder="ID / 标题 / UUID" clearable style="width:240px" @keyup.enter="load" />
@@ -25,7 +25,7 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <el-card class="glass table-card">
       <template v-if="rows.length === 0 && !loading">
         <table-empty-state text="暂无数据" />
       </template>

@@ -1,8 +1,8 @@
 <template>
-  <div class="kb-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>知识库管理</h2>
+        <h2 class="gradient-text">知识库管理</h2>
         <p>MOD-09 · 知识库 CRUD · 公开/私有 · 文档统计</p>
       </div>
       <div class="header-actions">
@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="kb_uuid" label="UUID" width="160" show-overflow-tooltip>

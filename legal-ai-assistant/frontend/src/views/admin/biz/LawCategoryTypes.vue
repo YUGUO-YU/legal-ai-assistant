@@ -1,6 +1,12 @@
 <template>
-  <div class="page-container">
-    <el-card>
+  <div class="admin-page">
+    <div class="page-header">
+      <div class="header-content">
+        <h2 class="gradient-text">分类维度管理</h2>
+        <p>业务域 · 法规分类维度定义</p>
+      </div>
+    </div>
+    <el-card class="glass table-card">
       <template #header>
         <div class="card-header">
           <span>分类维度管理</span>

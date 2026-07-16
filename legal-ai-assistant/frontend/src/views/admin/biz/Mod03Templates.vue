@@ -1,8 +1,8 @@
 <template>
-  <div class="templates-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>文书模板 · 生成器</h2>
+        <h2 class="gradient-text">文书模板 · 生成器</h2>
         <p>MOD-03 · 模板变量 / 内容预览 / 分类维护</p>
       </div>
       <div class="header-actions">
@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline>
         <el-form-item label="分类">
           <el-select v-model="filter.category" clearable placeholder="全部" style="width:160px">
@@ -24,7 +24,7 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="template_name" label="模板名称" min-width="200" />

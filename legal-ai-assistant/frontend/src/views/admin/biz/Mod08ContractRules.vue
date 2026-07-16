@@ -1,8 +1,8 @@
 <template>
-  <div class="contract-rules-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>合同审查规则</h2>
+        <h2 class="gradient-text">合同审查规则</h2>
         <p>MOD-08 · 多维维度 / 权重 / 高低阈值 · 风险评估基准</p>
       </div>
       <div class="header-actions">
@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="dimension" label="审查维度" min-width="200">

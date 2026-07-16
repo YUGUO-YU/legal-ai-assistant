@@ -1,8 +1,8 @@
 <template>
-  <div class="elements-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>案件要素字典</h2>
+        <h2 class="gradient-text">案件要素字典</h2>
         <p>MOD-02 · 要素分类 / 排序 / 启用状态</p>
       </div>
       <div class="header-actions">
@@ -20,7 +20,7 @@
       </el-col>
     </el-row>
 
-    <el-card v-for="group in grouped" :key="group.category" style="margin-bottom:16px">
+    <el-card class="glass table-card" v-for="group in grouped" :key="group.category" style="margin-bottom:14px">
       <template #header>
         <div class="group-head">
           <el-tag type="primary" size="small">{{ group.category }}</el-tag>

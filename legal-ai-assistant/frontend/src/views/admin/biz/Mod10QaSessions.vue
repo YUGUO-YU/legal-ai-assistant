@@ -1,10 +1,10 @@
 <template>
-  <div class="qa-sessions-page">
+  <div class="admin-page">
     <div class="page-header">
-      <div class="header-content"><h2>问答会话监控</h2><p>MOD-10 · 文件问答 / 消息统计 / 状态</p></div>
+      <div class="header-content"><h2 class="gradient-text">问答会话监控</h2><p>MOD-10 · 文件问答 / 消息统计 / 状态</p></div>
       <div class="header-actions"><el-button :icon="Refresh" @click="load">刷新</el-button></div>
     </div>
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="session_uuid" label="UUID" width="160"><template #default="{row}"><span class="mono">{{row.session_uuid?.substring(0,12)}}</span></template></el-table-column>

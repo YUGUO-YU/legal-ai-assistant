@@ -1,10 +1,10 @@
 <template>
-  <div class="strategy-page">
+  <div class="admin-page">
     <div class="page-header">
-      <div class="header-content"><h2>知识库分块策略</h2><p>MOD-09 · 分块大小 / 重叠 / 分割器</p></div>
+      <div class="header-content"><h2 class="gradient-text">知识库分块策略</h2><p>MOD-09 · 分块大小 / 重叠 / 分割器</p></div>
       <div class="header-actions"><el-button :icon="Refresh" @click="load">刷新</el-button><el-button type="primary" @click="openCreate">新增策略</el-button></div>
     </div>
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="kb_id" label="知识库ID" width="100" />

@@ -1,10 +1,10 @@
 <template>
-  <div class="review-rules-page">
+  <div class="admin-page">
     <div class="page-header">
-      <div class="header-content"><h2>文书复核规则</h2><p>MOD-03 · 模板关联 / 运算符 / 阈值 / 触发动作</p></div>
+      <div class="header-content"><h2 class="gradient-text">文书复核规则</h2><p>MOD-03 · 模板关联 / 运算符 / 阈值 / 触发动作</p></div>
       <div class="header-actions"><el-button :icon="Refresh" @click="load">刷新</el-button><el-button type="primary" @click="openCreate">新增规则</el-button></div>
     </div>
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="template_code" label="模板代码" width="150"><template #default="{row}"><el-tag size="small" type="primary">{{row.template_code}}</el-tag></template></el-table-column>

@@ -1,8 +1,8 @@
 <template>
-  <div class="cases-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>案件主数据管理</h2>
+        <h2 class="gradient-text">案件主数据管理</h2>
         <p>MOD-02 · 案由 / 法院 / 裁判结果 · 多维筛选 + 详情查看</p>
       </div>
       <div class="header-actions">
@@ -10,7 +10,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline :model="filter">
         <el-form-item label="案由">
           <el-input v-model="filter.cause" placeholder="案由关键词" clearable style="width:160px" @keyup.enter="load" />
@@ -54,7 +54,7 @@
       </el-col>
     </el-row>
 
-    <el-card>
+    <el-card class="glass table-card">
       <template v-if="rows.length === 0 && !loading">
         <table-empty-state text="暂无数据" />
       </template>

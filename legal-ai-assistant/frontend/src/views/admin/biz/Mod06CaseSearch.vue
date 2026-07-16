@@ -1,16 +1,16 @@
 <template>
-  <div class="case-search-page">
+  <div class="admin-page">
     <div class="page-header">
-      <div class="header-content"><h2>案例检索日志</h2><p>MOD-06 · 判例主数据 / 法院 / 案由 / 日期</p></div>
+      <div class="header-content"><h2 class="gradient-text">案例检索日志</h2><p>MOD-06 · 判例主数据 / 法院 / 案由 / 日期</p></div>
       <div class="header-actions"><el-button :icon="Refresh" @click="load">刷新</el-button></div>
     </div>
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline>
         <el-form-item label="案由"><el-input v-model="filter.cause" placeholder="案由关键词" clearable style="width:160px" @keyup.enter="load"/></el-form-item>
         <el-form-item><el-button type="primary" @click="load">查询</el-button><el-button @click="reset">重置</el-button></el-form-item>
       </el-form>
     </el-card>
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="case_uuid" label="UUID" width="140"><template #default="{row}"><span class="mono">{{row.case_uuid?.substring(0,12)}}</span></template></el-table-column>

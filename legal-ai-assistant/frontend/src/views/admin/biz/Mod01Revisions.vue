@@ -1,15 +1,15 @@
 <template>
-  <div class="revisions-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>法规修订追溯</h2>
+        <h2 class="gradient-text">法规修订追溯</h2>
         <p>MOD-01 · 修订类型 / 日期 / 来源URL</p>
       </div>
       <div class="header-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
       </div>
     </div>
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="law_id" label="法规ID" width="90" />

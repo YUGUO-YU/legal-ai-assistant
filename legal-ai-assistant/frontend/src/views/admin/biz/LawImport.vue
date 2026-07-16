@@ -1,6 +1,12 @@
 <template>
-  <div class="page-container">
-    <el-card>
+  <div class="admin-page">
+    <div class="page-header">
+      <div class="header-content">
+        <h2 class="gradient-text">AI 法规导入</h2>
+        <p>业务域 · PDF/Word 法规文件智能解析与导入</p>
+      </div>
+    </div>
+    <el-card class="glass table-card">
       <template #header>
         <span>AI 法规导入</span>
       </template>

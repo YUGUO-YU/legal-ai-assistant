@@ -1,8 +1,8 @@
 <template>
-  <div class="draft-review-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>AI 文书复核 · 工作台</h2>
+        <h2 class="gradient-text">AI 文书复核 · 工作台</h2>
         <p>MOD-03 · 3 态状态机：待复核 → 已通过 / 驳回 / 退回修改</p>
       </div>
       <div class="header-actions">
@@ -13,7 +13,7 @@
       </div>
     </div>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline :model="filter">
         <el-form-item label="关键词">
           <el-input v-model="filter.keyword" placeholder="标题 / 类型 / ID" clearable style="width:240px" @keyup.enter="load" />
@@ -25,7 +25,7 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="doc_title" label="文书标题" min-width="280" show-overflow-tooltip />

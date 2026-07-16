@@ -1,8 +1,8 @@
 <template>
-  <div class="crawl-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>爬虫任务管理</h2>
+        <h2 class="gradient-text">爬虫任务管理</h2>
         <p>MOD-01 · Cron 调度 / 源配置 / 爬取统计</p>
       </div>
       <div class="header-actions">
@@ -11,7 +11,7 @@
         <el-button type="primary" @click="openCreate">新建任务</el-button>
       </div>
     </div>
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="task_name" label="任务名称" min-width="180" />

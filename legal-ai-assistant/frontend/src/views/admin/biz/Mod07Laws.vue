@@ -1,17 +1,17 @@
 <template>
-  <div class="mod07-laws-page">
+  <div class="admin-page">
     <div class="page-header">
-      <div class="header-content"><h2>法规查询管理</h2><p>MOD-07 · 法规主数据 / 分类 / 效力状态</p></div>
+      <div class="header-content"><h2 class="gradient-text">法规查询管理</h2><p>MOD-07 · 法规主数据 / 分类 / 效力状态</p></div>
       <div class="header-actions"><el-button :icon="Refresh" @click="load">刷新</el-button></div>
     </div>
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline :model="filter">
         <el-form-item label="分类"><el-select v-model="filter.cat" clearable placeholder="全部" style="width:140px"><el-option v-for="c in categories" :key="c" :label="c" :value="c"/></el-select></el-form-item>
         <el-form-item label="状态"><el-select v-model="filter.status" clearable placeholder="全部" style="width:110px"><el-option label="现行" :value="1"/><el-option label="废止" :value="2"/><el-option label="修订中" :value="3"/></el-select></el-form-item>
         <el-form-item><el-button type="primary" @click="load">查询</el-button><el-button @click="reset">重置</el-button></el-form-item>
       </el-form>
     </el-card>
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="title" label="标题" min-width="280" show-overflow-tooltip />

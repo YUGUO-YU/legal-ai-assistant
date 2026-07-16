@@ -1,8 +1,8 @@
 <template>
-  <div class="law-relations-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>法规关联管理</h2>
+        <h2 class="gradient-text">法规关联管理</h2>
         <p>管理法规之间的关联关系，支持参照、援引、修改、废止、配套等关联类型</p>
       </div>
       <div class="header-actions">
@@ -75,7 +75,7 @@
       <div ref="chartRef" class="chart-container"></div>
     </el-card>
 
-    <el-card class="filter-card">
+    <el-card class="glass filter-card" style="margin-bottom: 14px;">
       <el-form inline :model="filter">
         <el-form-item label="来源法规">
           <el-select
@@ -110,7 +110,7 @@
       </el-form>
     </el-card>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column label="来源法规" min-width="250">
@@ -145,16 +145,17 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination
-        v-model:current-page="filter.page"
-        v-model:page-size="filter.pageSize"
-        :total="total"
-        layout="total, sizes, prev, pager, next"
-        :page-sizes="[10, 20, 50]"
-        class="pager"
-        @current-change="load"
-        @size-change="load"
-      />
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="filter.page"
+          v-model:page-size="filter.pageSize"
+          :total="total"
+          layout="total, sizes, prev, pager, next"
+          :page-sizes="[10, 20, 50]"
+          @size-change="load"
+          @current-change="load"
+        />
+      </div>
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">

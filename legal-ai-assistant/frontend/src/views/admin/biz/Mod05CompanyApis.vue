@@ -1,10 +1,10 @@
 <template>
-  <div class="company-apis-page">
+  <div class="admin-page">
     <div class="page-header">
-      <div class="header-content"><h2>企业查询 API 配置</h2><p>MOD-05 · 供应商 / 额度 / 用量统计</p></div>
+      <div class="header-content"><h2 class="gradient-text">企业查询 API 配置</h2><p>MOD-05 · 供应商 / 额度 / 用量统计</p></div>
       <div class="header-actions"><el-button :icon="Refresh" @click="load">刷新</el-button><el-button type="primary" @click="openCreate">新增配置</el-button></div>
     </div>
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="api_name" label="API名称" min-width="160"><template #default="{row}"><el-tag size="small" type="primary">{{row.api_name}}</el-tag></template></el-table-column>

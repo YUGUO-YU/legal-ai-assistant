@@ -1,8 +1,8 @@
 <template>
-  <div class="tasks-page">
+  <div class="admin-page">
     <div class="page-header">
       <div class="header-content">
-        <h2>法律研究任务</h2>
+        <h2 class="gradient-text">法律研究任务</h2>
         <p>MOD-04 · 任务状态流转 / 报告预览 / 来源追溯</p>
       </div>
       <div class="header-actions">
@@ -12,7 +12,7 @@
       </div>
     </div>
 
-    <el-card>
+    <el-card class="glass table-card">
       <el-table :data="rows" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="task_uuid" label="UUID" width="160" show-overflow-tooltip>

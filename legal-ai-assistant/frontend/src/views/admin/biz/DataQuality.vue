@@ -1,8 +1,17 @@
 <template>
-  <div class="data-quality">
+  <div class="admin-page">
     <div class="page-header">
-      <div>
-        <h2>数据质量监控</h2>
+      <div class="header-content">
+        <h2 class="gradient-text">数据质量监控</h2>
+        <p>业务域 · 跨库数据一致性校验、数据统计分析</p>
+      </div>
+      <div class="header-actions">
+        <el-button @click="loadReport" :loading="loading" type="primary">
+          <el-icon><Refresh /></el-icon>
+          刷新报告
+        </el-button>
+      </div>
+    </div>
         <p>跨库数据一致性校验、数据统计分析</p>
       </div>
       <el-button @click="loadReport" :loading="loading" type="primary">
@@ -121,7 +130,7 @@
       </el-space>
     </el-card>
 
-    <el-card class="laws-card">
+    <el-card class="glass table-card laws-card">
       <template #header>
         <div class="card-header">
           <span>法规列表</span>
