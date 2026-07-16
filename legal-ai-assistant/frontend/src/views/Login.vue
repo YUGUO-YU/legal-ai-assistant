@@ -331,12 +331,12 @@ const handleLogin = async () => {
       password: loginForm.password
     })
 
-    if (!res?.data?.token) {
+    if (!res?.token) {
       throw new Error('登录响应数据异常')
     }
 
-    localStorage.setItem('token', res.data.token)
-    localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))
+    localStorage.setItem('token', res.token)
+    localStorage.setItem('userInfo', JSON.stringify(res.userInfo))
     window.dispatchEvent(new Event('login-state-change'))
 
     ElMessage.success('登录成功，即将跳转到首页...')

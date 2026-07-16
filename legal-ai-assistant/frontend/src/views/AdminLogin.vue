@@ -155,8 +155,8 @@ const handleLogin = async () => {
       password: safePassword
     })
 
-    localStorage.setItem('admin_token', res.data.token)
-    localStorage.setItem('admin_user', JSON.stringify(res.data.userInfo))
+    localStorage.setItem('admin_token', res.token)
+    localStorage.setItem('admin_user', JSON.stringify(res.userInfo))
 
     if (rememberMe.value) {
       localStorage.setItem('admin_username', safeUsername)
@@ -164,8 +164,8 @@ const handleLogin = async () => {
       localStorage.removeItem('admin_username')
     }
 
-    if (res.data.lastLoginAt) {
-      localStorage.setItem('admin_last_login', res.data.lastLoginAt)
+    if (res.lastLoginAt) {
+      localStorage.setItem('admin_last_login', res.lastLoginAt)
     }
 
     ElMessage.success('登录成功')
