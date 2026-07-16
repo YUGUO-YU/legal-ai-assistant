@@ -36,7 +36,8 @@ public class CsrfInterceptor implements HandlerInterceptor {
             "/law-favorite",
             "/usage",
             "/progress",
-            "/ppt"
+            "/ppt",
+            "/admin/"
     );
 
     @Autowired
