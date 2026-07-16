@@ -450,7 +450,7 @@ const goToDetail = (kb) => {
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
   }

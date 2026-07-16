@@ -471,3 +471,63 @@
 .table-card {
   overflow: hidden;
 }
+
+/* ======================
+   全局页面过渡动画
+   ====================== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.4s ease both;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease both;
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.35s ease both;
+}
+
+/* 交错延迟 */
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.1s; }
+.delay-3 { animation-delay: 0.15s; }
+.delay-4 { animation-delay: 0.2s; }
+.delay-5 { animation-delay: 0.25s; }
+
+/* ======================
+   玻璃态悬停发光
+   ====================== */
+.glass-hover {
+  transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+  cursor: pointer;
+}
+.glass-hover:hover {
+  border-color: rgba(102, 126, 234, 0.4);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+/* ======================
+   文字渐变色
+   ====================== */
+.gradient-text {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
