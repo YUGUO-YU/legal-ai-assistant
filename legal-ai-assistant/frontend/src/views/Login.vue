@@ -339,6 +339,7 @@ const handleLogin = async () => {
     localStorage.setItem('userInfo', JSON.stringify(res.userInfo))
 
     ElMessage.success('登录成功，正在跳转...')
+    window.dispatchEvent(new Event('login-state-change'))
     router.replace('/dashboard')
   } catch (e) {
     ElMessage.error('登录失败')
