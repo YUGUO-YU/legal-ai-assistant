@@ -21,6 +21,7 @@ import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -154,8 +155,40 @@ public class LawImportService {
     private DocumentParserService documentParserService;
 
     /**
-     * 直接导入：一步完成解析与入库，无需预览确认。
+     * 直接导入（异步）：一步完成解析与入库，无需预览确认。
+     * 立即返回 job，用户通过轮询 jobId 获取结果。
      */
+    public LawImportJob submitDirectImport(MultipartFile file, String operator) {
+        String taskUuid = "IMPORT-" + System.currentTimeMillis();
+        String fileName = file.getOriginalFilename();
+        String lawName = fileName != null && fileName.endsWith(".json")
+                ? fileName.substring(0, fileName.length() - 5) : (fileName != null ? fileName : "直接导入");
+        long historyId = createHistory(taskUuid, lawName, "direct_upload", operator);
+
+        LawImportJob job = new LawImportJob();
+        job.setId(historyId);
+        job.setTaskUuid(taskUuid);
+        job.setLawName(lawName);
+        job.setSource("direct_upload");
+        job.setStatus("running");
+        job.setOperator(operator);
+
+        directImportAsync(historyId, taskUuid, file, operator);
+
+        return job;
+    }
+
+    @Async
+    public void directImportAsync(long historyId, String taskUuid, MultipartFile file, String operator) {
+        try {
+            LawImportPreview preview = previewImport(file);
+            doConfirmImport(historyId, taskUuid, preview, operator);
+        } catch (Exception e) {
+            log.error("Async direct import failed: {}", e.getMessage(), e);
+            finishHistory(historyId, "failed", 0, 0, 0, false, false, false, e.getMessage(), null);
+        }
+    }
+
     public LawImportJob directImport(MultipartFile file, String operator) {
         LawImportPreview preview = previewImport(file);
         return confirmImport(preview, operator);
@@ -331,11 +364,11 @@ public class LawImportService {
         String lawTitle = extractTitle(content);
         String shortTitle = extractShortTitle(content);
 
-        String metaPrompt = "分析以下法律文档，提取以下信息并以JSON格式返回：\n" +
+        String metaPrompt = "分析以下法律文档（全文约" + content.length() + "字符），提取以下信息并以JSON格式返回：\n" +
             "{\"documentNo\":\"发文字号(如:国务院令第XXX号)\",\"issuingAuthority\":\"发布机关\"," +
             "\"issueDate\":\"发布日期(YYYY-MM-DD格式)\",\"effectiveDate\":\"生效日期(YYYY-MM-DD格式)\"}\n" +
             "只返回JSON，不要其他文字。\n" +
-            content.substring(0, Math.min(3000, content.length()));
+            content.substring(0, Math.min(8000, content.length()));
         String metaJson;
         try {
             metaJson = llmClient.chat(metaPrompt);
@@ -343,11 +376,11 @@ public class LawImportService {
             throw new RuntimeException("AI分析元数据失败: " + e.getMessage(), e);
         }
 
-        String categoryPrompt = "判断以下法律文档的分类，以JSON数组格式返回：\n" +
+        String categoryPrompt = "判断以下法律文档（全文约" + content.length() + "字符）的分类，以JSON数组格式返回：\n" +
             "[{\"categoryTypeId\":1,\"categoryId\":对应分类ID,\"categoryName\":\"分类名称\",\"confidence\":0.95},...]\n" +
             "categoryTypeId对应：1=效力层级,2=法律部门,3=行业领域,4=自定义分类\n" +
             "只返回JSON数组。\n" +
-            content.substring(0, Math.min(3000, content.length()));
+            content.substring(0, Math.min(8000, content.length()));
         String categoryJson;
         try {
             categoryJson = llmClient.chat(categoryPrompt);
@@ -355,11 +388,11 @@ public class LawImportService {
             throw new RuntimeException("AI分析分类失败: " + e.getMessage(), e);
         }
 
-        String chapterPrompt = "分析以下法律文档的章节结构，以JSON数组格式返回：\n" +
+        String chapterPrompt = "分析以下法律文档（全文约" + content.length() + "字符）的章节结构，以JSON数组格式返回：\n" +
             "[{\"title\":\"章节标题\",\"level\":1或2或3,\"children\":[...]}]" +
             "level: 1=篇/编, 2=章, 3=节\n" +
             "只返回JSON数组。\n" +
-            content.substring(0, Math.min(5000, content.length()));
+            content.substring(0, Math.min(10000, content.length()));
         String chapterJson;
         try {
             chapterJson = llmClient.chat(chapterPrompt);
@@ -374,9 +407,13 @@ public class LawImportService {
 
     public LawImportJob confirmImport(LawImportPreview preview, String operator) {
         String taskUuid = "IMPORT-" + System.currentTimeMillis();
-        int totalArticles = preview.getArticles() != null ? preview.getArticles().size() : 0;
         long historyId = createHistory(taskUuid, preview.getLawTitle(), "upload", operator);
+        doConfirmImport(historyId, taskUuid, preview, operator);
+        return loadJob(historyId);
+    }
 
+    private void doConfirmImport(long historyId, String taskUuid, LawImportPreview preview, String operator) {
+        int totalArticles = preview.getArticles() != null ? preview.getArticles().size() : 0;
         boolean mysqlOk = false;
         boolean esOk = false;
         boolean milvusOk = false;
@@ -420,8 +457,23 @@ public class LawImportService {
 
         mysqlOk = true;
 
+        try {
+            List<ElasticsearchService.LawArticleDocument> esDocs = buildEsDocsFromPreview(lawId, preview);
+            int esCount = elasticsearchService.bulkIndexArticles(esDocs);
+            esOk = esCount > 0;
+            log.info("ES index built: lawId={}, count={}", lawId, esCount);
+        } catch (Exception e) {
+            log.error("ES indexing failed for lawId={}: {}", lawId, e.getMessage());
+        }
+
+        try {
+            milvusOk = indexToMilvusFromPreview(lawId, preview);
+            log.info("Milvus index built: lawId={}", lawId);
+        } catch (Exception e) {
+            log.error("Milvus indexing failed for lawId={}: {}", lawId, e.getMessage());
+        }
+
         finishHistory(historyId, "success", totalArticles, inserted, updated, mysqlOk, esOk, milvusOk, null, null);
-        return loadJob(historyId);
     }
 
     private Long findOrCreateCategory(LawImportPreview.CategorySuggestion cs) {
@@ -719,10 +771,7 @@ public class LawImportService {
                 continue;
             }
             sortOrder++;
-            String hash = ap.getContentHash();
-            if (hash == null || hash.isEmpty()) {
-                hash = sha256(ap.getContent() != null ? ap.getContent() : "");
-            }
+            String hash = sha256(ap.getContent() != null ? ap.getContent() : "");
             String existingHash = null;
             try {
                 List<String> hashes = jdbcTemplate.query(SELECT_ARTICLE_HASH,
@@ -780,6 +829,49 @@ public class LawImportService {
                 }
             } catch (Exception e) {
                 log.warn("Milvus 向量化失败: article={}, {}", a.articleNo, e.getMessage());
+            }
+        }
+        if (!batch.isEmpty()) {
+            milvusService.indexArticles(batch);
+        }
+        return true;
+    }
+
+    private List<ElasticsearchService.LawArticleDocument> buildEsDocsFromPreview(long lawId, LawImportPreview preview) {
+        List<ElasticsearchService.LawArticleDocument> docs = new ArrayList<>();
+        String lawIdStr = String.valueOf(lawId);
+        String categoryL1 = preview.getSuggestedCategories() == null || preview.getSuggestedCategories().isEmpty()
+                ? "其他" : preview.getSuggestedCategories().get(0).getCategoryName();
+        if (preview.getArticles() != null) {
+            for (LawImportPreview.ArticleParse a : preview.getArticles()) {
+                if (a.getArticleNo() == null || a.getArticleNo().isBlank()) continue;
+                String articleId = "LAW" + lawId + "-" + a.getArticleNo().hashCode() + "-" + Math.abs((a.getArticleNo() + lawIdStr).hashCode() % 10000);
+                docs.add(new ElasticsearchService.LawArticleDocument(
+                        articleId, lawIdStr, preview.getLawTitle(), a.getArticleNo(), a.getTitle(), a.getContent(),
+                        categoryL1, null, null, "AI 文件导入"
+                ));
+            }
+        }
+        return docs;
+    }
+
+    private boolean indexToMilvusFromPreview(long lawId, LawImportPreview preview) {
+        List<MilvusService.IndexableArticle> batch = new ArrayList<>();
+        int batchSize = 10;
+        if (preview.getArticles() != null) {
+            for (LawImportPreview.ArticleParse a : preview.getArticles()) {
+                if (a.getContent() == null || a.getContent().isBlank()) continue;
+                try {
+                    float[] vector = aiService.embedText(a.getContent());
+                    String articleId = "LAW" + lawId + "-" + a.getArticleNo();
+                    batch.add(new MilvusService.IndexableArticle(articleId, vector, a.getContent()));
+                    if (batch.size() >= batchSize) {
+                        milvusService.indexArticles(batch);
+                        batch.clear();
+                    }
+                } catch (Exception e) {
+                    log.warn("Milvus 向量化失败: article={}, {}", a.getArticleNo(), e.getMessage());
+                }
             }
         }
         if (!batch.isEmpty()) {

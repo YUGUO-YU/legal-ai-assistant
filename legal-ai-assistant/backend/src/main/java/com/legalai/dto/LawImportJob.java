@@ -3,7 +3,6 @@ package com.legalai.dto;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 public class LawImportJob {
@@ -22,12 +21,4 @@ public class LawImportJob {
     private String operator;
     private LocalDateTime startedAt;
     private LocalDateTime finishedAt;
-    private List<ImportedArticle> articles;
-
-    @Data
-    public static class ImportedArticle {
-        private String articleNo;
-        private String title;
-        private String content;
-    }
 }

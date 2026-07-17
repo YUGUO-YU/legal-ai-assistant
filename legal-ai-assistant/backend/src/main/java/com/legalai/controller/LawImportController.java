@@ -153,7 +153,7 @@ public class LawImportController {
             return ApiResponse.error(400, "只支持 Word/PDF/TXT 文档");
         }
         try {
-            LawImportJob job = lawImportService.directImport(file, operator);
+            LawImportJob job = lawImportService.submitDirectImport(file, operator);
             return ApiResponse.success(job);
         } catch (Exception e) {
             return ApiResponse.error(500, "直接导入失败: " + e.getMessage());
