@@ -117,7 +117,7 @@
 
       <div class="report-container">
         <div v-if="!loading && (!report || report.length === 0)" class="empty-research">
-          <el-empty description="暂无研究报告，请输入研究问题后点击"开始研究"" />
+          <el-empty description="暂无研究报告，请输入研究问题后点击【开始研究】" />
         </div>
         <el-card
           v-for="section in report"
