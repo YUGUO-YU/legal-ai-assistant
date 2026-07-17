@@ -139,4 +139,24 @@ public class LawImportController {
         LawImportJob job = lawImportService.confirmImport(preview, "admin");
         return ApiResponse.success(job);
     }
+
+    @PostMapping("/direct")
+    @Operation(summary = "直接导入", description = "上传文件后一步完成解析与入库，无需预览确认")
+    public ApiResponse<LawImportJob> directImport(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "operator", defaultValue = "admin") String operator) {
+        if (file == null || file.isEmpty()) {
+            return ApiResponse.error(400, "文件不能为空");
+        }
+        String filename = file.getOriginalFilename();
+        if (filename == null || (!filename.endsWith(".docx") && !filename.endsWith(".doc") && !filename.endsWith(".pdf") && !filename.endsWith(".txt"))) {
+            return ApiResponse.error(400, "只支持 Word/PDF/TXT 文档");
+        }
+        try {
+            LawImportJob job = lawImportService.directImport(file, operator);
+            return ApiResponse.success(job);
+        } catch (Exception e) {
+            return ApiResponse.error(500, "直接导入失败: " + e.getMessage());
+        }
+    }
 }

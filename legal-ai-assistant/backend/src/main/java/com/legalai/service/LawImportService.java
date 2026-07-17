@@ -154,6 +154,14 @@ public class LawImportService {
     private DocumentParserService documentParserService;
 
     /**
+     * 直接导入：一步完成解析与入库，无需预览确认。
+     */
+    public LawImportJob directImport(MultipartFile file, String operator) {
+        LawImportPreview preview = previewImport(file);
+        return confirmImport(preview, operator);
+    }
+
+    /**
      * 三入口之一：联网搜索导入。AI 拉取数据，结构化后入库。
      */
     public LawImportJob importByWebSearch(String lawName, String operator) {

@@ -278,6 +278,9 @@ export default {
     headers: { 'Content-Type': 'multipart/form-data' }
   })),
   importConfirm: (data) => withRetry(() => apiClient.post('/admin/law-import/confirm', data)),
+  importDirect: (formData) => withRetry(() => apiClient.post('/admin/law-import/direct', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })),
   lawImportHistory: () => withRetry(() => apiClient.get('/admin/law-import/history')),
   lawDocument: {
     create: (data) => withRetry(() => apiClient.post('/admin/law-document/create', data)),

@@ -8,9 +8,14 @@
     </div>
     <el-card class="glass table-card">
       <template #header>
-        <span>AI 法规导入</span>
+        <el-tabs v-model="importMode" class="import-tabs">
+          <el-tab-pane label="预览导入" name="preview" />
+          <el-tab-pane label="直接导入" name="direct" />
+        </el-tabs>
       </template>
-      <div class="import-layout">
+
+      <!-- 预览导入模式 -->
+      <div v-if="importMode === 'preview'" class="import-layout">
         <div class="left-upload">
           <el-upload
             ref="uploadRef"
@@ -110,6 +115,37 @@
         </div>
       </div>
 
+      <!-- 直接导入模式 -->
+      <div v-else class="import-layout">
+        <div class="left-upload">
+          <el-upload
+            ref="directUploadRef"
+            drag
+            :auto-upload="false"
+            :limit="1"
+            accept=".pdf,.doc,.docx"
+            :on-change="handleDirectFileChange"
+          >
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">拖拽法规文件到此处，或 <em>点击上传</em></div>
+            <template #tip>
+              <div class="el-upload__tip">支持 .pdf, .doc, .docx 格式</div>
+            </template>
+          </el-upload>
+          <el-button type="success" :disabled="!directUploadFile" style="margin-top: 16px; width: 100%;" @click="handleDirectImport">
+            <el-icon v-if="directUploading"><Loading class="is-loading" /></el-icon>
+            {{ directUploading ? '导入中...' : '直接导入数据库' }}
+          </el-button>
+          <div class="upload-hint">
+            <el-icon><InfoFilled /></el-icon>
+            <span>一步完成解析与入库，无需预览确认</span>
+          </div>
+        </div>
+        <div class="right-preview">
+          <el-empty description="上传文件后自动解析并导入数据库" />
+        </div>
+      </div>
+
       <el-card v-if="showPdfPreview && pdfPreviewUrl" style="margin-top: 16px;">
         <template #header>
           <div class="preview-header">
@@ -196,6 +232,10 @@ const pdfPreviewUrl = ref(null)
 const showPdfPreview = ref(false)
 const expandedArticles = ref(new Set())
 const showAllArticles = ref(false)
+const importMode = ref('preview')
+const directUploadRef = ref(null)
+const directUploadFile = ref(null)
+const directUploading = ref(false)
 
 const articleStats = computed(() => {
   if (!previewData.value?.articles?.length) {
@@ -238,6 +278,44 @@ const handleFileChange = (file) => {
       showPdfPreview.value = false
       pdfPreviewUrl.value = null
     }
+  }
+}
+
+const handleDirectFileChange = (file) => {
+  directUploadFile.value = file.raw
+}
+
+const handleDirectImport = async () => {
+  if (!directUploadFile.value) return
+  directUploading.value = true
+  const fileName = directUploadFile.value.name
+  const formData = new FormData()
+  formData.append('file', directUploadFile.value)
+  try {
+    const res = await api.importDirect(formData)
+    const jobId = res?.id || res?.taskUuid
+    ElMessage.success('导入任务已提交')
+    directUploadFile.value = null
+    directUploadRef.value?.clearFiles()
+    if (jobId) {
+      const newItem = {
+        id: jobId,
+        lawName: fileName || '直接导入',
+        status: 'running',
+        progress: 0,
+        successCount: 0,
+        failCount: 0,
+        startedAt: new Date().toLocaleString()
+      }
+      historyData.value.unshift(newItem)
+      pollJobStatus(jobId)
+    } else {
+      loadHistory()
+    }
+  } catch (e) {
+    ElMessage.error('直接导入失败: ' + (e.message || '未知错误'))
+  } finally {
+    directUploading.value = false
   }
 }
 
