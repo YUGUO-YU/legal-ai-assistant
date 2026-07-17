@@ -286,6 +286,7 @@ const loadSuggestedQueries = async () => {
     const res = await api.legalSearch.getSuggestedQueries(query.value)
     suggestedQueries.value = res || []
   } catch (e) {
+    ElMessage.warning('无法加载搜索建议')
   }
 }
 
