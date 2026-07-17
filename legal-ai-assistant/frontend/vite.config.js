@@ -42,9 +42,9 @@ export default defineConfig({
         }
       }
     },
-    chunkSizeWarningLimit: 1500
+    chunkSizeWarningLimit: 800
   },
   optimizeDeps: {
-    include: ['vue', 'vue-router', 'pinia', 'axios']
+    include: ['vue', 'vue-router', 'pinia', 'axios', 'element-plus', '@element-plus/icons-vue']
   }
 })
