@@ -441,8 +441,9 @@ const handleCommand = (command) => {
       localStorage.removeItem('userInfo')
       localStorage.removeItem('admin_token')
       localStorage.removeItem('admin_user')
+      isLoggedIn.value = false
       ElMessage.success('已退出登录')
-      window.location.hash = '#/'
+      router.push('/')
       break
     case 'profile':
       router.push('/profile')

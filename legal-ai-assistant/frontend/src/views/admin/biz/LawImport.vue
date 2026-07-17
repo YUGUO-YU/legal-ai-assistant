@@ -127,17 +127,7 @@
       <template #header>
         <span>导入历史</span>
       </template>
-      <el-table :data="historyData" stripe />
-      <el-pagination
-        v-if="historyTotal > historyPageSize"
-        background
-        layout="prev, pager, next"
-        :total="historyTotal"
-        :page-size="historyPageSize"
-        :current-page="historyPage"
-        @current-change="(p) => loadHistory(p)"
-        style="margin-top: 16px; justify-content: flex-end;"
-      />
+      <el-table :data="historyData" stripe>
         <el-table-column prop="lawName" label="法规标题" />
         <el-table-column label="状态" width="140">
           <template #default="{ row }">
@@ -168,6 +158,16 @@
         <el-table-column prop="startedAt" label="开始时间" width="170" />
         <el-table-column prop="operator" label="操作人" width="80" />
       </el-table>
+      <el-pagination
+        v-if="historyTotal > historyPageSize"
+        background
+        layout="prev, pager, next"
+        :total="historyTotal"
+        :page-size="historyPageSize"
+        :current-page="historyPage"
+        @current-change="(p) => loadHistory(p)"
+        style="margin-top: 16px; justify-content: flex-end;"
+      />
     </el-card>
   </div>
 </template>
