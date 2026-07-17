@@ -142,7 +142,31 @@
           </div>
         </div>
         <div class="right-preview">
-          <el-empty description="上传文件后自动解析并导入数据库" />
+          <el-card v-if="directImportResult" shadow="never">
+            <template #header>
+              <div class="preview-header">
+                <span>导入结果</span>
+                <el-tag :type="directImportResult.status === 'success' ? 'success' : 'danger'">
+                  {{ directImportResult.status === 'success' ? '导入成功' : '导入失败' }}
+                </el-tag>
+              </div>
+            </template>
+            <el-form label-width="110px">
+              <el-form-item label="法规标题">{{ directImportResult.lawName }}</el-form-item>
+              <el-form-item label="条款数量">{{ directImportResult.insertedArticles || 0 }} 条</el-form-item>
+              <el-form-item label="更新数量">{{ directImportResult.updatedArticles || 0 }} 条</el-form-item>
+              <el-form-item label="MySQL">{{ directImportResult.mysqlOk ? '成功' : '失败' }}</el-form-item>
+              <el-form-item label="ES索引">{{ directImportResult.esOk ? '成功' : '未建立' }}</el-form-item>
+              <el-form-item label="向量索引">{{ directImportResult.milvusOk ? '成功' : '未建立' }}</el-form-item>
+              <el-form-item v-if="directImportResult.errorMessage" label="错误信息">
+                <span style="color: var(--color-danger);">{{ directImportResult.errorMessage }}</span>
+              </el-form-item>
+            </el-form>
+            <div style="text-align: center; margin-top: 16px;">
+              <el-button @click="directImportResult = null">继续导入</el-button>
+            </div>
+          </el-card>
+          <el-empty v-else description="上传文件后自动解析并导入数据库" />
         </div>
       </div>
 
@@ -193,6 +217,27 @@
         </el-table-column>
         <el-table-column prop="startedAt" label="开始时间" width="170" />
         <el-table-column prop="operator" label="操作人" width="80" />
+        <el-table-column label="MySQL" width="70">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.mysqlOk ? 'success' : row.mysqlOk === false ? 'danger' : 'info'">
+              {{ row.mysqlOk ? '成功' : row.mysqlOk === false ? '失败' : '-' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="ES" width="70">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.esOk ? 'success' : row.esOk === false ? 'danger' : 'info'">
+              {{ row.esOk ? '成功' : row.esOk === false ? '失败' : '-' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="向量" width="70">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.milvusOk ? 'success' : row.milvusOk === false ? 'danger' : 'info'">
+              {{ row.milvusOk ? '成功' : row.milvusOk === false ? '失败' : '-' }}
+            </el-tag>
+          </template>
+        </el-table-column>
       </el-table>
       <el-pagination
         v-if="historyTotal > historyPageSize"
@@ -236,6 +281,7 @@ const importMode = ref('preview')
 const directUploadRef = ref(null)
 const directUploadFile = ref(null)
 const directUploading = ref(false)
+const directImportResult = ref(null)
 
 const articleStats = computed(() => {
   if (!previewData.value?.articles?.length) {
@@ -283,6 +329,8 @@ const handleFileChange = (file) => {
 
 const handleDirectFileChange = (file) => {
   directUploadFile.value = file.raw
+  showPdfPreview.value = false
+  pdfPreviewUrl.value = null
 }
 
 const handleDirectImport = async () => {
@@ -293,27 +341,36 @@ const handleDirectImport = async () => {
   formData.append('file', directUploadFile.value)
   try {
     const res = await api.importDirect(formData)
+    directImportResult.value = res
     const jobId = res?.id || res?.taskUuid
-    ElMessage.success('导入任务已提交')
+    if (res?.status === 'success') {
+      ElMessage.success('导入成功：' + (res.lawName || fileName) + '，共 ' + (res.insertedArticles || 0) + ' 个条款')
+    } else if (res?.status === 'failed') {
+      ElMessage.error('导入失败：' + (res.errorMessage || '未知原因'))
+    }
     directUploadFile.value = null
     directUploadRef.value?.clearFiles()
     if (jobId) {
       const newItem = {
         id: jobId,
-        lawName: fileName || '直接导入',
-        status: 'running',
-        progress: 0,
-        successCount: 0,
-        failCount: 0,
-        startedAt: new Date().toLocaleString()
+        lawName: res?.lawName || fileName || '直接导入',
+        status: res?.status || 'success',
+        progress: res?.status === 'success' ? 100 : 0,
+        successCount: res?.insertedArticles || 0,
+        failCount: res?.updatedArticles || 0,
+        startedAt: res?.startedAt ? new Date(res.startedAt).toLocaleString() : new Date().toLocaleString()
       }
-      historyData.value.unshift(newItem)
-      pollJobStatus(jobId)
-    } else {
-      loadHistory()
+      const existIdx = historyData.value.findIndex(h => h.id === jobId)
+      if (existIdx !== -1) {
+        historyData.value[existIdx] = newItem
+      } else {
+        historyData.value.unshift(newItem)
+      }
     }
+    loadHistory()
   } catch (e) {
     ElMessage.error('直接导入失败: ' + (e.message || '未知错误'))
+    directImportResult.value = null
   } finally {
     directUploading.value = false
   }

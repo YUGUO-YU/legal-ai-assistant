@@ -377,49 +377,50 @@ public class LawImportService {
         int totalArticles = preview.getArticles() != null ? preview.getArticles().size() : 0;
         long historyId = createHistory(taskUuid, preview.getLawTitle(), "upload", operator);
 
-        LawDocument doc = new LawDocument();
-        doc.setLawUuid(UUID.randomUUID().toString());
-        doc.setTitle(preview.getLawTitle());
-        doc.setShortTitle(preview.getShortTitle());
-        doc.setCategoryL1(preview.getSuggestedCategories() == null || preview.getSuggestedCategories().isEmpty() ? "其他" : preview.getSuggestedCategories().get(0).getCategoryName());
-        doc.setIssuingAuthority(preview.getIssuingAuthority() != null ? preview.getIssuingAuthority() : "");
-        doc.setIssueDate(parseDateOrNull(preview.getIssueDate()));
-        doc.setEffectiveDate(parseDateOrNull(preview.getEffectiveDate()));
-        lawDocumentMapper.insert(doc);
-
+        boolean mysqlOk = false;
+        boolean esOk = false;
+        boolean milvusOk = false;
         int inserted = 0;
-        int sortOrder = 0;
-        for (LawImportPreview.ArticleParse ap : preview.getArticles()) {
-            sortOrder++;
-            LawArticle article = new LawArticle();
-            article.setLawId(doc.getId());
-            article.setArticleUuid(ap.getArticleUuid() != null ? ap.getArticleUuid() : UUID.randomUUID().toString());
-            article.setArticleNo(ap.getArticleNo());
-            article.setTitle(ap.getTitle());
-            article.setContent(ap.getContent());
-            article.setSortOrder(ap.getSortOrder() != null ? ap.getSortOrder() : sortOrder);
-            String contentHash = ap.getContentHash();
-            if (contentHash == null || contentHash.isEmpty()) {
-                contentHash = sha256(ap.getContent() != null ? ap.getContent() : "");
-            }
-            article.setContentHash(contentHash);
-            lawArticleMapper.insert(article);
+        int updated = 0;
+
+        long lawId;
+        Long existingLawId = findLawIdByTitle(preview.getLawTitle());
+        if (existingLawId != null) {
+            lawId = existingLawId;
+            log.info("Law already exists, updating: title={}, lawId={}", preview.getLawTitle(), lawId);
+        } else {
+            LawDocument doc = new LawDocument();
+            doc.setLawUuid(UUID.randomUUID().toString());
+            doc.setTitle(preview.getLawTitle());
+            doc.setShortTitle(preview.getShortTitle());
+            doc.setCategoryL1(preview.getSuggestedCategories() == null || preview.getSuggestedCategories().isEmpty() ? "其他" : preview.getSuggestedCategories().get(0).getCategoryName());
+            doc.setIssuingAuthority(preview.getIssuingAuthority() != null ? preview.getIssuingAuthority() : "");
+            doc.setIssueDate(parseDateOrNull(preview.getIssueDate()));
+            doc.setEffectiveDate(parseDateOrNull(preview.getEffectiveDate()));
+            lawDocumentMapper.insert(doc);
+            lawId = doc.getId();
             inserted++;
         }
+
+        UpsertResult articleResult = upsertArticlesFromPreview(lawId, preview.getArticles());
+        inserted += articleResult.inserted;
+        updated += articleResult.updated;
 
         if (preview.getSuggestedCategories() != null) {
             for (LawImportPreview.CategorySuggestion cs : preview.getSuggestedCategories()) {
                 Long categoryId = findOrCreateCategory(cs);
                 if (categoryId != null) {
                     LawDocumentCategory docCat = new LawDocumentCategory();
-                    docCat.setLawId(doc.getId());
+                    docCat.setLawId(lawId);
                     docCat.setCategoryId(categoryId);
                     lawDocumentCategoryMapper.insert(docCat);
                 }
             }
         }
 
-        finishHistory(historyId, "success", totalArticles, inserted, 0, true, false, false, null, null);
+        mysqlOk = true;
+
+        finishHistory(historyId, "success", totalArticles, inserted, updated, mysqlOk, esOk, milvusOk, null, null);
         return loadJob(historyId);
     }
 
@@ -459,7 +460,10 @@ public class LawImportService {
         if (code.startsWith("_")) {
             code = code.substring(1);
         }
-        return code.isEmpty() ? "CUSTOM_" + System.currentTimeMillis() : code;
+        if (code.isEmpty()) {
+            return "CUSTOM_" + System.currentTimeMillis();
+        }
+        return code + "_" + Math.abs(UUID.randomUUID().toString().hashCode() % 10000);
     }
 
     private String extractTextFromFile(MultipartFile file) {
@@ -563,17 +567,34 @@ public class LawImportService {
 
     private List<LawImportPreview.ArticleParse> extractArticles(String content) {
         List<LawImportPreview.ArticleParse> articles = new ArrayList<>();
-        Pattern p = Pattern.compile("第([一二三四五六七八九十百千万\\d]+)条[^\\n]*\\n([\\s\\S]*?)(?=(?:第[一二三四五六七八九十百千万\\d]+条)|$)");
+        Pattern p = Pattern.compile(
+            "(?:^|\\n)(第[一二三四五六七八九十百千万\\d]+条(?:之\\d+|(?:\\([" +
+            "一二三四五六七八九十百千万\\d]+\\))|(?:-[\\d]+)?)[^\\n]*)\\n([\\s\\S]*?)(?=(?:第[一二三四五六七八九十百千万\\d]+条)|$)",
+            Pattern.MULTILINE);
         Matcher m = p.matcher(content);
         int sortOrder = 0;
         while (m.find()) {
             sortOrder++;
             LawImportPreview.ArticleParse a = new LawImportPreview.ArticleParse();
-            a.setArticleNo("第" + m.group(1) + "条");
+            String articleNo = m.group(1).trim();
+            a.setArticleNo(articleNo);
             a.setContent(m.group(2).trim());
             a.setSortOrder(sortOrder);
             a.setContentHash(sha256(m.group(2).trim()));
             articles.add(a);
+        }
+        if (articles.isEmpty()) {
+            Pattern fallback = Pattern.compile("(^|\\n)(第[一二三四五六七八九十百千万\\d]+条)\\n([\\s\\S]*?)(?=(?:第[一二三四五六七八九十百千万\\d]+条)|$)", Pattern.MULTILINE);
+            Matcher fm = fallback.matcher(content);
+            while (fm.find()) {
+                sortOrder++;
+                LawImportPreview.ArticleParse a = new LawImportPreview.ArticleParse();
+                a.setArticleNo(fm.group(2).trim());
+                a.setContent(fm.group(3).trim());
+                a.setSortOrder(sortOrder);
+                a.setContentHash(sha256(fm.group(3).trim()));
+                articles.add(a);
+            }
         }
         return articles;
     }
@@ -679,6 +700,49 @@ public class LawImportService {
                 if (!ids.isEmpty()) {
                     jdbcTemplate.update(UPDATE_ARTICLE_SQL,
                             a.title, a.content, hash, order, ids.get(0));
+                    updated++;
+                }
+            }
+        }
+        return new UpsertResult(inserted, updated);
+    }
+
+    private UpsertResult upsertArticlesFromPreview(long lawId, List<LawImportPreview.ArticleParse> articles) {
+        if (articles == null || articles.isEmpty()) {
+            return new UpsertResult(0, 0);
+        }
+        int inserted = 0;
+        int updated = 0;
+        int sortOrder = 0;
+        for (LawImportPreview.ArticleParse ap : articles) {
+            if (ap.getArticleNo() == null || ap.getArticleNo().isBlank()) {
+                continue;
+            }
+            sortOrder++;
+            String hash = ap.getContentHash();
+            if (hash == null || hash.isEmpty()) {
+                hash = sha256(ap.getContent() != null ? ap.getContent() : "");
+            }
+            String existingHash = null;
+            try {
+                List<String> hashes = jdbcTemplate.query(SELECT_ARTICLE_HASH,
+                        (rs, rn) -> rs.getString(1), lawId, ap.getArticleNo());
+                if (!hashes.isEmpty()) {
+                    existingHash = hashes.get(0);
+                }
+            } catch (Exception e) { log.debug("查询已有hash失败: lawId={}, articleNo={}", lawId, ap.getArticleNo(), e.getMessage()); }
+
+            if (existingHash == null) {
+                String articleUuid = ap.getArticleUuid() != null ? ap.getArticleUuid() : "ART-" + System.currentTimeMillis() + "-" + sortOrder;
+                jdbcTemplate.update(INSERT_ARTICLE_SQL,
+                        lawId, articleUuid, ap.getArticleNo(), ap.getTitle(), ap.getContent(), hash, ap.getSortOrder() != null ? ap.getSortOrder() : sortOrder);
+                inserted++;
+            } else if (!hash.equals(existingHash)) {
+                List<Long> ids = jdbcTemplate.query(SELECT_ARTICLE_ID,
+                        (rs, rn) -> rs.getLong(1), lawId, ap.getArticleNo());
+                if (!ids.isEmpty()) {
+                    jdbcTemplate.update(UPDATE_ARTICLE_SQL,
+                            ap.getTitle(), ap.getContent(), hash, ap.getSortOrder() != null ? ap.getSortOrder() : sortOrder, ids.get(0));
                     updated++;
                 }
             }
