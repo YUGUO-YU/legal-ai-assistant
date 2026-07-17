@@ -250,6 +250,9 @@ public class LegalSearchService {
     private LegalSearchResponse buildResponse(LegalSearchRequest request,
             List<LegalSearchResponse.SearchResultItem> fusedResults, long startTime) {
         int from = (request.getPage() - 1) * request.getPageSize();
+        if (from >= fusedResults.size()) {
+            from = Math.max(0, fusedResults.size() - request.getPageSize());
+        }
         int to = Math.min(from + request.getPageSize(), fusedResults.size());
         List<LegalSearchResponse.SearchResultItem> pagedResults = fusedResults.subList(from, to);
 

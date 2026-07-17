@@ -16,10 +16,14 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class AdminDataService {
     private static final Logger log = LoggerFactory.getLogger(AdminDataService.class);
+    private final ExecutorService statsExecutor = Executors.newFixedThreadPool(6);
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -438,14 +442,22 @@ public class AdminDataService {
                 "search_log", "user_feedback", "sys_config"
             };
             Map<String, Long> counts = new LinkedHashMap<>();
+            List<CompletableFuture<Map.Entry<String, Long>>> futures = new ArrayList<>();
             for (String t : tables) {
-                try {
-                    Long c = jdbc.queryForObject("SELECT COUNT(*) FROM " + sanitize(t), Long.class);
-                    counts.put(t, c == null ? 0L : c);
-                } catch (Exception e) {
-                    log.warn("统计表 {} 行数失败: {}", t, e.getMessage());
-                    counts.put(t, -1L);
-                }
+                CompletableFuture<Map.Entry<String, Long>> f = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        Long c = jdbc.queryForObject("SELECT COUNT(*) FROM " + sanitize(t), Long.class);
+                        return Map.entry(t, c == null ? 0L : c);
+                    } catch (Exception e) {
+                        log.warn("统计表 {} 行数失败: {}", t, e.getMessage());
+                        return Map.entry(t, -1L);
+                    }
+                }, statsExecutor);
+                futures.add(f);
+            }
+            for (CompletableFuture<Map.Entry<String, Long>> f : futures) {
+                Map.Entry<String, Long> entry = f.join();
+                counts.put(entry.getKey(), entry.getValue());
             }
             result.put("counts", counts);
             result.put("source", "admin-db");

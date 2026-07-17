@@ -237,6 +237,9 @@ async function handleSave() {
   if (!form.template_code || !form.template_name || !templateContent.value) {
     ElMessage.warning('模板代码/名称/内容必填'); return
   }
+  if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(form.template_code)) {
+    ElMessage.warning('模板代码格式非法：只能包含字母、数字、下划线、连字符，且不能以数字开头'); return
+  }
   extractVars()
   const payload = { ...form }
   delete payload.id
