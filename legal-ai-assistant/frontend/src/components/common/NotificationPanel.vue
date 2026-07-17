@@ -3,6 +3,10 @@
     <div class="panel-header">
       <span class="panel-title">通知中心</span>
       <div class="panel-actions">
+        <span class="ws-status" :class="wsStatus">
+          <span class="status-dot"></span>
+          {{ statusText }}
+        </span>
         <el-button text size="small" @click="handleMarkAllRead" :disabled="unreadCount === 0">
           全标已读
         </el-button>
@@ -44,10 +48,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Close, Bell, CircleCheck, WarningFilled, CircleCloseFilled, InfoFilled } from '@element-plus/icons-vue'
 import { useNotificationCenter } from '@/composables/useNotificationCenter'
+import { useNotificationWs } from '@/composables/useNotificationWs'
 
 defineProps({
   visible: {
@@ -59,6 +64,18 @@ defineProps({
 const emit = defineEmits(['close'])
 const router = useRouter()
 const { notifications, unreadCount, markRead, markAllRead, remove, clearAll, formatTime } = useNotificationCenter()
+const { wsStatus } = useNotificationWs()
+
+const statusText = computed(() => {
+  const map = {
+    connected: '已连接',
+    disconnected: '未连接',
+    reconnecting: '重连中',
+    error: '连接错误',
+    failed: '连接失败'
+  }
+  return map[wsStatus.value] || '未知'
+})
 
 function getIcon(type) {
   const map = {
@@ -127,7 +144,46 @@ function handleClearAll() {
 
 .panel-actions {
   display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ws-status {
+  display: flex;
+  align-items: center;
   gap: 4px;
+  font-size: 11px;
+  color: var(--el-text-color-placeholder);
+}
+
+.ws-status .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #dcdfe6;
+}
+
+.ws-status.connected .status-dot {
+  background: #67c23a;
+}
+
+.ws-status.connected {
+  color: #67c23a;
+}
+
+.ws-status.reconnecting .status-dot {
+  background: #e6a23c;
+  animation: blink 1s infinite;
+}
+
+.ws-status.error .status-dot,
+.ws-status.failed .status-dot {
+  background: #f56c6c;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .panel-body {

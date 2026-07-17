@@ -275,6 +275,7 @@ import QuickActions from '@/components/common/QuickActions.vue'
 import CommandPalette from '@/components/common/CommandPalette.vue'
 import { initializeApp } from '@/services/dataService'
 import { wsService } from '@/services/websocketService'
+import { useNotificationWs } from '@/composables/useNotificationWs'
 
 const route = useRoute()
 const router = useRouter()
@@ -362,6 +363,8 @@ onMounted(() => {
 
   if (isLoggedIn.value) {
     initializeApp()
+    const { connect: connectNotificationWs } = useNotificationWs()
+    connectNotificationWs()
   }
 
   if (!import.meta.env.DEV) {
