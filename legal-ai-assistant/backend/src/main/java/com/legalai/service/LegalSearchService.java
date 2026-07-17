@@ -524,7 +524,7 @@ public class LegalSearchService {
 
         for (LegalSearchResponse.SearchResultItem citation : citations) {
             String content = citation.getContent();
-            if (content != null && claim.contains(content.substring(0, Math.min(20, content.length())))) {
+            if (content != null && content.length() >= 20 && claim.contains(content.substring(0, 20))) {
                 return false;
             }
         }

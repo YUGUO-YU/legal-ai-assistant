@@ -134,7 +134,7 @@
               复制
             </el-button>
           </div>
-          <div class="section-content" v-html="section.content"></div>
+           <div class="section-content" v-html="sanitize(section.content)"></div>
           <div class="section-citations" v-if="section.citations?.length">
             <div class="citations-header">
               <el-icon><Link /></el-icon>
@@ -151,10 +151,11 @@
   </div>
 </template>
 
-<script setup>
- import { ref, reactive } from 'vue'
- import { ElMessage } from 'element-plus'
- import api from '../api'
+ <script setup>
+  import { ref, reactive } from 'vue'
+  import { ElMessage } from 'element-plus'
+  import api from '../api'
+  import { sanitizeHTML as sanitize } from '@/utils/sanitize'
 import {
   Edit,
   DataAnalysis,

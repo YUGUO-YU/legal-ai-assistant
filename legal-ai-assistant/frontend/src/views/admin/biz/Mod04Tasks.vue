@@ -64,7 +64,7 @@
       <h4 style="margin-top:16px">研究主题</h4>
       <pre class="content-preview">{{ detail.topic }}</pre>
       <h4 style="margin-top:16px">研究报告</h4>
-      <div v-if="detail.report" class="content-preview report-content" v-html="detail.report"></div>
+      <div v-if="detail.report" class="content-preview report-content" v-html="sanitize(detail.report)"></div>
       <div v-else class="empty-hint">报告尚未生成</div>
     </el-drawer>
   </div>
@@ -74,6 +74,7 @@
 import { ref, reactive, watch, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import api from '../../../api'
+import { sanitizeHTML as sanitize } from '@/utils/sanitize'
 
 const rows = ref([])
 const total = ref(0)

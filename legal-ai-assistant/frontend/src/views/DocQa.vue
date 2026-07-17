@@ -67,7 +67,7 @@
                 </div>
                 <div class="message-content">
                   <div class="message-bubble">
-                    <div class="message-text" v-html="formatContent(msg.content)"></div>
+                    <div class="message-text" v-html="sanitize(formatContent(msg.content))"></div>
                     <div v-if="msg.citations?.length" class="message-citations">
                       <div class="citation-header">
                         <el-icon><Document /></el-icon>
@@ -264,6 +264,7 @@ import {
 import api from '../api'
 import { useKeyboardShortcuts, matchShortcut, isInputFocused } from '@/composables/useKeyboardShortcuts'
 import { useStats } from '@/composables/useStats'
+import { sanitizeHTML as sanitize } from '@/utils/sanitize'
 
 const router = useRouter()
 const route = useRoute()

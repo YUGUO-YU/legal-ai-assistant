@@ -104,7 +104,7 @@
               </div>
             </div>
 
-            <div class="section-content" v-html="formatContent(section.content)"></div>
+            <div class="section-content" v-html="sanitize(formatContent(section.content))"></div>
           </div>
 
           <div v-if="analysis.relatedLaws?.length" class="related-block">
@@ -146,7 +146,7 @@
   </el-dialog>
 </template>
 
-<script setup>
+ <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
@@ -159,6 +159,7 @@ import {
   Document,
   InfoFilled
 } from '@element-plus/icons-vue'
+import { sanitizeHTML as sanitize } from '@/utils/sanitize'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },

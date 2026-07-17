@@ -172,7 +172,7 @@ public class ContractService {
             case "BREACH_RESPONSIBILITY" -> "违约责任";
             case "DISPUTE_RESOLUTION" -> "争议解决";
             case "EXEMPTION_CLAUSE" -> "免责条款";
-            case "INTELLECTIAL_PROPERTY" -> "知识产权";
+            case "INTELLECTUAL_PROPERTY" -> "知识产权";
             case "PERSONAL_INFO" -> "个人信息";
             default -> code;
         };

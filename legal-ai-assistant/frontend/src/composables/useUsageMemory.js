@@ -78,6 +78,7 @@ export function useUsageMemory() {
   const isLoading = ref(false)
   const cleanedCount = ref(0)
   let userId = getUserId()
+  loadRecordsAsync()
 
   async function loadRecordsAsync() {
     isLoading.value = true
@@ -97,8 +98,6 @@ export function useUsageMemory() {
       isLoading.value = false
     }
   }
-
-  loadRecordsAsync()
 
   const expiredRecords = computed(() => {
     const now = Date.now()
