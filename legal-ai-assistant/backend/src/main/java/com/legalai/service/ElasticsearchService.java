@@ -112,8 +112,17 @@ public class ElasticsearchService {
                 item.setCategoryL2(doc.categoryL2);
                 item.setScore(hit.score() != null ? hit.score() : 0.0);
 
-                if (hit.highlight() != null && hit.highlight().containsKey("content")) {
-                    item.setHighlights(hit.highlight().get("content"));
+                if (hit.highlight() != null) {
+                    List<String> combinedHighlights = new ArrayList<>();
+                    if (hit.highlight().containsKey("content")) {
+                        combinedHighlights.addAll(hit.highlight().get("content"));
+                    }
+                    if (hit.highlight().containsKey("title")) {
+                        combinedHighlights.addAll(hit.highlight().get("title"));
+                    }
+                    if (!combinedHighlights.isEmpty()) {
+                        item.setHighlights(combinedHighlights);
+                    }
                 }
 
                 items.add(item);

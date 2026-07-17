@@ -25,22 +25,34 @@ public class AuthController {
     @Operation(summary = "用户注册", description = "注册新用户账号")
     @PostMapping("/register")
     public ApiResponse<Void> register(@RequestBody RegisterRequest request) {
-        authService.register(request);
-        return ApiResponse.success(null);
+        try {
+            authService.register(request);
+            return ApiResponse.success(null);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        }
     }
 
     @Operation(summary = "忘记密码", description = "发送密码重置验证码到用户邮箱")
     @PostMapping("/forgot-password")
     public ApiResponse<ForgotPasswordResponse> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        ForgotPasswordResponse response = authService.sendResetCode(request.getUsername());
-        return ApiResponse.success(response);
+        try {
+            ForgotPasswordResponse response = authService.sendResetCode(request.getUsername());
+            return ApiResponse.success(response);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        }
     }
 
     @Operation(summary = "重置密码", description = "使用验证码重置用户密码")
     @PostMapping("/reset-password")
     public ApiResponse<Void> resetPassword(@RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request);
-        return ApiResponse.success(null);
+        try {
+            authService.resetPassword(request);
+            return ApiResponse.success(null);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        }
     }
 
     @Operation(summary = "修改密码", description = "已登录用户修改自己的密码")
@@ -51,8 +63,12 @@ public class AuthController {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             authHeader = authHeader.substring(7);
         }
-        authService.changePassword(authHeader, request.getOldPassword(), request.getNewPassword());
-        return ApiResponse.success(null);
+        try {
+            authService.changePassword(authHeader, request.getOldPassword(), request.getNewPassword());
+            return ApiResponse.success(null);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        }
     }
 
     @Operation(summary = "更新个人资料", description = "已登录用户更新个人资料信息")
@@ -63,8 +79,12 @@ public class AuthController {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             authHeader = authHeader.substring(7);
         }
-        authService.updateProfile(authHeader, request.getRealName(), request.getEmail(), request.getPhone(), request.getBio());
-        return ApiResponse.success(null);
+        try {
+            authService.updateProfile(authHeader, request.getRealName(), request.getEmail(), request.getPhone(), request.getBio());
+            return ApiResponse.success(null);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        }
     }
 
     @Operation(summary = "管理员登录", description = "后台管理员登录系统")
@@ -82,16 +102,24 @@ public class AuthController {
         }
         request.setIp(ip);
         request.setLoginType("admin");
-        LoginResponse response = authService.adminLogin(request);
-        return ApiResponse.success(response);
+        try {
+            LoginResponse response = authService.adminLogin(request);
+            return ApiResponse.success(response);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(401, e.getMessage());
+        }
     }
 
     @Operation(summary = "强制用户下线", description = "管理员强制指定用户下线所有会话")
     @PostMapping("/admin/force-logout/{userId}")
     public ApiResponse<Map<String, Object>> adminForceLogout(
             @Parameter(description = "用户ID") @PathVariable Long userId) {
-        int count = authService.forceLogoutUser(userId);
-        return ApiResponse.success(Map.of("ok", true, "message", "已强制下线 " + count + " 个会话"));
+        try {
+            int count = authService.forceLogoutUser(userId);
+            return ApiResponse.success(Map.of("ok", true, "message", "已强制下线 " + count + " 个会话"));
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        }
     }
 
     @Operation(summary = "账号锁定状态", description = "查询指定用户账号的锁定状态")
@@ -117,8 +145,12 @@ public class AuthController {
     @Operation(summary = "刷新Token", description = "使用刷新令牌获取新的访问令牌")
     @PostMapping("/refresh")
     public ApiResponse<LoginResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
-        LoginResponse response = authService.refreshToken(request.getRefreshToken());
-        return ApiResponse.success(response);
+        try {
+            LoginResponse response = authService.refreshToken(request.getRefreshToken());
+            return ApiResponse.success(response);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(401, e.getMessage());
+        }
     }
 
     @Operation(summary = "用户登出", description = "使当前访问令牌失效")
@@ -128,8 +160,12 @@ public class AuthController {
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
         }
-        authService.logout(token);
-        return ApiResponse.success(null);
+        try {
+            authService.logout(token);
+            return ApiResponse.success(null);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(400, e.getMessage());
+        }
     }
 
     @Operation(summary = "获取用户信息", description = "获取当前登录用户的详细信息")
@@ -139,7 +175,11 @@ public class AuthController {
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
         }
-        LoginResponse.UserInfo userInfo = authService.getUserInfo(token);
-        return ApiResponse.success(userInfo);
+        try {
+            LoginResponse.UserInfo userInfo = authService.getUserInfo(token);
+            return ApiResponse.success(userInfo);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(401, e.getMessage());
+        }
     }
 }

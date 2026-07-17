@@ -110,7 +110,7 @@ const loadStats = async () => {
       stats.value = res || {}
     }
   } catch (e) {
-    console.error('加载统计失败', e)
+    ElMessage.error('加载统计失败')
   }
 }
 
@@ -121,7 +121,7 @@ const loadKbList = async () => {
       kbList.value = res?.list || []
     }
   } catch (e) {
-    console.error('加载知识库列表失败', e)
+    ElMessage.error('加载知识库列表失败')
   }
 }
 

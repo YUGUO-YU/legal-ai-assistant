@@ -125,11 +125,7 @@ public class AuthService {
 
         String dbPassword = (String) user.get("password");
         if (dbPassword == null || !passwordMatches(request.getPassword(), dbPassword)) {
-            String computed = DigestUtils.sha256Hex(request.getPassword().getBytes(StandardCharsets.UTF_8));
-            log.warn("用户密码错误: username={}, storedHashPrefix={}, computedHashPrefix={}",
-                    request.getUsername(),
-                    dbPassword == null ? "null" : dbPassword.substring(0, Math.min(16, dbPassword.length())),
-                    computed.substring(0, 16));
+            log.warn("用户密码错误: username={}", request.getUsername());
             throw new RuntimeException("账号或密码错误");
         }
 
@@ -204,11 +200,7 @@ public class AuthService {
         String dbPassword = (String) user.get("password");
         if (dbPassword == null || !passwordMatches(request.getPassword(), dbPassword)) {
             recordLoginFailure(request.getUsername());
-            String computed = DigestUtils.sha256Hex(request.getPassword().getBytes(StandardCharsets.UTF_8));
-            log.warn("管理员密码错误: username={}, storedHashPrefix={}, computedHashPrefix={}",
-                    request.getUsername(),
-                    dbPassword == null ? "null" : dbPassword.substring(0, Math.min(16, dbPassword.length())),
-                    computed.substring(0, 16));
+            log.warn("管理员密码错误: username={}", request.getUsername());
             if (isAccountLocked(request.getUsername())) {
                 throw new RuntimeException("连续" + MAX_LOGIN_FAILURES + "次登录失败，账号已锁定5分钟");
             }
