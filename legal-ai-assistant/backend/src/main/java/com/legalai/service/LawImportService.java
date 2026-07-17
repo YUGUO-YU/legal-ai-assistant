@@ -1,6 +1,6 @@
 package com.legalai.service;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.dto.LawImportJob;
@@ -12,6 +12,10 @@ import com.legalai.model.LawDocumentCategory;
 import com.legalai.repository.LawArticleMapper;
 import com.legalai.repository.LawDocumentMapper;
 import com.legalai.repository.LawDocumentCategoryMapper;
+import com.legalai.repository.LawCategoryMapper;
+import com.legalai.repository.LawCategoryTypeMapper;
+import com.legalai.model.LawCategory;
+import com.legalai.model.LawCategoryType;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
@@ -136,6 +140,12 @@ public class LawImportService {
 
     @Autowired
     private LawDocumentCategoryMapper lawDocumentCategoryMapper;
+
+    @Autowired
+    private LawCategoryMapper lawCategoryMapper;
+
+    @Autowired
+    private LawCategoryTypeMapper lawCategoryTypeMapper;
 
     @Autowired
     private ProgressNotificationService progressNotificationService;
@@ -391,10 +401,11 @@ public class LawImportService {
 
         if (preview.getSuggestedCategories() != null) {
             for (LawImportPreview.CategorySuggestion cs : preview.getSuggestedCategories()) {
-                if (cs.getCategoryId() != null) {
+                Long categoryId = findOrCreateCategory(cs);
+                if (categoryId != null) {
                     LawDocumentCategory docCat = new LawDocumentCategory();
                     docCat.setLawId(doc.getId());
-                    docCat.setCategoryId(cs.getCategoryId());
+                    docCat.setCategoryId(categoryId);
                     lawDocumentCategoryMapper.insert(docCat);
                 }
             }
@@ -402,6 +413,45 @@ public class LawImportService {
 
         finishHistory(historyId, "success", totalArticles, inserted, 0, true, false, false, null, null);
         return loadJob(historyId);
+    }
+
+    private Long findOrCreateCategory(LawImportPreview.CategorySuggestion cs) {
+        if (cs.getCategoryName() == null || cs.getCategoryName().isBlank()) {
+            return null;
+        }
+        Long typeId = cs.getCategoryTypeId() != null ? cs.getCategoryTypeId() : 1L;
+
+        LambdaQueryWrapper<LawCategory> wrapper = new LambdaQueryWrapper<LawCategory>()
+                .eq(LawCategory::getCategoryTypeId, typeId)
+                .eq(LawCategory::getCategoryName, cs.getCategoryName().trim());
+        LawCategory existing = lawCategoryMapper.selectOne(wrapper);
+        if (existing != null) {
+            return existing.getId();
+        }
+
+        LawCategory newCat = new LawCategory();
+        newCat.setCategoryTypeId(typeId);
+        newCat.setCategoryName(cs.getCategoryName().trim());
+        newCat.setCategoryCode(generateCategoryCode(cs.getCategoryName().trim()));
+        newCat.setStatus(1);
+        newCat.setSortOrder(0);
+        lawCategoryMapper.insert(newCat);
+        log.info("Auto-created category: typeId={}, name={}, id={}", typeId, cs.getCategoryName(), newCat.getId());
+        return newCat.getId();
+    }
+
+    private String generateCategoryCode(String name) {
+        if (name == null || name.isBlank()) {
+            return "CUSTOM_" + System.currentTimeMillis();
+        }
+        String code = name.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9]", "")
+                .replaceAll("([A-Z])", "_$1")
+                .toUpperCase()
+                .trim();
+        if (code.startsWith("_")) {
+            code = code.substring(1);
+        }
+        return code.isEmpty() ? "CUSTOM_" + System.currentTimeMillis() : code;
     }
 
     private String extractTextFromFile(MultipartFile file) {
