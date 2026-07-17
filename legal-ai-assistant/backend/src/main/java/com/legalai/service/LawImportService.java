@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -143,9 +142,6 @@ public class LawImportService {
 
     @Autowired
     private DocumentParserService documentParserService;
-
-    @Value("${mock.enabled:false}")
-    private boolean mockEnabled;
 
     /**
      * 三入口之一：联网搜索导入。AI 拉取数据，结构化后入库。
@@ -648,10 +644,6 @@ public class LawImportService {
     }
 
     private boolean indexToMilvus(long lawId, ParsedLaw parsed) {
-        if (mockEnabled) {
-            log.info("[mock] 跳过 Milvus 写入");
-            return false;
-        }
         List<MilvusService.IndexableArticle> batch = new ArrayList<>();
         int batchSize = 10;
         for (ParsedArticle a : parsed.articles) {

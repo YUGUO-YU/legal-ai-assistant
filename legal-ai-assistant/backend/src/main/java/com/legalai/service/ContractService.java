@@ -6,20 +6,15 @@ import com.legalai.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class ContractService {
     private static final Logger log = LoggerFactory.getLogger(ContractService.class);
-
-    @Value("${mock.enabled:false}")
-    private boolean mockEnabled;
 
     @Autowired
     private AIService aiService;
@@ -38,22 +33,13 @@ public class ContractService {
         "PERSONAL_INFO", 7
     );
 
-    private static final Pattern PARTY_PATTERN = Pattern.compile("(甲方|乙方|出租方|承租方|买方|卖方|债权人|债务人)\\s*[：:]?\\s*(\\S+)");
-    private static final Pattern AMOUNT_PATTERN = Pattern.compile("(\\d+(?:,\\d{3})*(?:\\.\\d+)?)\\s*(?:元|万元|万)");
-    private static final Pattern DATE_PATTERN = Pattern.compile("(\\d{4})\\s*年\\s*(\\d{1,2})\\s*月\\s*(\\d{1,2})\\s*日");
-
     public ContractReviewResponse reviewContract(ContractReviewRequest request) {
         log.info("合同审查请求: contractType={}, contractName={}",
             request.getContractType(), request.getContractName());
 
         validateRequest(request);
 
-        ContractReviewResponse response;
-        if (mockEnabled) {
-            response = mockReviewContract(request);
-        } else {
-            response = aiReviewContract(request);
-        }
+        ContractReviewResponse response = aiReviewContract(request);
         response.setCreatedAt(System.currentTimeMillis());
         reviewStore.save(response);
         return response;
@@ -76,42 +62,6 @@ public class ContractService {
         }
     }
 
-    private ContractReviewResponse mockReviewContract(ContractReviewRequest request) {
-        String contractText = request.getContractText();
-
-        Map<String, Integer> dimensionScores = analyzeContractDimensions(contractText, request.getContractType());
-
-        List<ContractReviewResponse.DimensionReview> dimensions = buildDimensionReviews(dimensionScores);
-
-        List<ContractReviewResponse.RiskItem> riskItems = identifyRiskItems(contractText, dimensionScores);
-
-        List<ContractReviewResponse.RiskItem> highRiskItems = riskItems.stream()
-            .filter(r -> "HIGH".equals(r.getLevel()))
-            .collect(Collectors.toList());
-        List<ContractReviewResponse.RiskItem> mediumRiskItems = riskItems.stream()
-            .filter(r -> "MEDIUM".equals(r.getLevel()))
-            .collect(Collectors.toList());
-        List<ContractReviewResponse.RiskItem> lowRiskItems = riskItems.stream()
-            .filter(r -> "LOW".equals(r.getLevel()))
-            .collect(Collectors.toList());
-
-        int totalScore = calculateTotalScore(dimensionScores);
-        String riskLevel = determineRiskLevel(totalScore);
-
-        ContractReviewResponse response = new ContractReviewResponse();
-        response.setContractName(request.getContractName());
-        response.setContractType(request.getContractType());
-        response.setTotalScore(totalScore);
-        response.setRiskLevel(riskLevel);
-        response.setDimensions(dimensions);
-        response.setHighRiskItems(highRiskItems);
-        response.setMediumRiskItems(mediumRiskItems);
-        response.setLowRiskItems(lowRiskItems);
-        response.setOverallComment(generateOverallComment(totalScore, riskItems));
-
-        return response;
-    }
-
     private ContractReviewResponse aiReviewContract(ContractReviewRequest request) {
         log.info("调用MiniMax AI进行合同审查...");
 
@@ -122,7 +72,7 @@ public class ContractService {
             return parseAIResponse(aiResponse, request);
         } catch (IOException e) {
             log.error("AI合同审查失败: {}", e.getMessage());
-            return mockReviewContract(request);
+            throw new IllegalStateException("AI合同审查服务不可用，请稍后重试", e);
         }
     }
 
@@ -192,7 +142,7 @@ public class ContractService {
 
         } catch (Exception e) {
             log.error("解析AI响应失败: {}", e.getMessage());
-            return mockReviewContract(request);
+            throw new IllegalStateException("AI响应格式解析失败，请稍后重试", e);
         }
 
         return response;
@@ -214,207 +164,6 @@ public class ContractService {
         return items;
     }
 
-    private Map<String, Integer> analyzeContractDimensions(String text, String contractType) {
-        Map<String, Integer> scores = new HashMap<>();
-
-        scores.put("SUBJECT_QUALIFICATION", analyzeSubjectQualification(text));
-        scores.put("CONTRACT_VALIDITY", analyzeContractValidity(text));
-        scores.put("RIGHTS_OBLIGATIONS", analyzeRightsObligations(text));
-        scores.put("BREACH_RESPONSIBILITY", analyzeBreachResponsibility(text));
-        scores.put("DISPUTE_RESOLUTION", analyzeDisputeResolution(text));
-        scores.put("EXEMPTION_CLAUSE", analyzeExemptionClause(text));
-        scores.put("INTELLECTUAL_PROPERTY", analyzeIntellectualProperty(text));
-        scores.put("PERSONAL_INFO", analyzePersonalInfo(text));
-
-        return scores;
-    }
-
-    private int analyzeSubjectQualification(String text) {
-        var partyMatcher = PARTY_PATTERN.matcher(text);
-        int partyCount = 0;
-        while (partyMatcher.find()) {
-            partyCount++;
-        }
-
-        int score = 70;
-        if (partyCount >= 2) {
-            score = 85;
-        }
-        if (text.contains("法定代表人") || text.contains("授权代表")) {
-            score += 5;
-        }
-        if (text.contains("营业执照") || text.contains("统一社会信用代码")) {
-            score += 5;
-        }
-        if (text.contains("无民事行为能力") || text.contains("限制民事行为能力")) {
-            score -= 20;
-        }
-        return Math.min(score, 95);
-    }
-
-    private int analyzeContractValidity(String text) {
-        boolean hasAmount = AMOUNT_PATTERN.matcher(text).find();
-        boolean hasDate = DATE_PATTERN.matcher(text).find();
-        boolean hasPurpose = text.contains("为了") || text.contains("鉴于");
-        boolean hasSignature = text.contains("签章") || text.contains("签字") || text.contains("盖章");
-
-        int score = 70;
-        if (hasAmount) score += 8;
-        if (hasDate) score += 8;
-        if (hasPurpose) score += 5;
-        if (hasSignature) score += 5;
-        if (text.contains("无效") || text.contains("撤销")) {
-            score -= 25;
-        }
-        return Math.min(score, 95);
-    }
-
-    private int analyzeRightsObligations(String text) {
-        int score = 65;
-
-        if (text.contains("权利") && text.contains("义务")) {
-            score += 10;
-        }
-        if (text.contains("甲方") && text.contains("乙方")) {
-            score += 5;
-        }
-        long rightCount = text.chars().filter(c -> "权".equals(String.valueOf((char) c))).count();
-        long obligationCount = text.chars().filter(c -> "义".equals(String.valueOf((char) c))).count();
-        if (rightCount > 2 && obligationCount > 2) {
-            score += 10;
-        }
-        if (text.contains("保密") || text.contains("竞业限制")) {
-            score += 5;
-        }
-        return Math.min(score, 90);
-    }
-
-    private int analyzeBreachResponsibility(String text) {
-        int score = 65;
-
-        if (text.contains("违约金")) {
-            if (text.contains("1倍") || text.contains("2倍") || text.contains("LPR")) {
-                score += 15;
-            } else if (text.contains("3倍") || text.contains("4倍") || text.contains("日万分之")) {
-                score -= 15;
-            } else {
-                score += 5;
-            }
-        }
-        if (text.contains("损失赔偿")) {
-            score += 10;
-        }
-        if (text.contains("继续履行")) {
-            score += 5;
-        }
-        if (text.contains("定金") && !text.contains("违约金")) {
-            score += 5;
-        }
-        if (text.contains("免责") || text.contains("不承担")) {
-            score -= 10;
-        }
-        return Math.min(Math.max(score, 0), 100);
-    }
-
-    private int analyzeDisputeResolution(String text) {
-        int score = 70;
-
-        if (text.contains("仲裁")) {
-            score += 15;
-        } else if (text.contains("起诉") || text.contains("诉讼")) {
-            score += 8;
-        }
-        if (text.contains("管辖")) {
-            score += 8;
-        }
-        if (text.contains("仲裁委员会")) {
-            score += 5;
-        }
-        if (text.contains("专属管辖")) {
-            score += 5;
-        }
-        if (text.contains("不可仲裁") || text.contains("排除管辖")) {
-            score -= 15;
-        }
-        return Math.min(score, 95);
-    }
-
-    private int analyzeExemptionClause(String text) {
-        int score = 75;
-
-        if (text.contains("不可抗力")) {
-            score += 12;
-        }
-        if (text.contains("免责")) {
-            score += 8;
-        }
-        if (text.contains("不承担") && !text.contains("责任")) {
-            score -= 10;
-        }
-        if (text.contains("全部免责") || text.contains("完全免责")) {
-            score -= 15;
-        }
-        if (text.contains("部分免责")) {
-            score += 5;
-        }
-        return Math.min(score, 95);
-    }
-
-    private int analyzeIntellectualProperty(String text) {
-        int score = 80;
-
-        if (text.contains("知识产权") || text.contains("专利") || text.contains("商标")) {
-            score += 10;
-        }
-        if (text.contains("著作权") || text.contains("版权")) {
-            score += 5;
-        }
-        if (text.contains("技术秘密") || text.contains("商业秘密")) {
-            score += 5;
-        }
-        if (text.contains("共有") || text.contains("共享")) {
-            score -= 5;
-        }
-        if (text.contains("转让") && text.contains("知识产权")) {
-            score += 5;
-        }
-        return Math.min(score, 98);
-    }
-
-    private int analyzePersonalInfo(String text) {
-        int score = 80;
-
-        if (text.contains("个人信息") || text.contains("隐私")) {
-            score += 10;
-        }
-        if (text.contains("GDPR") || text.contains("《个人信息保护法》")) {
-            score += 5;
-        }
-        if (text.contains("收集") && text.contains("同意")) {
-            score += 5;
-        }
-        if (text.contains("泄露") || text.contains("篡改") || text.contains("非法提供")) {
-            score -= 15;
-        }
-        if (text.contains("加密") || text.contains("匿名化")) {
-            score += 5;
-        }
-        return Math.min(score, 95);
-    }
-
-    private List<ContractReviewResponse.DimensionReview> buildDimensionReviews(Map<String, Integer> scores) {
-        return scores.entrySet().stream()
-            .map(entry -> {
-                ContractReviewResponse.DimensionReview dim = new ContractReviewResponse.DimensionReview();
-                dim.setDimensionCode(entry.getKey());
-                dim.setDimensionName(getDimensionName(entry.getKey()));
-                dim.setScore(entry.getValue());
-                dim.setComment(getDimensionComment(entry.getKey(), entry.getValue()));
-                return dim;
-            })
-            .collect(Collectors.toList());
-    }
-
     private String getDimensionName(String code) {
         return switch (code) {
             case "SUBJECT_QUALIFICATION" -> "主体资格";
@@ -423,104 +172,10 @@ public class ContractService {
             case "BREACH_RESPONSIBILITY" -> "违约责任";
             case "DISPUTE_RESOLUTION" -> "争议解决";
             case "EXEMPTION_CLAUSE" -> "免责条款";
-            case "INTELLECTUAL_PROPERTY" -> "知识产权";
+            case "INTELLECTIAL_PROPERTY" -> "知识产权";
             case "PERSONAL_INFO" -> "个人信息";
             default -> code;
         };
-    }
-
-    private String getDimensionComment(String code, int score) {
-        if (score >= 80) {
-            return "该维度条款约定合理，风险较低";
-        } else if (score >= 60) {
-            return "该维度存在一定风险，建议优化";
-        } else {
-            return "该维度风险较高，建议重点关注";
-        }
-    }
-
-    private List<ContractReviewResponse.RiskItem> identifyRiskItems(String text, Map<String, Integer> scores) {
-        List<ContractReviewResponse.RiskItem> items = new ArrayList<>();
-
-        if (scores.getOrDefault("BREACH_RESPONSIBILITY", 0) < 70) {
-            if (text.contains("违约金") && !text.contains("LPR") && !text.contains("1倍") && !text.contains("2倍")) {
-                items.add(createRiskItem("HIGH", "违约责任", "违约金约定不规范",
-                    "违约金约定可能超出法定标准，存在被法院调整的风险",
-                    "建议将违约金约定为不超实际损失30%或按LPR的1-4倍计算"));
-            }
-        }
-
-        if (scores.getOrDefault("RIGHTS_OBLIGATIONS", 0) < 65) {
-            items.add(createRiskItem("MEDIUM", "权利义务", "付款条件约定模糊",
-                "付款条件和时间节点不够明确，可能导致争议",
-                "建议明确付款条件、付款方式和付款时间节点"));
-        }
-
-        if (scores.getOrDefault("CONTRACT_VALIDITY", 0) < 70) {
-            items.add(createRiskItem("MEDIUM", "合同效力", "合同生效条件不明确",
-                "合同生效条件约定不够清晰",
-                "建议明确合同生效的时间和条件"));
-        }
-
-        if (scores.getOrDefault("DISPUTE_RESOLUTION", 0) < 70) {
-            items.add(createRiskItem("LOW", "争议解决", "争议解决条款待完善",
-                "争议解决方式约定不够具体",
-                "建议明确争议解决方式（诉讼/仲裁）和管辖法院"));
-        }
-
-        return items;
-    }
-
-    private ContractReviewResponse.RiskItem createRiskItem(String level, String dim, String title, String desc, String suggestion) {
-        ContractReviewResponse.RiskItem item = new ContractReviewResponse.RiskItem();
-        item.setLevel(level);
-        item.setDimension(dim);
-        item.setTitle(title);
-        item.setDescription(desc);
-        item.setSuggestion(suggestion);
-        return item;
-    }
-
-    private int calculateTotalScore(Map<String, Integer> scores) {
-        int weightedSum = 0;
-        int totalWeight = 0;
-
-        for (Map.Entry<String, Integer> entry : scores.entrySet()) {
-            int weight = DIMENSION_WEIGHTS.getOrDefault(entry.getKey(), 10);
-            weightedSum += entry.getValue() * weight;
-            totalWeight += weight;
-        }
-
-        return totalWeight > 0 ? weightedSum / totalWeight : 0;
-    }
-
-    private String determineRiskLevel(int score) {
-        if (score >= 80) {
-            return "LOW";
-        } else if (score >= 60) {
-            return "MEDIUM";
-        } else {
-            return "HIGH";
-        }
-    }
-
-    private String generateOverallComment(int score, List<ContractReviewResponse.RiskItem> risks) {
-        StringBuilder sb = new StringBuilder();
-
-        if (score >= 80) {
-            sb.append("合同整体质量良好，风险较低。");
-        } else if (score >= 60) {
-            sb.append("合同整体结构基本完整，但存在部分条款需要优化。");
-        } else {
-            sb.append("合同存在较多风险点，建议进行全面修订。");
-        }
-
-        long highRiskCount = risks.stream().filter(r -> "HIGH".equals(r.getLevel())).count();
-        if (highRiskCount > 0) {
-            sb.append("其中").append(highRiskCount).append("项高风险需要重点关注。");
-        }
-
-        return sb.toString();
     }
 
     public List<Map<String, String>> getDimensions() {

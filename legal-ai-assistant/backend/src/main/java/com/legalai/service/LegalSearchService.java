@@ -8,7 +8,6 @@ import com.legalai.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -20,9 +19,6 @@ import java.util.stream.Collectors;
 @Service
 public class LegalSearchService {
     private static final Logger log = LoggerFactory.getLogger(LegalSearchService.class);
-
-    @Value("${mock.enabled:false}")
-    private boolean mockEnabled;
 
     private final ElasticsearchService elasticsearchService;
     private final MilvusService milvusService;
@@ -95,12 +91,7 @@ public class LegalSearchService {
             return cached;
         }
 
-        LegalSearchResponse response;
-        if (mockEnabled) {
-            response = mockSearch(request);
-        } else {
-            response = hybridSearch(request);
-        }
+        LegalSearchResponse response = hybridSearch(request);
 
         if (request.getPage() == 1) {
             cacheService.cacheSearchResults(request.getQuery(), response);
@@ -179,7 +170,7 @@ public class LegalSearchService {
             return parseAISearchResponse(aiResponse, request);
         } catch (Exception e) {
             log.error("AI生成检索结果失败: {}", e.getMessage());
-            return mockSearch(request).getItems();
+            throw new IllegalStateException("AI生成检索结果失败，且无法回退到Mock数据，请检查服务配置", e);
         }
     }
 
@@ -240,7 +231,7 @@ public class LegalSearchService {
         }
 
         if (items.isEmpty()) {
-            items = mockSearch(request).getItems();
+            throw new IllegalStateException("AI检索响应解析失败且无有效结果，无法回退到Mock数据");
         }
 
         return items;
@@ -404,84 +395,6 @@ public class LegalSearchService {
         return null;
     }
 
-    private LegalSearchResponse mockSearch(LegalSearchRequest request) {
-        List<LegalSearchResponse.SearchResultItem> items = new ArrayList<>();
-        String query = request.getQuery() != null ? request.getQuery().toLowerCase() : "";
-
-        List<Map<String, String>> mockLaws = List.of(
-            Map.of("articleId", "ART-2023-001", "lawTitle", "中华人民共和国民法典", "articleNo", "第一百四十八条",
-                "title", "欺诈的认定", "content", "一方以欺诈手段，使对方在违背真实意思的情况下订立的合同，受欺诈方有权请求人民法院或者仲裁机构予以撤销。",
-                "categoryL1", "法律", "categoryL2", "民法"),
-            Map.of("articleId", "ART-2023-002", "lawTitle", "中华人民共和国民法典", "articleNo", "第一百四十九条",
-                "title", "第三人欺诈", "content", "第三人实施欺诈行为，使一方陷入错误认识的，适用欺诈规定。",
-                "categoryL1", "法律", "categoryL2", "民法"),
-            Map.of("articleId", "ART-2023-003", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百六十三条",
-                "title", "合同解除情形", "content", "有下列情形之一的，当事人可以解除合同：（一）因不可抗力致使不能实现合同目的；（二）履行期限届满前，当事人一方明确表示或者以自己的行为表明不履行主要债务。",
-                "categoryL1", "法律", "categoryL2", "民法"),
-            Map.of("articleId", "ART-2023-004", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百七十七条",
-                "title", "违约责任", "content", "当事人一方不履行合同义务或者履行合同义务不符合约定的，应当承担违约责任。",
-                "categoryL1", "法律", "categoryL2", "民法"),
-            Map.of("articleId", "ART-2023-005", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百八十四条",
-                "title", "损失赔偿范围", "content", "当事人一方不履行合同义务或者履行合同义务不符合约定的，给对方造成损失的，损失赔偿额应当相当于因违约所造成的损失，包括合同履行后可以获得的利益。",
-                "categoryL1", "法律", "categoryL2", "民法"),
-            Map.of("articleId", "ART-2023-006", "lawTitle", "中华人民共和国劳动合同法", "articleNo", "第三十九条",
-                "title", "用人单位单方解除劳动合同", "content", "劳动者有下列情形之一的，用人单位可以解除劳动合同：（一）在试用期间被证明不符合录用条件的；（二）严重违反用人单位的规章制度的。",
-                "categoryL1", "法律", "categoryL2", "劳动法"),
-            Map.of("articleId", "ART-2023-007", "lawTitle", "中华人民共和国劳动合同法", "articleNo", "第四十六条",
-                "title", "经济补偿", "content", "有下列情形之一的，用人单位应当向劳动者支付经济补偿：（一）劳动者依照本法第三十八条规定解除劳动合同的。",
-                "categoryL1", "法律", "categoryL2", "劳动法"),
-            Map.of("articleId", "ART-2023-008", "lawTitle", "最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）", "articleNo", "第十条",
-                "title", "工程价款结算", "content", "当事人对建设工程的计价标准或者计价方法有约定的，按照约定结算工程价款。",
-                "categoryL1", "司法解释", "categoryL2", "建设工程")
-        );
-
-        int count = 0;
-        for (Map<String, String> law : mockLaws) {
-            if (count >= request.getPageSize()) break;
-
-            String content = law.get("content").toLowerCase();
-            String title = law.get("title").toLowerCase();
-            String lawTitle = law.get("lawTitle").toLowerCase();
-
-            if (query.isEmpty() || content.contains(query) || title.contains(query) ||
-                lawTitle.contains(query) || matchQueryWithSynonyms(query, content, title, lawTitle)) {
-
-                LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
-                item.setArticleId(law.get("articleId"));
-                item.setLawId("LAW-2023-001");
-                item.setLawTitle(law.get("lawTitle"));
-                item.setArticleNo(law.get("articleNo"));
-                item.setTitle(law.get("title"));
-                item.setContent(law.get("content"));
-                item.setHighlights(List.of("<em>" + highlightKeyword(request.getQuery()) + "</em>"));
-                item.setSourceUrl("https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3YWIzYzIyYzA2M2I=");
-                item.setSourceName("国家法律法规信息库");
-                item.setScore(18.56 - count * 2.0);
-                item.setRelatedCasesCount(new Random().nextInt(10));
-                item.setCategoryL1(law.get("categoryL1"));
-                item.setCategoryL2(law.get("categoryL2"));
-                items.add(item);
-                count++;
-            }
-        }
-
-        List<LegalSearchResponse.RelatedCase> relatedCases = new ArrayList<>();
-        if (Boolean.TRUE.equals(request.getIncludeCases()) && !items.isEmpty()) {
-            relatedCases = generateRelatedCases(items.get(0).getTitle());
-        }
-
-        normalizeScores(items);
-
-        LegalSearchResponse response = new LegalSearchResponse();
-        response.setTotal((long) items.size());
-        response.setPage(request.getPage());
-        response.setPageSize(request.getPageSize());
-        response.setTookMs(45L);
-        response.setItems(items);
-        response.setRelatedCases(relatedCases);
-        return response;
-    }
-
     private boolean matchQueryWithSynonyms(String query, String content, String title, String lawTitle) {
         for (Map.Entry<String, List<String>> entry : SYNONYMS.entrySet()) {
             if (query.contains(entry.getKey())) {
@@ -493,12 +406,6 @@ public class LegalSearchService {
             }
         }
         return false;
-    }
-
-    private String highlightKeyword(String query) {
-        if (query == null || query.isEmpty()) return "法律";
-        String[] words = query.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9]", " ").split("\\s+");
-        return words.length > 0 ? words[0] : "法律";
     }
 
     private List<LegalSearchResponse.RelatedCase> generateRelatedCases(String topic) {
@@ -575,29 +482,11 @@ public class LegalSearchService {
     public LegalSearchResponse.SearchResultItem getArticleDetail(String articleId) {
         log.info("获取法规详情: articleId={}", articleId);
 
-        if (mockEnabled) {
-            for (Map<String, String> law : getMockLaws()) {
-                if (law.get("articleId").equals(articleId)) {
-                    LegalSearchResponse.SearchResultItem item = new LegalSearchResponse.SearchResultItem();
-                    item.setArticleId(law.get("articleId"));
-                    item.setLawId("LAW-2023-001");
-                    item.setLawTitle(law.get("lawTitle"));
-                    item.setArticleNo(law.get("articleNo"));
-                    item.setTitle(law.get("title"));
-                    item.setContent(law.get("content"));
-                    item.setSourceUrl("https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3YWIzYzIyYzA2M2I=");
-                    item.setSourceName("国家法律法规信息库");
-                    return item;
-                }
-            }
-            return null;
-        }
-
         if (esConfig.isEnabled() && elasticsearchService.isAvailable()) {
             return elasticsearchService.getArticleById(articleId);
         }
 
-        return null;
+        throw new IllegalStateException("Elasticsearch服务不可用，无法获取法规详情");
     }
 
     public void submitFeedback(SearchFeedbackRequest request) {
@@ -626,27 +515,6 @@ public class LegalSearchService {
                     request.getIsHelpful() == 1 ? "有用" : "无用",
                     request.getUserComment());
         }
-    }
-
-    private List<Map<String, String>> getMockLaws() {
-        return List.of(
-            Map.of("articleId", "ART-2023-001", "lawTitle", "中华人民共和国民法典", "articleNo", "第一百四十八条",
-                "title", "欺诈的认定", "content", "一方以欺诈手段，使对方在违背真实意思的情况下订立的合同，受欺诈方有权请求人民法院或者仲裁机构予以撤销。"),
-            Map.of("articleId", "ART-2023-002", "lawTitle", "中华人民共和国民法典", "articleNo", "第一百四十九条",
-                "title", "第三人欺诈", "content", "第三人实施欺诈行为，使一方陷入错误认识的，适用欺诈规定。"),
-            Map.of("articleId", "ART-2023-003", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百六十三条",
-                "title", "合同解除情形", "content", "有下列情形之一的，当事人可以解除合同。"),
-            Map.of("articleId", "ART-2023-004", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百七十七条",
-                "title", "违约责任", "content", "当事人一方不履行合同义务或者履行合同义务不符合约定的，应当承担违约责任。"),
-            Map.of("articleId", "ART-2023-005", "lawTitle", "中华人民共和国民法典", "articleNo", "第五百八十四条",
-                "title", "损失赔偿范围", "content", "当事人一方不履行合同义务或者履行合同义务不符合约定的，给对方造成损失的，损失赔偿额应当相当于因违约所造成的损失。"),
-            Map.of("articleId", "ART-2023-006", "lawTitle", "中华人民共和国劳动合同法", "articleNo", "第三十九条",
-                "title", "用人单位单方解除劳动合同", "content", "劳动者有下列情形之一的，用人单位可以解除劳动合同。"),
-            Map.of("articleId", "ART-2023-007", "lawTitle", "中华人民共和国劳动合同法", "articleNo", "第四十六条",
-                "title", "经济补偿", "content", "有下列情形之一的，用人单位应当向劳动者支付经济补偿。"),
-            Map.of("articleId", "ART-2023-008", "lawTitle", "最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）", "articleNo", "第十条",
-                "title", "工程价款结算", "content", "当事人对建设工程的计价标准或者计价方法有约定的，按照约定结算工程价款。")
-        );
     }
 
     public boolean isHallucinated(String claim, List<LegalSearchResponse.SearchResultItem> citations) {

@@ -6,7 +6,6 @@ import com.legalai.dto.LegalSearchResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,9 +15,6 @@ import java.util.Map;
 public class DataImportService {
 
     private static final Logger log = LoggerFactory.getLogger(DataImportService.class);
-
-    @Value("${mock.enabled:false}")
-    private boolean mockEnabled;
 
     @Autowired
     private ElasticsearchService elasticsearchService;
@@ -36,15 +32,11 @@ public class DataImportService {
     private MilvusConfig milvusConfig;
 
     public String importCivilLaw() {
-        if (mockEnabled) {
-            return "Mock模式，跳过数据导入";
-        }
-
         log.info("开始导入民法典数据...");
 
         try {
             if (!esConfig.isEnabled()) {
-                return "Elasticsearch未启用，跳过导入";
+                throw new IllegalStateException("Elasticsearch未启用，无法导入民法典数据");
             }
 
             int count = 0;
@@ -67,15 +59,11 @@ public class DataImportService {
     }
 
     public String importLaborLaw() {
-        if (mockEnabled) {
-            return "Mock模式，跳过数据导入";
-        }
-
         log.info("开始导入劳动法相关数据...");
 
         try {
             if (!esConfig.isEnabled()) {
-                return "Elasticsearch未启用，跳过导入";
+                throw new IllegalStateException("Elasticsearch未启用，无法导入劳动法数据");
             }
 
             int count = 0;
@@ -94,15 +82,11 @@ public class DataImportService {
     }
 
     public String importConstructionLaw() {
-        if (mockEnabled) {
-            return "Mock模式，跳过数据导入";
-        }
-
         log.info("开始导入建设工程司法解释...");
 
         try {
             if (!esConfig.isEnabled()) {
-                return "Elasticsearch未启用，跳过导入";
+                throw new IllegalStateException("Elasticsearch未启用，无法导入建设工程司法解释");
             }
 
             int count = 0;
@@ -121,15 +105,11 @@ public class DataImportService {
     }
 
     public String vectorizeAllArticles() {
-        if (mockEnabled) {
-            return "Mock模式，跳过向量化";
-        }
-
         log.info("开始向量化所有法规条文...");
 
         try {
             if (!milvusConfig.isEnabled()) {
-                return "Milvus未启用，跳过向量化";
+                throw new IllegalStateException("Milvus未启用，无法向量化法规条文");
             }
 
             int count = 0;

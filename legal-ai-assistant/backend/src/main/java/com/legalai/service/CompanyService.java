@@ -21,9 +21,6 @@ import java.util.concurrent.TimeUnit;
 public class CompanyService {
     private static final Logger log = LoggerFactory.getLogger(CompanyService.class);
 
-    @Value("${mock.enabled:false}")
-    private boolean mockEnabled;
-
     @Autowired
     private AIService aiService;
 
@@ -35,12 +32,7 @@ public class CompanyService {
 
         validateRequest(request);
 
-        CompanyQueryResponse response;
-        if (mockEnabled) {
-            response = mockQueryCompany(request);
-        } else {
-            response = realQueryCompany(request);
-        }
+        CompanyQueryResponse response = realQueryCompany(request);
         queryStore.save(response);
         return response;
     }
@@ -60,140 +52,6 @@ public class CompanyService {
         if (request.getCompanyName().length() > 200) {
             throw new IllegalArgumentException("企业名称长度不能超过200字");
         }
-    }
-
-    private CompanyQueryResponse mockQueryCompany(CompanyQueryRequest request) {
-        CompanyQueryResponse response = new CompanyQueryResponse();
-        String companyName = request.getCompanyName() != null ? request.getCompanyName() : "示例科技有限公司";
-
-        response.setCompanyName(companyName);
-        response.setUnifiedSocialCreditCode("91110000" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        response.setLegalRepresentative("模拟数据-张三");
-        response.setRegisteredCapital(new BigDecimal("1000"));
-        response.setBusinessStatus("存续（模拟数据）");
-        response.setRegistrationAuthority("北京市市场监督管理局（模拟）");
-        response.setEstablishDate("2020-01-15");
-        response.setDataSource("Mock数据 | 仅供参考");
-        response.setSearchSources(Collections.singletonList("模拟数据源"));
-
-        List<CompanyQueryResponse.ShareholderInfo> shareholders = new ArrayList<>();
-        shareholders.add(createShareholder("李四（模拟）", "500", "50%", "自然人股东"));
-        shareholders.add(createShareholder("王五（模拟）", "300", "30%", "自然人股东"));
-        shareholders.add(createShareholder("赵六（模拟）", "200", "20%", "自然人股东"));
-        response.setShareholders(shareholders);
-
-        List<CompanyQueryResponse.RiskWarning> warnings = new ArrayList<>();
-        warnings.add(createRiskWarning("LOW", "经营异常（模拟）", "暂无异常", "", 0));
-
-        if (Boolean.TRUE.equals(request.getEnableRiskWarning())) {
-            warnings.add(createRiskWarning("MEDIUM", "法律诉讼（模拟）", "涉及合同纠纷", "", 0));
-        }
-
-        response.setRiskWarnings(warnings);
-        response.setRiskLevel(calculateRiskLevel(warnings));
-
-        response.setEquityChain(buildMockEquityChain(companyName));
-        response.setRelatedCompanies(buildMockRelatedCompanies(companyName));
-        response.setBeneficialOwner(buildMockBeneficialOwner());
-        response.setBusinessAnalysis(buildMockBusinessAnalysis());
-        response.setSubscribed(false);
-
-        return response;
-    }
-
-    private List<CompanyQueryResponse.EquityChain> buildMockEquityChain(String companyName) {
-        List<CompanyQueryResponse.EquityChain> chain = new ArrayList<>();
-
-        CompanyQueryResponse.EquityChain level1 = new CompanyQueryResponse.EquityChain();
-        level1.setLevel(1);
-        level1.setCompanyName(companyName);
-        level1.setRatio("100%");
-        level1.setAmount(1000.0);
-        level1.setType("本公司");
-
-        List<CompanyQueryResponse.EquityChain> level2Children = new ArrayList<>();
-
-        CompanyQueryResponse.EquityChain level2_1 = new CompanyQueryResponse.EquityChain();
-        level2_1.setLevel(2);
-        level2_1.setCompanyName("李四（模拟）");
-        level2_1.setRatio("50%");
-        level2_1.setAmount(500.0);
-        level2_1.setType("自然人股东");
-        level2Children.add(level2_1);
-
-        CompanyQueryResponse.EquityChain level2_2 = new CompanyQueryResponse.EquityChain();
-        level2_2.setLevel(2);
-        level2_2.setCompanyName("王五（模拟）");
-        level2_2.setRatio("30%");
-        level2_2.setAmount(300.0);
-        level2_2.setType("自然人股东");
-        level2Children.add(level2_2);
-
-        level1.setChildren(level2Children);
-        chain.add(level1);
-
-        return chain;
-    }
-
-    private List<CompanyQueryResponse.RelatedCompany> buildMockRelatedCompanies(String companyName) {
-        List<CompanyQueryResponse.RelatedCompany> related = new ArrayList<>();
-
-        CompanyQueryResponse.RelatedCompany parent = new CompanyQueryResponse.RelatedCompany();
-        parent.setName(companyName + "母公司（模拟）");
-        parent.setRelation("母公司");
-        parent.setUnifiedSocialCreditCode("91110000PARENT01");
-        parent.setBusinessStatus("存续");
-        parent.setLegalRepresentative("模拟-张三");
-        related.add(parent);
-
-        CompanyQueryResponse.RelatedCompany subsidiary = new CompanyQueryResponse.RelatedCompany();
-        subsidiary.setName(companyName + "子公司A（模拟）");
-        subsidiary.setRelation("子公司");
-        subsidiary.setUnifiedSocialCreditCode("91110000SUB01");
-        subsidiary.setBusinessStatus("存续");
-        subsidiary.setLegalRepresentative("模拟-李四");
-        related.add(subsidiary);
-
-        CompanyQueryResponse.RelatedCompany sibling = new CompanyQueryResponse.RelatedCompany();
-        sibling.setName(companyName + "兄弟公司（模拟）");
-        sibling.setRelation("同一母公司");
-        sibling.setUnifiedSocialCreditCode("91110000SIB01");
-        sibling.setBusinessStatus("存续");
-        sibling.setLegalRepresentative("模拟-王五");
-        related.add(sibling);
-
-        return related;
-    }
-
-    private CompanyQueryResponse.BeneficialOwner buildMockBeneficialOwner() {
-        CompanyQueryResponse.BeneficialOwner owner = new CompanyQueryResponse.BeneficialOwner();
-        owner.setName("李四（模拟）");
-        owner.setType("自然人");
-        owner.setActualRatio(50.0);
-        owner.setNationality("中国");
-        return owner;
-    }
-
-    private CompanyQueryResponse.BusinessAnalysis buildMockBusinessAnalysis() {
-        CompanyQueryResponse.BusinessAnalysis analysis = new CompanyQueryResponse.BusinessAnalysis();
-        analysis.setEmployeeCount(50);
-        analysis.setEmployeeTrend("上升");
-        analysis.setPaidInCapital(new BigDecimal("800"));
-        analysis.setIndustry("科技推广和应用服务业");
-        analysis.setIndustryAvgRatio("高于平均水平");
-        analysis.setPatentCount(5);
-        analysis.setTrademarkCount(8);
-        analysis.setCopyrightCount(3);
-        analysis.setBusinessScope("技术开发、技术咨询、技术转让、技术服务；软件开发；计算机系统服务等");
-        analysis.setMainBusiness("AI法律科技服务");
-
-        List<CompanyQueryResponse.YearData> yearlyData = new ArrayList<>();
-        yearlyData.add(new CompanyQueryResponse.YearData(2024, new BigDecimal("1000"), 50, "稳步增长"));
-        yearlyData.add(new CompanyQueryResponse.YearData(2023, new BigDecimal("800"), 35, "快速增长"));
-        yearlyData.add(new CompanyQueryResponse.YearData(2022, new BigDecimal("500"), 20, "初步发展"));
-        analysis.setYearlyData(yearlyData);
-
-        return analysis;
     }
 
     private CompanyQueryResponse realQueryCompany(CompanyQueryRequest request) {
@@ -216,16 +74,17 @@ public class CompanyService {
             log.info("直接HTTP搜索完成，结果长度={}", searchResult != null ? searchResult.length() : 0);
         }
 
+        if (searchResult == null || searchResult.contains("未获取到") || searchResult.contains("搜索失败") || searchResult.isEmpty()) {
+            throw new IllegalStateException("企业信息查询失败：无法从网络获取有效数据，请稍后重试");
+        }
+
         try {
             String structurePrompt = buildStructurePrompt(request, searchResult);
             String aiResponse = aiService.chat(structurePrompt);
             return parseAIResponse(aiResponse, request);
         } catch (IOException e) {
             log.error("AI结构化失败: {}", e.getMessage());
-            if (searchResult != null && !searchResult.startsWith("未获取到") && !searchResult.contains("搜索失败")) {
-                return parseAIResponse("企业信息查询失败，但有搜索结果: " + searchResult, request);
-            }
-            return mockQueryCompany(request);
+            throw new IllegalStateException("企业信息查询失败：AI结构化处理异常，请稍后重试");
         }
     }
 
@@ -417,7 +276,7 @@ public class CompanyService {
         String jsonContent = extractJsonFromResponse(aiResponse);
         if (jsonContent == null || jsonContent.isEmpty()) {
             log.error("无法从AI响应中提取JSON内容");
-            return mockQueryCompany(request);
+            throw new IllegalStateException("企业信息查询失败：AI返回格式异常，请稍后重试");
         }
 
         try {
@@ -487,7 +346,7 @@ public class CompanyService {
 
         } catch (Exception e) {
             log.error("解析AI企业查询响应失败: {}", e.getMessage());
-            return mockQueryCompany(request);
+            throw new IllegalStateException("企业信息查询失败：解析AI响应异常，请稍后重试");
         }
     }
 
@@ -506,9 +365,6 @@ public class CompanyService {
             }
         } catch (Exception e) {
             log.debug("解析股权链失败: {}", e.getMessage());
-        }
-        if (chain.isEmpty()) {
-            return buildMockEquityChain(companyName);
         }
         return chain;
     }
@@ -530,9 +386,6 @@ public class CompanyService {
         } catch (Exception e) {
             log.debug("解析关联企业失败: {}", e.getMessage());
         }
-        if (related.isEmpty()) {
-            return buildMockRelatedCompanies(companyName);
-        }
         return related;
     }
 
@@ -551,7 +404,10 @@ public class CompanyService {
         } catch (Exception e) {
             log.debug("解析受益所有人失败: {}", e.getMessage());
         }
-        return buildMockBeneficialOwner();
+        CompanyQueryResponse.BeneficialOwner owner = new CompanyQueryResponse.BeneficialOwner();
+        owner.setName("未知");
+        owner.setType("自然人");
+        return owner;
     }
 
     private CompanyQueryResponse.BusinessAnalysis parseBusinessAnalysis(JsonNode node) {
@@ -587,7 +443,12 @@ public class CompanyService {
         } catch (Exception e) {
             log.debug("解析经营分析失败: {}", e.getMessage());
         }
-        return buildMockBusinessAnalysis();
+        CompanyQueryResponse.BusinessAnalysis analysis = new CompanyQueryResponse.BusinessAnalysis();
+        analysis.setEmployeeCount(0);
+        analysis.setEmployeeTrend("未知");
+        analysis.setIndustry("未知");
+        analysis.setBusinessScope("未知");
+        return analysis;
     }
 
     private String extractJsonFromResponse(String response) {
@@ -611,42 +472,6 @@ public class CompanyService {
         }
 
         return trimmed;
-    }
-
-    private CompanyQueryResponse.ShareholderInfo createShareholder(String name, String capital, String ratio, String type) {
-        CompanyQueryResponse.ShareholderInfo info = new CompanyQueryResponse.ShareholderInfo();
-        info.setName(name);
-        info.setCapitalContribution(capital + "万元");
-        info.setRatio(ratio);
-        info.setType(type);
-        return info;
-    }
-
-    private CompanyQueryResponse.RiskWarning createRiskWarning(String level, String type, String desc, String date, int count) {
-        CompanyQueryResponse.RiskWarning warning = new CompanyQueryResponse.RiskWarning();
-        warning.setLevel(level);
-        warning.setType(type);
-        warning.setDescription(desc);
-        warning.setDate(date);
-        warning.setCount(count);
-        return warning;
-    }
-
-    private String calculateRiskLevel(List<CompanyQueryResponse.RiskWarning> warnings) {
-        if (warnings == null || warnings.isEmpty()) {
-            return "NONE";
-        }
-
-        boolean hasHigh = warnings.stream().anyMatch(w -> "HIGH".equals(w.getLevel()));
-        boolean hasMedium = warnings.stream().anyMatch(w -> "MEDIUM".equals(w.getLevel()));
-
-        if (hasHigh) {
-            return "HIGH";
-        } else if (hasMedium) {
-            return "MEDIUM";
-        } else {
-            return "LOW";
-        }
     }
 
     public CompanyQueryResponse getCompanyDetail(String companyName) {

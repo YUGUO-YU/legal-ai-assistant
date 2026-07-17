@@ -16,7 +16,6 @@ import com.legalai.repository.LawCategoryTypeMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -26,9 +25,6 @@ import java.util.stream.Collectors;
 @Service
 public class LawSearchService {
     private static final Logger log = LoggerFactory.getLogger(LawSearchService.class);
-
-    @Value("${mock.enabled:false}")
-    private boolean mockEnabled;
 
     @Autowired
     private ElasticsearchService elasticsearchService;
@@ -55,15 +51,9 @@ public class LawSearchService {
         log.info("法规查询请求: keyword={}, categoryL1={}, status={}",
             request.getKeyword(), request.getCategoryL1(), request.getStatus());
 
-        if (!mockEnabled) {
-            LawSearchResponse dbResponse = dbSearchLaws(request);
-            if (dbResponse != null && dbResponse.getTotal() > 0) {
-                return dbResponse;
-            }
-        }
-
-        if (mockEnabled) {
-            return mockSearchLaws(request);
+        LawSearchResponse dbResponse = dbSearchLaws(request);
+        if (dbResponse != null && dbResponse.getTotal() > 0) {
+            return dbResponse;
         }
 
         return esSearchLaws(request);
@@ -176,31 +166,6 @@ public class LawSearchService {
         return item;
     }
 
-    private LawSearchResponse mockSearchLaws(LawSearchRequest request) {
-        long startTime = System.currentTimeMillis();
-
-        List<LawSearchResponse.LawSearchItem> allLaws = generateMockLaws(request);
-
-        List<LawSearchResponse.LawSearchItem> filteredLaws = applyLawFilters(allLaws, request);
-
-        int total = filteredLaws.size();
-        int from = (request.getPage() - 1) * request.getPageSize();
-        int to = Math.min(from + request.getPageSize(), total);
-
-        List<LawSearchResponse.LawSearchItem> pagedLaws = total > from
-            ? filteredLaws.subList(from, to)
-            : Collections.emptyList();
-
-        LawSearchResponse response = new LawSearchResponse();
-        response.setTotal((long) total);
-        response.setPage(request.getPage());
-        response.setPageSize(request.getPageSize());
-        response.setTookMs(System.currentTimeMillis() - startTime);
-        response.setItems(pagedLaws);
-
-        return response;
-    }
-
     private LawSearchResponse esSearchLaws(LawSearchRequest request) {
         long startTime = System.currentTimeMillis();
 
@@ -254,7 +219,7 @@ public class LawSearchService {
             return parseAIResponse(aiResponse, request, startTime);
         } catch (IOException e) {
             log.error("AI生成法规失败: {}", e.getMessage());
-            return mockSearchLaws(request);
+            throw new IllegalStateException("AI生成法规失败，无法返回结果: " + e.getMessage());
         }
     }
 
@@ -316,7 +281,7 @@ public class LawSearchService {
         String jsonContent = extractJsonFromResponse(aiResponse);
         if (jsonContent == null || jsonContent.isEmpty()) {
             log.error("无法从AI响应中提取JSON内容");
-            return mockSearchLaws(request);
+            throw new IllegalStateException("无法从AI响应中提取JSON内容");
         }
 
         try {
@@ -336,7 +301,7 @@ public class LawSearchService {
         }
 
         if (items.isEmpty()) {
-            return mockSearchLaws(request);
+            throw new IllegalStateException("AI未能返回有效的法规数据");
         }
 
         for (LawSearchResponse.LawSearchItem item : items) {
@@ -506,74 +471,6 @@ public class LawSearchService {
         return lawItem;
     }
 
-    private List<LawSearchResponse.LawSearchItem> generateMockLaws(LawSearchRequest request) {
-        List<LawSearchResponse.LawSearchItem> laws = new ArrayList<>();
-
-        laws.add(createLawItem("LAW-2023-001", "中华人民共和国民法典", "民法典", "法律", "民法",
-            "全国人民代表大会", "2020-05-28", "2021-01-01", 1, 1260, 156789));
-        laws.add(createLawItem("LAW-2023-002", "中华人民共和国劳动合同法", "劳动合同法", "法律", "劳动法",
-            "全国人民代表大会常务委员会", "2012-12-28", "2013-07-01", 1, 89, 89456));
-        laws.add(createLawItem("LAW-2023-003", "中华人民共和国公司法", "公司法", "法律", "商法",
-            "全国人民代表大会常务委员会", "2023-12-29", "2024-07-01", 4, 216, 45678));
-        laws.add(createLawItem("LAW-2023-004", "中华人民共和国刑法", "刑法", "法律", "刑法",
-            "全国人民代表大会", "2023-12-29", "2024-03-01", 1, 452, 234567));
-        laws.add(createLawItem("LAW-2023-005", "最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）",
-            "建设工程施工合同司法解释", "司法解释", "民法", "最高人民法院", "2020-12-29", "2021-01-01", 1, 26, 67890));
-        laws.add(createLawItem("LAW-2023-006", "中华人民共和国消费者权益保护法", "消费者权益保护法", "法律", "经济法",
-            "全国人民代表大会常务委员会", "2023-10-25", "2024-01-01", 1, 69, 34567));
-        laws.add(createLawItem("LAW-2023-007", "中华人民共和国行政处罚法", "行政处罚法", "法律", "行政法",
-            "全国人民代表大会", "2021-01-22", "2021-07-15", 1, 63, 23456));
-
-        return laws;
-    }
-
-    private LawSearchResponse.LawSearchItem createLawItem(String lawUuid, String title, String shortTitle,
-            String categoryL1, String categoryL2, String issuingAuthority,
-            String issueDate, String effectiveDate, int status, int articleCount, int viewCount) {
-        LawSearchResponse.LawSearchItem item = new LawSearchResponse.LawSearchItem();
-        item.setLawUuid(lawUuid);
-        item.setTitle(title);
-        item.setShortTitle(shortTitle);
-        item.setCategoryL1(categoryL1);
-        item.setCategoryL2(categoryL2);
-        item.setIssuingAuthority(issuingAuthority);
-        item.setIssueDate(issueDate);
-        item.setEffectiveDate(effectiveDate);
-        item.setStatus(status);
-        item.setStatusName(getStatusName(status));
-        item.setArticleCount(articleCount);
-        item.setViewCount(viewCount);
-        item.setSourceUrl("https://flk.npc.gov.cn/");
-        item.setSourceName("国家法律法规信息库");
-        return item;
-    }
-
-    private List<LawSearchResponse.LawSearchItem> applyLawFilters(
-            List<LawSearchResponse.LawSearchItem> laws,
-            LawSearchRequest request) {
-
-        return laws.stream()
-            .filter(law -> {
-                if (request.getCategoryL1() != null && !request.getCategoryL1().equals(law.getCategoryL1())) {
-                    return false;
-                }
-                if (request.getCategoryL2() != null && !request.getCategoryL2().equals(law.getCategoryL2())) {
-                    return false;
-                }
-                if (request.getStatus() != null && !request.getStatus().equals(law.getStatus())) {
-                    return false;
-                }
-                if (request.getKeyword() != null && !request.getKeyword().isEmpty()) {
-                    String keyword = request.getKeyword().toLowerCase();
-                    if (!law.getTitle().toLowerCase().contains(keyword)) {
-                        return false;
-                    }
-                }
-                return true;
-            })
-            .collect(Collectors.toList());
-    }
-
     private String getStatusName(int status) {
         return switch (status) {
             case 1 -> "现行有效";
@@ -663,16 +560,7 @@ public class LawSearchService {
             log.error("数据库查询法规详情失败: {}", e.getMessage());
         }
 
-        LawSearchRequest request = new LawSearchRequest();
-        request.setKeyword("");
-        request.setPageSize(100);
-
-        LawSearchResponse response = mockSearchLaws(request);
-
-        return response.getItems().stream()
-            .filter(item -> item.getLawUuid().equals(lawUuid))
-            .findFirst()
-            .orElse(null);
+        throw new IllegalStateException("法规未找到: " + lawUuid);
     }
 
     public LawDocument getLawDocument(String lawUuid) {
