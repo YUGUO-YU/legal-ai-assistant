@@ -11,7 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController("adminLawImportController")
-@RequestMapping("/api/v1/admin/law-import")
+@RequestMapping("/api/v1/admin/law-import-jobs")
 @CrossOrigin
 public class LawImportController {
     private static final Logger log = LoggerFactory.getLogger(LawImportController.class);

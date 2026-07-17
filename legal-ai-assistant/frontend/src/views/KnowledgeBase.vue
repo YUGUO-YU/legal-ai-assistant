@@ -210,6 +210,7 @@ import {
   ChatLineRound
 } from '@element-plus/icons-vue'
 import EmptyState from '../components/EmptyState.vue'
+import api from '../api'
 
 const router = useRouter()
 const showUpload = ref(false)

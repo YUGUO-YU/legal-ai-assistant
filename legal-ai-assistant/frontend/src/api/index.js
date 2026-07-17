@@ -260,7 +260,7 @@ export default {
     preset: (presetKey, operator) => withRetry(() => apiClient.post(`/admin/law-import/preset/${presetKey}`, null, { params: { operator } })),
     presets: () => withRetry(() => apiClient.get('/admin/law-import/presets')),
     history: (page = 1, pageSize = 20) => withRetry(() => apiClient.get('/admin/law-import/history', { params: { page, pageSize } })),
-    historyById: (id) => withRetry(() => apiClient.get(`/admin/law-import/history/${id}`)),
+    historyById: (id) => withRetry(() => apiClient.get(`/admin/law-import-jobs/history/${id}`)),
     stats: () => withRetry(() => apiClient.get('/admin/law-import/stats'))
   },
   categoryTypes: () => withRetry(() => apiClient.get('/admin/law/category-types')),
