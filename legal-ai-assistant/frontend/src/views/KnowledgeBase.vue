@@ -193,7 +193,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -232,60 +232,7 @@ const kbForm = reactive({
   isPublic: 0
 })
 
-const knowledgeBases = ref([
-  {
-    id: 1,
-    name: '劳动法法规库',
-    description: '劳动法律法规及相关案例汇总',
-    type: 'public',
-    isPublic: 1,
-    docCount: 156,
-    chunkCount: 2340,
-    size: '128MB',
-    owner: '系统管理员',
-    updateTime: '2024-06-10',
-    parseStatus: 2
-  },
-  {
-    id: 2,
-    name: '合同纠纷案例',
-    description: '各类合同纠纷案例集',
-    type: 'private',
-    isPublic: 0,
-    docCount: 89,
-    chunkCount: 1560,
-    size: '96MB',
-    owner: '张三',
-    updateTime: '2024-06-08',
-    parseStatus: 2
-  },
-  {
-    id: 3,
-    name: '知识产权法规',
-    description: '知识产权相关法律法规',
-    type: 'public',
-    isPublic: 1,
-    docCount: 234,
-    chunkCount: 3200,
-    size: '156MB',
-    owner: '系统管理员',
-    updateTime: '2024-06-12',
-    parseStatus: 2
-  },
-  {
-    id: 4,
-    name: '公司法务文档',
-    description: '公司内部法务文档',
-    type: 'private',
-    isPublic: 0,
-    docCount: 45,
-    chunkCount: 680,
-    size: '45MB',
-    owner: '李四',
-    updateTime: '2024-06-05',
-    parseStatus: 1
-  }
-])
+const knowledgeBases = ref([])
 
 const filteredKbList = computed(() => {
   if (!searchKeyword.value) return knowledgeBases.value
@@ -294,6 +241,19 @@ const filteredKbList = computed(() => {
     kb.name.toLowerCase().includes(kw) ||
     kb.description?.toLowerCase().includes(kw)
   )
+})
+
+const loadKnowledgeBases = async () => {
+  try {
+    const res = await api.knowledgeBase.list({ page: 1, pageSize: 100 })
+    knowledgeBases.value = res?.items || res || []
+  } catch (e) {
+    ElMessage.error('加载知识库列表失败')
+  }
+}
+
+onMounted(() => {
+  loadKnowledgeBases()
 })
 
 const handleFileChange = (file) => {
@@ -322,6 +282,7 @@ const handleUpload = async () => {
       await api.knowledgeBase.upload(formData)
     }
     ElMessage.success('文档上传成功，正在解析中...')
+    await loadKnowledgeBases()
     fileList.value = []
     uploadForm.docName = ''
     showUpload.value = false
@@ -339,25 +300,21 @@ const handleCreateKb = async () => {
     return
   }
 
-  const newKb = {
-    id: Date.now(),
-    name: kbForm.name,
-    description: kbForm.description,
-    type: kbForm.isPublic === 1 ? 'public' : 'private',
-    isPublic: kbForm.isPublic,
-    docCount: 0,
-    chunkCount: 0,
-    size: '0MB',
-    owner: '当前用户',
-    updateTime: new Date().toLocaleDateString(),
-    parseStatus: 0
+  try {
+    await api.knowledgeBase.create({
+      name: kbForm.name,
+      description: kbForm.description,
+      isPublic: kbForm.isPublic
+    })
+    await loadKnowledgeBases()
+    showCreateKb.value = false
+    kbForm.name = ''
+    kbForm.description = ''
+    kbForm.isPublic = 0
+    ElMessage.success('知识库创建成功')
+  } catch (e) {
+    ElMessage.error('创建失败：' + (e?.message || '请稍后重试'))
   }
-  knowledgeBases.value.push(newKb)
-  showCreateKb.value = false
-  kbForm.name = ''
-  kbForm.description = ''
-  kbForm.isPublic = 0
-  ElMessage.success('知识库创建成功')
 }
 
 const getKbColor = (type) => {
@@ -414,11 +371,8 @@ const deleteKb = async () => {
       '删除确认',
       { type: 'warning' }
     )
-    if (api.knowledgeBase && api.knowledgeBase.delete) {
-      await api.knowledgeBase.delete(managingKb.value.id)
-    } else {
-      knowledgeBases.value = knowledgeBases.value.filter(k => k.id !== managingKb.value.id)
-    }
+    await api.knowledgeBase.delete(managingKb.value.id)
+    await loadKnowledgeBases()
     ElMessage.success('知识库已删除')
     showManage.value = false
   } catch (e) {
