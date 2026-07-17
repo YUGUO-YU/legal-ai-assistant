@@ -297,5 +297,11 @@ export default {
     userActivity: (params) => withRetry(() => apiClient.get('/admin/stats/user-activity', { params })),
     lawUsage: (params) => withRetry(() => apiClient.get('/admin/stats/law-usage', { params })),
     hourlyAccess: () => withRetry(() => apiClient.get('/admin/stats/hourly-access'))
+  },
+  mod10: {
+    sessionDetail: (sessionId) => withRetry(() => apiClient.get(`/admin/biz/mod10/qa-sessions/${sessionId}`)),
+    sessionMessages: (sessionId, params) => withRetry(() => apiClient.get(`/admin/biz/mod10/qa-sessions/${sessionId}/messages`, { params })),
+    deleteSession: (sessionId) => withRetry(() => apiClient.delete(`/admin/biz/mod10/qa-sessions/${sessionId}`)),
+    exportSession: (sessionId) => apiClient.post(`/admin/biz/mod10/qa-sessions/${sessionId}/export`, {}, { responseType: 'blob' })
   }
 }

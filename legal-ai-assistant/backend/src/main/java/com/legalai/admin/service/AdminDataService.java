@@ -3239,4 +3239,163 @@ public class AdminDataService {
         }
         return null;
     }
+
+    // ============================================================
+    // MOD-10 DocQA 会话管理
+    // ============================================================
+
+    public Map<String, Object> mod10SessionDetail(Long sessionId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT s.id, s.session_uuid, s.title, s.user_id, s.kb_id, s.status, s.msg_count, s.created_at, s.updated_at, " +
+                "kb.kb_name " +
+                "FROM doc_qa_session s " +
+                "LEFT JOIN kb_knowledge_base kb ON s.kb_id = kb.id " +
+                "WHERE s.id = ?",
+                sessionId);
+            if (rows.isEmpty()) {
+                result.put("data", null);
+                result.put("error", "会话不存在");
+                return result;
+            }
+            result.put("data", rows.get(0));
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] mod10SessionDetail 失败 sessionId={}: {}", sessionId, e.getMessage());
+            result.put("data", null);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> mod10SessionMessages(Long sessionId, int page, int pageSize) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> sessionRows = jdbc.queryForList(
+                "SELECT id FROM doc_qa_session WHERE id = ?", sessionId);
+            if (sessionRows.isEmpty()) {
+                result.put("total", 0);
+                result.put("page", page);
+                result.put("pageSize", pageSize);
+                result.put("list", java.util.Collections.emptyList());
+                result.put("error", "会话不存在");
+                return result;
+            }
+
+            Integer total = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM doc_qa_message WHERE session_id = ?", Integer.class, sessionId);
+            int offset = Math.max(0, (page - 1) * pageSize);
+
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT id, session_id, msg_index, msg_type, role, content, created_at " +
+                "FROM doc_qa_message WHERE session_id = ? ORDER BY msg_index ASC LIMIT ? OFFSET ?",
+                sessionId, pageSize, offset);
+
+            List<Map<String, Object>> qaPairs = new ArrayList<>();
+            Map<String, Object> currentPair = null;
+            for (Map<String, Object> msg : rows) {
+                String role = (String) msg.get("role");
+                if ("user".equals(role)) {
+                    currentPair = new LinkedHashMap<>();
+                    currentPair.put("question", msg.get("content"));
+                    currentPair.put("questionTime", msg.get("created_at"));
+                    currentPair.put("msgIndex", msg.get("msg_index"));
+                } else if ("assistant".equals(role) && currentPair != null) {
+                    currentPair.put("answer", msg.get("content"));
+                    currentPair.put("answerTime", msg.get("created_at"));
+                    qaPairs.add(currentPair);
+                    currentPair = null;
+                }
+            }
+            if (currentPair != null) {
+                qaPairs.add(currentPair);
+            }
+
+            result.put("total", total == null ? 0 : total);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", qaPairs);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] mod10SessionMessages 失败 sessionId={}: {}", sessionId, e.getMessage());
+            result.put("total", 0);
+            result.put("page", page);
+            result.put("pageSize", pageSize);
+            result.put("list", java.util.Collections.emptyList());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> deleteMod10Session(Long sessionId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> sessionRows = jdbc.queryForList(
+                "SELECT id FROM doc_qa_session WHERE id = ?", sessionId);
+            if (sessionRows.isEmpty()) {
+                result.put("ok", false);
+                result.put("error", "会话不存在");
+                return result;
+            }
+            jdbc.update("DELETE FROM doc_qa_message WHERE session_id = ?", sessionId);
+            int n = jdbc.update("DELETE FROM doc_qa_session WHERE id = ?", sessionId);
+            result.put("ok", n > 0);
+            result.put("affected", n);
+            log.info("[Admin] 删除 MOD-10 会话 id={}", sessionId);
+        } catch (Exception e) {
+            log.warn("[Admin] deleteMod10Session 失败 sessionId={}: {}", sessionId, e.getMessage());
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> exportMod10Session(Long sessionId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> sessionRows = jdbc.queryForList(
+                "SELECT s.id, s.session_uuid, s.title, s.user_id, s.kb_id, s.status, s.msg_count, s.created_at, s.updated_at " +
+                "FROM doc_qa_session s WHERE s.id = ?", sessionId);
+            if (sessionRows.isEmpty()) {
+                result.put("error", "会话不存在");
+                return result;
+            }
+            Map<String, Object> sessionData = sessionRows.get(0);
+
+            List<Map<String, Object>> messageRows = jdbc.queryForList(
+                "SELECT id, msg_index, role, content, created_at FROM doc_qa_message WHERE session_id = ? ORDER BY msg_index ASC",
+                sessionId);
+
+            Map<String, Object> qaPairs = new LinkedHashMap<>();
+            List<Map<String, Object>> pairs = new ArrayList<>();
+            Map<String, Object> currentPair = null;
+            for (Map<String, Object> msg : messageRows) {
+                String role = (String) msg.get("role");
+                if ("user".equals(role)) {
+                    currentPair = new LinkedHashMap<>();
+                    currentPair.put("question", msg.get("content"));
+                    currentPair.put("questionTime", msg.get("created_at"));
+                } else if ("assistant".equals(role) && currentPair != null) {
+                    currentPair.put("answer", msg.get("content"));
+                    currentPair.put("answerTime", msg.get("created_at"));
+                    pairs.add(currentPair);
+                    currentPair = null;
+                }
+            }
+            if (currentPair != null) {
+                pairs.add(currentPair);
+            }
+            qaPairs.put("session", sessionData);
+            qaPairs.put("messages", pairs);
+            qaPairs.put("totalMessages", messageRows.size());
+
+            result.put("data", qaPairs);
+            result.put("source", "admin-db");
+        } catch (Exception e) {
+            log.warn("[Admin] exportMod10Session 失败 sessionId={}: {}", sessionId, e.getMessage());
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
 }
