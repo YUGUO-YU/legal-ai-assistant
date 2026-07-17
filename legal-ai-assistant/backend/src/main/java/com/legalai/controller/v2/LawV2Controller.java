@@ -1,7 +1,6 @@
 package com.legalai.controller.v2;
 
 import com.legalai.dto.v2.ApiResponse;
-import com.legalai.service.LawSearchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,6 +16,8 @@ import java.util.*;
 @Tag(name = "法规管理 v2", description = "法规管理API v2版本，支持分页、过滤、排序和字段选择")
 public class LawV2Controller {
 
+    private static final Set<String> ALLOWED_FIELDS = Set.of("id", "doc_uuid", "title", "short_title", "status", "category_l1", "category_l2", "issuing_authority", "document_no", "effective_date", "created_at", "updated_at");
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -31,9 +32,16 @@ public class LawV2Controller {
             @Parameter(description = "选择字段") @RequestParam(required = false) List<String> fields,
             @Parameter(description = "搜索关键词") @RequestParam(required = false) String search) {
 
-        String baseFields = fields != null && !fields.isEmpty()
-                ? String.join(", ", fields)
-                : "*";
+        List<String> safeFields = new ArrayList<>();
+        if (fields != null && !fields.isEmpty()) {
+            for (String f : fields) {
+                String trimmed = f.trim();
+                if (ALLOWED_FIELDS.contains(trimmed)) {
+                    safeFields.add(trimmed);
+                }
+            }
+        }
+        String baseFields = safeFields.isEmpty() ? "*" : String.join(", ", safeFields);
 
         StringBuilder sql = new StringBuilder("SELECT " + baseFields + " FROM law_document WHERE 1=1");
         List<Object> params = new ArrayList<>();
@@ -55,7 +63,16 @@ public class LawV2Controller {
             params.add("%" + search + "%");
         }
 
-        String countSql = sql.toString().replace(baseFields, "COUNT(*)");
+        String countSql = "SELECT COUNT(*) FROM law_document WHERE 1=1";
+        if (status != null && !status.isEmpty()) {
+            countSql += " AND status = ?";
+        }
+        if (category != null && !category.isEmpty()) {
+            countSql += " AND (category_l1 = ? OR category_l2 = ?)";
+        }
+        if (search != null && !search.isEmpty()) {
+            countSql += " AND (title LIKE ? OR short_title LIKE ?)";
+        }
 
         String sortField = "created_at";
         String sortOrder = "DESC";
@@ -66,8 +83,8 @@ public class LawV2Controller {
             } else {
                 sortField = sort;
             }
-            Set<String> allowedFields = Set.of("created_at", "updated_at", "title", "doc_uuid", "status");
-            if (!allowedFields.contains(sortField)) {
+            Set<String> allowedSort = Set.of("created_at", "updated_at", "title", "doc_uuid", "status");
+            if (!allowedSort.contains(sortField)) {
                 sortField = "created_at";
             }
             sql.append(" ORDER BY ").append(sortField).append(" ").append(sortOrder);
@@ -77,11 +94,26 @@ public class LawV2Controller {
 
         int offset = (page - 1) * pageSize;
         sql.append(" LIMIT ? OFFSET ?");
+
+        long total = 0;
+        try {
+            List<Object> countArgs = new ArrayList<>();
+            if (status != null && !status.isEmpty()) countArgs.add(status);
+            if (category != null && !category.isEmpty()) {
+                countArgs.add(category);
+                countArgs.add(category);
+            }
+            if (search != null && !search.isEmpty()) {
+                countArgs.add("%" + search + "%");
+                countArgs.add("%" + search + "%");
+            }
+            total = jdbcTemplate.queryForObject(countSql, Long.class, countArgs.toArray());
+        } catch (Exception e) {
+            total = 0;
+        }
+
         params.add(pageSize);
         params.add(offset);
-
-        long total = jdbcTemplate.queryForObject(countSql, Long.class, params.toArray());
-
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql.toString(), params.toArray());
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -100,9 +132,16 @@ public class LawV2Controller {
             @PathVariable Long id,
             @Parameter(description = "选择字段") @RequestParam(required = false) List<String> fields) {
 
-        String baseFields = fields != null && !fields.isEmpty()
-                ? String.join(", ", fields)
-                : "*";
+        List<String> safeFields = new ArrayList<>();
+        if (fields != null && !fields.isEmpty()) {
+            for (String f : fields) {
+                String trimmed = f.trim();
+                if (ALLOWED_FIELDS.contains(trimmed)) {
+                    safeFields.add(trimmed);
+                }
+            }
+        }
+        String baseFields = safeFields.isEmpty() ? "*" : String.join(", ", safeFields);
 
         String sql = "SELECT " + baseFields + " FROM law_document WHERE id = ?";
 
@@ -137,12 +176,11 @@ public class LawV2Controller {
     public ApiResponse<List<Map<String, Object>>> getCategories(
             @Parameter(description = "分类类型") @RequestParam(required = false) String type) {
 
-        String sql = "SELECT * FROM law_category";
         if (type != null && !type.isEmpty()) {
-            sql += " WHERE category_type = ?";
+            String sql = "SELECT * FROM law_category WHERE category_type = ?";
             return ApiResponse.success(jdbcTemplate.queryForList(sql, type));
         }
-        return ApiResponse.success(jdbcTemplate.queryForList(sql));
+        return ApiResponse.success(jdbcTemplate.queryForList("SELECT * FROM law_category"));
     }
 
     @GetMapping("/stats")

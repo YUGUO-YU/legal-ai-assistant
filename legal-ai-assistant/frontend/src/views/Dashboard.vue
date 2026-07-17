@@ -596,13 +596,32 @@ watch(memoryRecords, (records) => {
   }))
 }, { immediate: true })
 
-const hotTopics = ref([
-  { title: '合同欺诈认定', count: 1256, percentage: 95, color: '#ff4d4f' },
-  { title: '劳动仲裁流程', count: 987, percentage: 75, color: '#ff7a45' },
-  { title: '民间借贷利息', count: 856, percentage: 65, color: '#ffa940' },
-  { title: '建设工程优先权', count: 743, percentage: 56, color: '#ffd666' },
-  { title: '商标侵权赔偿', count: 621, percentage: 47, color: '#95de64' }
-])
+const hotTopics = computed(() => {
+  const searchRecords = (memoryRecords.value || []).filter(r => r.type === 'search')
+  const counts = {}
+  searchRecords.forEach(r => {
+    const key = r.title
+    counts[key] = (counts[key] || 0) + 1
+  })
+  const sorted = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+  const maxCount = sorted[0]?.[1] || 1
+  const colors = ['#ff4d4f', '#ff7a45', '#ffa940', '#ffd666', '#95de64']
+  if (sorted.length === 0) {
+    return [
+      { title: '合同纠纷怎么处理', percentage: 0, color: '#667eea' },
+      { title: '劳动仲裁程序', percentage: 0, color: '#f5576c' },
+      { title: '借款合同有效期', percentage: 0, color: '#4facfe' }
+    ]
+  }
+  return sorted.map(([title, count], i) => ({
+    title,
+    count,
+    percentage: Math.round((count / maxCount) * 100),
+    color: colors[i % colors.length]
+  }))
+})
 
 const tips = [
   { title: '智能提示', desc: '搜索时使用自然语言，系统会自动匹配', icon: 'MagicStick', gradient: 'linear-gradient(135deg, #667eea, #764ba2)' },
@@ -873,7 +892,7 @@ const onDrawerAction = (action) => {
 }
 
 const loadMore = () => {
-  console.log('load more activities')
+  router.push('/profile')
 }
 
 const openInNewWindow = (card) => {

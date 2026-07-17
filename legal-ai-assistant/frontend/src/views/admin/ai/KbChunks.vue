@@ -140,7 +140,6 @@ const loadChunks = async () => {
     }
   } catch (e) {
     ElMessage.error('加载分块列表失败')
-    console.error(e)
   } finally {
     loading.value = false
   }

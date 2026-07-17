@@ -458,7 +458,6 @@ const clearHistory = async () => {
     try {
       await api.docQa.clearSession(sessionId.value)
     } catch (e) {
-      console.error(e)
     }
   }
   messages.value = []

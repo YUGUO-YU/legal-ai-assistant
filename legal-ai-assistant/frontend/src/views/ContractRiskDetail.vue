@@ -229,7 +229,6 @@ const loadDetail = async () => {
       ElMessage.error('审查记录不存在或已过期')
     }
   } catch (e) {
-    console.error(e)
     ElMessage.error('加载失败，请稍后重试')
   } finally {
     loading.value = false

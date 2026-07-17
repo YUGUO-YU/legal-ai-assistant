@@ -450,7 +450,6 @@ const handleDraft = async () => {
       addRecord('document', `起草"${selectedTemplate.value}"`, '文书生成成功')
       increment('documentDraftCount')
     } catch (e) {
-      console.error(e)
       ElMessage.error('生成失败，请稍后重试')
     } finally {
       loading.value = false
@@ -587,7 +586,6 @@ const handleExtractInfo = async () => {
       ElMessage.error(res.message || '信息提取失败')
     }
   } catch (e) {
-    console.error(e)
     ElMessage.error('信息提取失败: ' + (e.message || '未知错误'))
   } finally {
     extracting.value = false
@@ -599,7 +597,6 @@ const loadTemplates = async () => {
     const res = await api.document.getTemplates()
     templates.value = res || []
   } catch (e) {
-    console.error(e)
   }
 }
 

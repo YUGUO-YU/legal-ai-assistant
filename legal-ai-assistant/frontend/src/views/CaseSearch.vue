@@ -291,7 +291,6 @@ const handleSearch = async () => {
     total.value = res?.total || 0
     tookMs.value = res?.tookMs || 0
   } catch (e) {
-    console.error(e)
     ElMessage.error('查询失败，请稍后重试')
   } finally {
     loading.value = false

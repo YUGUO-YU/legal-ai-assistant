@@ -215,7 +215,6 @@ const loadDetail = async () => {
       chunks.value = chunksRes.data
     }
   } catch (e) {
-    console.error(e)
     ElMessage.error('加载失败，请稍后重试')
   } finally {
     loading.value = false
@@ -251,7 +250,6 @@ const onDelete = async () => {
     router.push('/knowledge-base')
   } catch (e) {
     if (e !== 'cancel') {
-      console.error(e)
       ElMessage.error('删除失败')
     }
   }
@@ -270,7 +268,6 @@ const runTest = async () => {
       ElMessage.info('未检索到相关结果')
     }
   } catch (e) {
-    console.error(e)
     ElMessage.error('检索失败')
   } finally {
     testing.value = false

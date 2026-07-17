@@ -275,7 +275,6 @@ const handleSearch = async () => {
       increment('searchCount')
     }
   } catch (e) {
-    console.error(e)
     ElMessage.error('检索失败，请稍后重试')
   } finally {
     loading.value = false
@@ -287,7 +286,6 @@ const loadSuggestedQueries = async () => {
     const res = await api.legalSearch.getSuggestedQueries(query.value)
     suggestedQueries.value = res || []
   } catch (e) {
-    console.error(e)
   }
 }
 

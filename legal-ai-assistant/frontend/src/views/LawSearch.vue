@@ -273,7 +273,6 @@ const handleSearch = async () => {
     results.value = res?.items || []
     total.value = res?.total || 0
   } catch (e) {
-    console.error(e)
     ElMessage.error('查询失败，请稍后重试')
   } finally {
     loading.value = false

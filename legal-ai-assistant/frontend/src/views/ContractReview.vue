@@ -382,7 +382,6 @@ const handleReview = async () => {
     addRecord('contract', `审查"${reviewOptions.contractType}"合同`, `发现 ${riskCount} 处风险`)
     increment('caseAnalysisCount')
   } catch (e) {
-    console.error(e)
     ElMessage.error('审查失败，请稍后重试')
   } finally {
     loading.value = false

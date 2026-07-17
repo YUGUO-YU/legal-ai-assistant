@@ -220,7 +220,6 @@ const loadSession = async () => {
       ElMessage.error('会话不存在或已过期')
     }
   } catch (e) {
-    console.error(e)
     ElMessage.error('加载失败')
   } finally {
     loading.value = false
@@ -295,7 +294,6 @@ const onClear = async () => {
     router.push('/doc-qa')
   } catch (e) {
     if (e !== 'cancel') {
-      console.error(e)
       ElMessage.error('清除失败')
     }
   } finally {

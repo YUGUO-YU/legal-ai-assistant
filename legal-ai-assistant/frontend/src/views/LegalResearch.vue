@@ -287,7 +287,6 @@ const handleResearch = async () => {
     loading.value = false
     ElMessage.success('研究报告生成完成')
   } catch (e) {
-    console.error(e)
     loading.value = false
     progressStatus.value = 'exception'
     progressMessage.value = '生成失败，请稍后重试'

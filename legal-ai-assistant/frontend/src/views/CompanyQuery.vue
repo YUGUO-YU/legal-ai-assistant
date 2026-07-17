@@ -470,7 +470,6 @@ const handleQuery = async () => {
     localStorage.setItem('companyQueryHistory', JSON.stringify(queryHistory.value))
     addRecord('company', `查询"${companyName.value}"`, `风险等级：${res?.riskLevel || '未知'}`)
   } catch (e) {
-    console.error(e)
     ElMessage.error('查询失败，请稍后重试')
   } finally {
     loading.value = false
