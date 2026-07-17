@@ -2,17 +2,7 @@ import { ref, computed, readonly } from 'vue'
 
 const STORAGE_KEY = 'notification_center'
 
-export interface CenterNotification {
-  id: string
-  type: 'info' | 'success' | 'warning' | 'error' | 'system'
-  title: string
-  message: string
-  read: boolean
-  createdAt: number
-  link?: string
-}
-
-function loadFromStorage(): CenterNotification[] {
+function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
@@ -22,7 +12,7 @@ function loadFromStorage(): CenterNotification[] {
   }
 }
 
-function saveToStorage(items: CenterNotification[]) {
+function saveToStorage(items) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, 100)))
 }
 
@@ -33,7 +23,7 @@ const DEMO_NOTIFIED_KEY = 'notification_center_demo_shown'
 export function useNotificationCenter() {
   const stored = loadFromStorage()
   if (stored.length === 0 && !localStorage.getItem(DEMO_NOTIFIED_KEY)) {
-    const demo: CenterNotification[] = [{
+    const demo = [{
       id: (++idCounter).toString(36) + Math.random().toString(36).substring(2, 6),
       type: 'system',
       title: '欢迎使用法律AI助手',
@@ -46,13 +36,13 @@ export function useNotificationCenter() {
     stored.push(...demo)
   }
 
-  const notifications = ref<CenterNotification[]>(stored)
+  const notifications = ref(stored)
 
   const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
 
-  function add(options: Omit<CenterNotification, 'id' | 'read' | 'createdAt'>): string {
+  function add(options) {
     const id = (++idCounter).toString(36) + Math.random().toString(36).substring(2, 6)
-    const item: CenterNotification = {
+    const item = {
       ...options,
       id,
       read: false,
@@ -63,7 +53,7 @@ export function useNotificationCenter() {
     return id
   }
 
-  function markRead(id: string) {
+  function markRead(id) {
     const item = notifications.value.find(n => n.id === id)
     if (item) {
       item.read = true
@@ -76,7 +66,7 @@ export function useNotificationCenter() {
     saveToStorage(notifications.value)
   }
 
-  function remove(id: string) {
+  function remove(id) {
     notifications.value = notifications.value.filter(n => n.id !== id)
     saveToStorage(notifications.value)
   }
@@ -86,7 +76,7 @@ export function useNotificationCenter() {
     saveToStorage([])
   }
 
-  function formatTime(timestamp: number): string {
+  function formatTime(timestamp) {
     const diff = Date.now() - timestamp
     const mins = Math.floor(diff / 60000)
     if (mins < 1) return '刚刚'
