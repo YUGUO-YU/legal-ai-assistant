@@ -349,18 +349,6 @@ public class AdminController {
         return ApiResponse.success(adminDataService.monitorOverview());
     }
 
-    @Operation(summary = "LLM健康检查", description = "检查所有LLM模型的健康状态")
-    @PostMapping("/ai/llm-models/health-check")
-    public ApiResponse<Map<String, Object>> llmHealthCheck() {
-        return ApiResponse.success(adminDataService.llmHealthCheck());
-    }
-
-    @Operation(summary = "Milvus集合列表", description = "获取Milvus向量数据库中的所有集合")
-    @GetMapping("/ai/milvus/collections")
-    public ApiResponse<Map<String, Object>> milvusCollections() {
-        return ApiResponse.success(adminDataService.milvusCollections());
-    }
-
     // (Domain 02: MOD01-MOD10 - migrated to BusinessController)
     // (Domain 03: AI config - migrated to AiConfigController)
     // (Domain 04: Ops - migrated to OpsController)
