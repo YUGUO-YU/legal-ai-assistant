@@ -1,5 +1,3 @@
-import { useIntersectionObserver } from '@/composables/useIntersectionObserver'
-
 export const lazyLoad = {
   mounted(el, binding) {
     const { src, placeholder = '/placeholder.png' } = binding.value || {}
@@ -21,19 +19,29 @@ export const lazyLoad = {
       img.src = src
     }
 
-    const { stop } = useIntersectionObserver(el, (isIntersecting) => {
-      if (isIntersecting) {
-        loadImage()
-        stop()
-      }
-    })
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            loadImage()
+            observer.unobserve(el)
+            observer.disconnect()
+          }
+        })
+      },
+      { rootMargin: '50px', threshold: 0 }
+    )
 
-    el._lazyLoadStop = stop
+    observer.observe(el)
+
+    el._lazyLoadObserver = observer
   },
 
   unmounted(el) {
-    if (el._lazyLoadStop) {
-      el._lazyLoadStop()
+    if (el._lazyLoadObserver) {
+      el._lazyLoadObserver.unobserve(el)
+      el._lazyLoadObserver.disconnect()
+      el._lazyLoadObserver = null
     }
   }
 }
