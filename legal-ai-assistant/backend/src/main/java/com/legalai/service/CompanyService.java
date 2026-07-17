@@ -27,6 +27,9 @@ public class CompanyService {
     @Autowired
     private CompanyQueryStore queryStore;
 
+    @Autowired
+    private EnterpriseScraperService scraperService;
+
     public CompanyQueryResponse queryCompany(CompanyQueryRequest request) {
         log.info("企业查询请求: companyName={}", request.getCompanyName());
 
@@ -75,7 +78,14 @@ public class CompanyService {
         }
 
         if (searchResult == null || searchResult.contains("未获取到") || searchResult.contains("搜索失败") || searchResult.isEmpty()) {
-            throw new IllegalStateException("企业信息查询失败：无法从网络获取有效数据，请稍后重试");
+            log.warn("HTTP搜索无效，启用多源爬取降级策略...");
+            String scraperResult = scraperService.scrapeCompanyInfo(request.getCompanyName());
+            if (scraperResult != null && !scraperResult.isEmpty()) {
+                searchResult = scraperResult;
+                log.info("多源爬取成功，合并结果长度={}", searchResult.length());
+            } else {
+                throw new IllegalStateException("企业信息查询失败：无法从网络获取有效数据，请稍后重试");
+            }
         }
 
         try {
