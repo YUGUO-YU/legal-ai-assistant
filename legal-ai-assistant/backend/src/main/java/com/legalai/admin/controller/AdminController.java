@@ -1,13 +1,10 @@
 package com.legalai.admin.controller;
 
 import com.legalai.admin.annotation.RateLimit;
-import com.legalai.admin.enums.DataScope;
 import com.legalai.admin.service.AdminDataService;
 import com.legalai.admin.service.AlertMonitorService;
 import com.legalai.admin.service.LawCategoryService;
 import com.legalai.dto.ApiResponse;
-import com.legalai.model.LawCategory;
-import com.legalai.model.LawCategoryType;
 import com.legalai.service.CacheService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,19 +15,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * 后台管理统一 API 入口。

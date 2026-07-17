@@ -405,7 +405,7 @@ const handleFileChange = async (file) => {
       contractText.value = text
       ElMessage.success('文件已读取：' + file.name)
     } catch (e) {
-      console.error('读取文件失败:', e)
+      ElMessage.error('读取文件失败')
       ElMessage.error('读取文件失败，请手动复制内容')
     }
   }

@@ -273,7 +273,7 @@ const handleResearch = async () => {
               report.value = parseReportContent(fullReportContent)
             }
           } catch (e) {
-            console.error('解析SSE事件失败:', e)
+            ElMessage.error('解析SSE事件失败')
           }
         }
       }

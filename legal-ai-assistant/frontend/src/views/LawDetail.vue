@@ -227,7 +227,7 @@ const loadLawDetail = async () => {
       lawArticles.value = articlesRes
     }
   } catch (e) {
-    console.error('Failed to load law detail:', e)
+    ElMessage.error('Failed to load law detail')
     ElMessage.error('加载失败，请稍后重试')
   } finally {
     loading.value = false
@@ -273,7 +273,7 @@ const generateAnalysis = async () => {
       throw new Error('解读结果为空')
     }
   } catch (e) {
-    console.error('AI法规解读失败:', e)
+    ElMessage.error('AI法规解读失败')
     ElMessage.error(e?.message || e?.response?.data?.message || 'AI法规解读失败')
   } finally {
     analysisLoading.value = false

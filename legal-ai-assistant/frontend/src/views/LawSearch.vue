@@ -247,7 +247,7 @@ const loadStatusOptions = async () => {
     const res = await api.lawSearch.getCategories()
     statusOptions.value = res?.statusOptions || []
   } catch (e) {
-    console.error('Failed to load status options:', e)
+    ElMessage.error('Failed to load status options')
     statusOptions.value = [
       { value: 1, label: '现行有效' },
       { value: 2, label: '已废止' },
@@ -298,7 +298,7 @@ const submitLawUpload = async () => {
       uploadDialogVisible.value = false
     }
   } catch (e) {
-    console.error('法规上传失败:', e)
+    ElMessage.error('法规上传失败')
     ElMessage.error(e?.message || e?.response?.data?.message || '导入失败')
   } finally {
     uploadLoading.value = false
@@ -337,7 +337,6 @@ const browseArticles = async (law) => {
     const res = await api.lawSearch.getLawArticles(law.lawUuid)
     articles.value = res || []
   } catch (e) {
-    console.error('加载条款失败:', e)
     ElMessage.error('加载条款失败')
   } finally {
     articlesLoading.value = false
@@ -349,7 +348,7 @@ const collectLaw = async (law) => {
     await api.lawFavorite.add(law.lawUuid, law.title)
     ElMessage.success('已添加到收藏')
   } catch (e) {
-    console.error('收藏失败:', e)
+    ElMessage.error('收藏失败')
     ElMessage.error(e?.message || e?.response?.data?.message || '收藏失败')
   }
 }
@@ -377,7 +376,7 @@ const loadCategories = async () => {
       { value: 5, label: '部分失效' }
     ]
   } catch (e) {
-    console.error('Failed to load categories:', e)
+    ElMessage.error('Failed to load categories')
   }
 }
 </script>

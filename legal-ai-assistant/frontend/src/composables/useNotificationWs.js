@@ -1,4 +1,5 @@
 import { ref, onUnmounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useNotificationCenter } from './useNotificationCenter'
 
 export function useNotificationWs() {
@@ -45,7 +46,7 @@ export function useNotificationWs() {
             message: data.message || ''
           })
         } catch (e) {
-          console.warn('[WS] Failed to parse message:', e)
+          ElMessage.warning('[WS] Failed to parse message')
         }
       }
 
@@ -56,11 +57,11 @@ export function useNotificationWs() {
       }
 
       ws.onerror = (err) => {
-        console.warn('[WS] Error:', err)
+        ElMessage.warning('[WS] Error')
         wsStatus.value = 'error'
       }
     } catch (e) {
-      console.warn('[WS] Connection failed:', e)
+      ElMessage.warning('[WS] Connection failed')
       scheduleReconnect()
     }
   }

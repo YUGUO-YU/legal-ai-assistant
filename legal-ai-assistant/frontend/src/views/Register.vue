@@ -208,7 +208,7 @@ const handleRegister = async () => {
       ElMessage.success('注册成功！您的账号正在等待管理员审核，审核通过后可登录')
       router.push('/')
     } catch (e) {
-      console.error('注册失败:', e)
+      ElMessage.error('注册失败')
       const errMsg = e?.response?.data?.message || e?.message || '注册失败'
       ElMessage.error(errMsg)
     } finally {

@@ -303,7 +303,7 @@ const loadSessions = async () => {
       }))
     }
   } catch (e) {
-    console.error('加载会话列表失败:', e)
+    ElMessage.error('加载会话列表失败')
   }
 }
 
@@ -321,7 +321,7 @@ const loadKbList = async () => {
       }
     }
   } catch (e) {
-    console.error('加载知识库列表失败:', e)
+    ElMessage.error('加载知识库列表失败')
   }
 }
 
@@ -482,7 +482,7 @@ const switchSession = async (session) => {
       }))
     }
   } catch (e) {
-    console.error('获取会话历史失败:', e)
+    ElMessage.error('获取会话历史失败')
   }
 
   ElMessage.info('已切换会话')
@@ -533,7 +533,6 @@ const restoreSession = async (session) => {
       }))
     }
   } catch (e) {
-    console.error('加载会话消息失败:', e)
     ElMessage.error('加载会话消息失败')
   }
 

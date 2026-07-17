@@ -12,8 +12,8 @@
     </div>
 
     <el-row :gutter="16" style="margin-bottom:16px">
-      <el-col :span="6" v-for="g in groupedStats" :key="g.name">
-        <div class="kpi-card" :style="{ borderLeft: `4px solid ${palette[$index]}` }">
+      <el-col :span="6" v-for="(g, idx) in groupedStats" :key="g.name">
+        <div class="kpi-card" :style="{ borderLeft: `4px solid ${palette[idx % palette.length]}` }">
           <div class="kpi-label">{{ g.name }}</div>
           <div class="kpi-value">{{ g.count }}</div>
         </div>

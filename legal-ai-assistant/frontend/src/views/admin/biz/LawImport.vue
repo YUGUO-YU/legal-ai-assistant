@@ -87,7 +87,7 @@
             </el-divider>
 
             <div v-if="previewData?.articles?.length" class="articles-list">
-              <div v-for="(article, index) in displayArticles" :key="index" class="article-item">
+              <div v-for="(article, index) in displayArticles" :key="article.articleUuid || index" class="article-item">
                 <div class="article-header" @click="toggleArticle(index)">
                   <el-icon class="expand-icon" :class="{ expanded: expandedArticles.has(index) }">
                     <ArrowRight />

@@ -209,7 +209,7 @@ const loadCaseDetail = async () => {
       ElMessage.error('案例不存在')
     }
   } catch (e) {
-    console.error('Failed to load case detail:', e)
+    ElMessage.error('Failed to load case detail')
     ElMessage.error('加载失败，请稍后重试')
   } finally {
     loading.value = false

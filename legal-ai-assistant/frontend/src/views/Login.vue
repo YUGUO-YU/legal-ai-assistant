@@ -341,7 +341,7 @@ const handleLogin = async () => {
     ElMessage.success('登录成功，正在跳转...')
     router.replace('/dashboard')
   } catch (e) {
-    console.error('登录失败:', e)
+    ElMessage.error('登录失败')
     ElMessage.error(e?.message || '登录失败，请检查用户名和密码')
     refreshCaptcha()
   } finally {
