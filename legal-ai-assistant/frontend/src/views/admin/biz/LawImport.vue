@@ -264,6 +264,7 @@ const uploadRef = ref(null)
 const uploadFile = ref(null)
 const previewData = ref(null)
 const previewForm = ref({})
+const previewTaskUuid = ref(null)
 const selectedCategoryIds = ref([])
 const categoryList = ref([])
 const historyData = ref([])
@@ -394,27 +395,68 @@ const loadCategories = async () => {
 const handlePreview = async () => {
   if (!uploadFile.value) return
   uploading.value = true
+  previewData.value = null
+  previewTaskUuid.value = null
   const formData = new FormData()
   formData.append('file', uploadFile.value)
   try {
-    const res = await api.importPreview(formData)
-    previewData.value = res || {}
-    previewForm.value = {
-      lawTitle: res?.lawTitle || res?.title || '',
-      shortTitle: res?.shortTitle || '',
-      documentNo: res?.documentNo || '',
-      issuingAuthority: res?.issuingAuthority || '',
-      issueDate: res?.issueDate || '',
-      effectiveDate: res?.effectiveDate || ''
+    const job = await api.importPreview(formData)
+    if (!job?.taskUuid) {
+      ElMessage.error('预览提交失败：无任务ID')
+      return
     }
-    expandedArticles.value.clear()
-    showAllArticles.value = false
-    ElMessage.success('预览生成成功')
+    previewTaskUuid.value = job.taskUuid
+    ElMessage.info('预览任务已提交，请稍候...')
+    pollPreviewResult(job.taskUuid)
   } catch (e) {
-    ElMessage.error('预览失败: ' + (e.message || '未知错误'))
-  } finally {
+    ElMessage.error('预览提交失败: ' + (e.message || '未知错误'))
     uploading.value = false
   }
+}
+
+const pollPreviewResult = async (taskUuid) => {
+  let attempts = 0
+  const maxAttempts = 150
+  pollTimers.value.preview = setInterval(async () => {
+    attempts++
+    if (attempts > maxAttempts) {
+      clearInterval(pollTimers.value.preview)
+      ElMessage.error('预览超时，请重试')
+      uploading.value = false
+      return
+    }
+    try {
+      const res = await api.importPreviewResult(taskUuid)
+      if (res && res.lawTitle) {
+        clearInterval(pollTimers.value.preview)
+        delete pollTimers.value.preview
+        previewData.value = res
+        previewForm.value = {
+          lawTitle: res.lawTitle || res.title || '',
+          shortTitle: res.shortTitle || '',
+          documentNo: res.documentNo || '',
+          issuingAuthority: res.issuingAuthority || '',
+          issueDate: res.issueDate || '',
+          effectiveDate: res.effectiveDate || ''
+        }
+        expandedArticles.value.clear()
+        showAllArticles.value = false
+        ElMessage.success('预览生成成功')
+        uploading.value = false
+        previewTaskUuid.value = null
+      }
+    } catch (e) {
+      if (attempts > 5 && (e?.code === 404 || (e?.message && e.message.includes('不存在')))) {
+        return
+      }
+      if (attempts > 5 && e?.message && !e.message.includes('不存在')) {
+        clearInterval(pollTimers.value.preview)
+        ElMessage.error('获取预览结果失败: ' + (e.message || '未知错误'))
+        uploading.value = false
+        previewTaskUuid.value = null
+      }
+    }
+  }, 2000)
 }
 
 const handleConfirm = async () => {

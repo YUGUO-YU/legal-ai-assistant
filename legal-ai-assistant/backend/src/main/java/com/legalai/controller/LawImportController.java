@@ -117,8 +117,8 @@ public class LawImportController {
     }
 
     @PostMapping("/preview")
-    @Operation(summary = "预览导入", description = "预览上传文件中的法规内容")
-    public ApiResponse<LawImportPreview> previewImport(@RequestParam("file") MultipartFile file) {
+    @Operation(summary = "预览导入（异步）", description = "上传文件预览法规内容，立即返回job，轮询获取结果")
+    public ApiResponse<LawImportJob> submitPreviewImport(@RequestParam("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {
             return ApiResponse.error(400, "文件不能为空");
         }
@@ -126,7 +126,21 @@ public class LawImportController {
         if (filename == null || (!filename.endsWith(".docx") && !filename.endsWith(".doc"))) {
             return ApiResponse.error(400, "只支持 Word 文档(.docx/.doc)");
         }
-        LawImportPreview preview = lawImportService.previewImport(file);
+        try {
+            LawImportJob job = lawImportService.submitPreviewImport(file);
+            return ApiResponse.success(job);
+        } catch (Exception e) {
+            return ApiResponse.error(500, "预览提交失败: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/preview/{taskUuid}")
+    @Operation(summary = "获取预览结果", description = "轮询预览任务获取预览结果")
+    public ApiResponse<LawImportPreview> getPreviewResult(@PathVariable String taskUuid) {
+        LawImportPreview preview = lawImportService.getPreviewResult(taskUuid);
+        if (preview == null) {
+            return ApiResponse.error(404, "预览结果不存在或尚未完成");
+        }
         return ApiResponse.success(preview);
     }
 

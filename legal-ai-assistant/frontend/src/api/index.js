@@ -277,6 +277,10 @@ export default {
   importPreview: (formData) => withRetry(() => apiClient.post('/admin/law-import/preview', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })),
+  importPreviewResult: (taskUuid) => apiClient.get(`/admin/law-import/preview/${taskUuid}`).then(r => r.data).catch(e => {
+    if (e?.response?.status === 404) return null
+    throw e
+  }),
   importConfirm: (data) => withRetry(() => apiClient.post('/admin/law-import/confirm', data)),
   importDirect: (formData) => withRetry(() => apiClient.post('/admin/law-import/direct', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }

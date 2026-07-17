@@ -115,6 +115,8 @@ public class LawImportService {
 
     private static final String SELECT_ARTICLE_COUNT = "SELECT COUNT(*) FROM law_article";
 
+    private final java.util.concurrent.ConcurrentHashMap<String, LawImportPreview> previewCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -357,6 +359,42 @@ public class LawImportService {
         }
         Collections.sort(presets);
         return presets;
+    }
+
+    public LawImportJob submitPreviewImport(MultipartFile file) {
+        String taskUuid = "PREVIEW-" + System.currentTimeMillis();
+        String fileName = file.getOriginalFilename();
+        String lawName = fileName != null && !fileName.isBlank()
+                ? fileName.substring(0, fileName.lastIndexOf('.')) : "预览任务";
+        long historyId = createHistory(taskUuid, lawName, "preview", "admin");
+
+        LawImportJob job = new LawImportJob();
+        job.setId(historyId);
+        job.setTaskUuid(taskUuid);
+        job.setLawName(lawName);
+        job.setSource("preview");
+        job.setStatus("running");
+        job.setOperator("admin");
+
+        previewImportAsync(historyId, taskUuid, file);
+
+        return job;
+    }
+
+    @Async
+    public void previewImportAsync(long historyId, String taskUuid, MultipartFile file) {
+        try {
+            LawImportPreview preview = previewImport(file);
+            previewCache.put(taskUuid, preview);
+            updateHistoryStatus(historyId, "previewed", null);
+        } catch (Exception e) {
+            log.error("Async preview import failed: {}", e.getMessage(), e);
+            updateHistoryStatus(historyId, "failed", e.getMessage());
+        }
+    }
+
+    public LawImportPreview getPreviewResult(String taskUuid) {
+        return previewCache.get(taskUuid);
     }
 
     public LawImportPreview previewImport(MultipartFile file) {
@@ -662,6 +700,12 @@ public class LawImportService {
                                String error, String articlesJson) {
         jdbcTemplate.update(UPDATE_HISTORY_SQL, status, total, inserted, updated,
                 mysqlOk ? 1 : 0, esOk ? 1 : 0, milvusOk ? 1 : 0, error, id);
+    }
+
+    private void updateHistoryStatus(long id, String status, String error) {
+        jdbcTemplate.update(
+            "UPDATE law_import_history SET status = ?, error_message = ?, finished_at = NOW() WHERE id = ?",
+            status, error, id);
     }
 
     private long queryLastInsertId() {
