@@ -187,7 +187,7 @@
       <template #header>
         <span>导入历史</span>
       </template>
-      <el-table :data="historyData" stripe>
+      <el-table :data="historyData" stripe row-key="id">
         <el-table-column prop="lawName" label="法规标题" />
         <el-table-column label="状态" width="140">
           <template #default="{ row }">

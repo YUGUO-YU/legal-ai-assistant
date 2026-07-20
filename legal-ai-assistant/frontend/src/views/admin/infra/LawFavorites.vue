@@ -53,7 +53,7 @@
           </div>
         </div>
       </template>
-      <el-table :data="list" stripe size="small" v-loading="loading" max-height="400">
+      <el-table :data="list" stripe size="small" v-loading="loading" max-height="400" row-key="id">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="user_id" label="用户ID" width="100" />
         <el-table-column prop="username" label="用户名" width="120" />

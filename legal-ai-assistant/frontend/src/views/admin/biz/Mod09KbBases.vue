@@ -12,7 +12,7 @@
     </div>
 
     <el-card class="glass table-card">
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <el-table :data="rows" v-loading="loading" stripe border row-key="id">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="kb_uuid" label="UUID" width="160" show-overflow-tooltip>
           <template #default="{ row }">

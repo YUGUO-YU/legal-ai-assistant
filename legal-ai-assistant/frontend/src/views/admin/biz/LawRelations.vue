@@ -111,7 +111,7 @@
     </el-card>
 
     <el-card class="glass table-card">
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <el-table :data="rows" v-loading="loading" stripe border row-key="id">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column label="来源法规" min-width="250">
           <template #default="{ row }">

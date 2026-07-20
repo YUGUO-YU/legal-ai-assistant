@@ -16,7 +16,7 @@
     </div>
 
     <el-card class="glass table-card">
-      <el-table :data="displayRows" v-loading="loading" stripe border>
+      <el-table :data="displayRows" v-loading="loading" stripe border row-key="id">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column label="优先级" width="90">
           <template #default="{ row }">

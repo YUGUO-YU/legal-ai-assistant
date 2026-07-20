@@ -5,7 +5,7 @@
       <div class="header-actions"><el-button :icon="Refresh" @click="load">刷新</el-button></div>
     </div>
     <el-card class="glass table-card">
-      <el-table :data="rows" v-loading="loading" stripe border @row-click="openDetail">
+      <el-table :data="rows" v-loading="loading" stripe border row-key="id" @row-click="openDetail">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="session_uuid" label="UUID" width="160"><template #default="{row}"><span class="mono">{{row.session_uuid?.substring(0,12)}}</span></template></el-table-column>
         <el-table-column prop="title" label="标题" min-width="260" show-overflow-tooltip />

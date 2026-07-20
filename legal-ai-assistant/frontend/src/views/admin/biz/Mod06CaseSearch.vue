@@ -11,7 +11,7 @@
       </el-form>
     </el-card>
     <el-card class="glass table-card">
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <el-table :data="rows" v-loading="loading" stripe border row-key="id">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="case_uuid" label="UUID" width="140"><template #default="{row}"><span class="mono">{{row.case_uuid?.substring(0,12)}}</span></template></el-table-column>
         <el-table-column prop="case_no" label="案号" width="170" show-overflow-tooltip />

@@ -43,7 +43,7 @@
           <el-button size="small" @click="selectedRows = []">取消选择</el-button>
         </div>
       </template>
-      <el-table v-else :data="displayRows" v-loading="loading" stripe border @selection-change="handleSelectionChange" @sort-change="handleSortChange">
+      <el-table v-else :data="displayRows" v-loading="loading" stripe border row-key="id" @selection-change="handleSelectionChange" @sort-change="handleSortChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="70" sortable="custom" />
         <el-table-column prop="username" label="用户名" min-width="130" sortable="custom" />

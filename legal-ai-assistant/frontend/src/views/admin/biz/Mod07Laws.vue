@@ -12,7 +12,7 @@
       </el-form>
     </el-card>
     <el-card class="glass table-card">
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <el-table :data="rows" v-loading="loading" stripe border row-key="id">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="title" label="标题" min-width="280" show-overflow-tooltip />
         <el-table-column prop="category_l1" label="一级分类" width="110"><template #default="{row}"><el-tag size="small" type="primary">{{row.category_l1}}</el-tag></template></el-table-column>

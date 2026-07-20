@@ -29,7 +29,7 @@
       <template v-if="rows.length === 0 && !loading">
         <table-empty-state text="暂无数据" />
       </template>
-      <el-table v-else :data="rows" v-loading="loading" stripe border>
+      <el-table v-else :data="rows" v-loading="loading" stripe border row-key="id">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="title" label="标题" min-width="320" show-overflow-tooltip />
         <el-table-column prop="category_l1" label="效力级别" width="110" />

@@ -134,7 +134,7 @@
           </el-input>
         </div>
       </template>
-      <el-table :data="laws" v-loading="tableLoading" @selection-change="handleSelectionChange" stripe>
+      <el-table :data="laws" v-loading="tableLoading" @selection-change="handleSelectionChange" stripe row-key="id">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="title" label="法规名称" min-width="200" show-overflow-tooltip />

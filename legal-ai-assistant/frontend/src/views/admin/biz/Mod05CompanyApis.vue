@@ -5,7 +5,7 @@
       <div class="header-actions"><el-button :icon="Refresh" @click="load">刷新</el-button><el-button type="primary" @click="openCreate">新增配置</el-button></div>
     </div>
     <el-card class="glass table-card">
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <el-table :data="rows" v-loading="loading" stripe border row-key="id">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="api_name" label="API名称" min-width="160"><template #default="{row}"><el-tag size="small" type="primary">{{row.api_name}}</el-tag></template></el-table-column>
         <el-table-column prop="provider" label="供应商" width="110" />

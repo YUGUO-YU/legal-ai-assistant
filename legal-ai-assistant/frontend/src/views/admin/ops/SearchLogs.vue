@@ -65,7 +65,7 @@
     </el-row>
 
     <el-card class="glass table-card" style="margin-top:16px">
-      <el-table :data="rows" v-loading="loading" stripe border size="small" max-height="420">
+      <el-table :data="rows" v-loading="loading" stripe border size="small" max-height="420" row-key="id">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="query_text" label="检索关键词" min-width="280" show-overflow-tooltip />
         <el-table-column prop="intent_type" label="意图" width="110">

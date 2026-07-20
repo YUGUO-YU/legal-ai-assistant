@@ -102,7 +102,7 @@
           </div>
         </div>
       </template>
-      <el-table :data="list" stripe size="small" v-loading="loading" max-height="400">
+      <el-table :data="list" stripe size="small" v-loading="loading" max-height="400" row-key="id">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="article_id" label="法规ID" width="100" />
         <el-table-column prop="article_title" label="法规标题" min-width="200" show-overflow-tooltip />

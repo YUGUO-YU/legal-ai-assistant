@@ -26,7 +26,7 @@
     </el-card>
 
     <el-card class="glass table-card">
-      <el-table :data="rows" v-loading="loading" stripe border>
+      <el-table :data="rows" v-loading="loading" stripe border row-key="id">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="config_key" label="Key" min-width="240" />
         <el-table-column prop="config_value" label="Value" min-width="240">

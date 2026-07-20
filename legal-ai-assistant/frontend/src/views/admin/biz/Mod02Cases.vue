@@ -58,7 +58,7 @@
       <template v-if="rows.length === 0 && !loading">
         <table-empty-state text="暂无数据" />
       </template>
-      <el-table v-else :data="rows" v-loading="loading" stripe border>
+      <el-table v-else :data="rows" v-loading="loading" stripe border row-key="id">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="case_no" label="案号" width="180" show-overflow-tooltip />
         <el-table-column prop="case_name" label="案件名称" min-width="240" show-overflow-tooltip />

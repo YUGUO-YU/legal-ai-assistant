@@ -24,7 +24,7 @@
     </el-card>
 
     <el-card class="glass table-card">
-      <el-table :data="rows" v-loading="loading" stripe border @row-click="openDetail">
+      <el-table :data="rows" v-loading="loading" stripe border row-key="id" @row-click="openDetail">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="user_id" label="用户ID" width="100" />
         <el-table-column prop="username" label="用户" width="120" />
