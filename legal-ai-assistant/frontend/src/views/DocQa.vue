@@ -970,4 +970,43 @@ const goSessionDetail = (s) => { router.push(`/qa-session/${s.sessionUuid || s.i
   code { color: #e2e8f0; font-size: 13px; font-family: 'JetBrains Mono', monospace; line-height: 1.6; }
 }
 :deep(.inline-code) { background: rgba(102,126,234,0.1); color: var(--color-primary); padding: 1px 5px; border-radius: 4px; font-size: 13px; font-family: monospace; }
+
+/* Responsive - Mobile (< 768px) */
+@media (max-width: 768px) {
+  .doc-qa {
+    flex-direction: column;
+  }
+
+  .kb-sidebar {
+    display: none;
+  }
+
+  .chat-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .chat-header {
+    padding: 10px 16px;
+  }
+
+  .chat-messages {
+    padding: 16px;
+  }
+
+  .msg-body {
+    max-width: 85%;
+  }
+
+  .chat-input-area {
+    padding: 12px 16px 16px;
+  }
+
+  .input-card {
+    .send-btn {
+      padding: 0 12px;
+      font-size: 13px;
+    }
+  }
+}
 </style>

@@ -288,7 +288,6 @@ const handleUpload = async () => {
     uploadForm.docName = ''
     showUpload.value = false
   } catch (e) {
-    ElMessage.error('Upload failed')
     ElMessage.error('上传失败，请稍后重试')
   } finally {
     uploading.value = false

@@ -210,7 +210,7 @@ const loadStatusOptions = async () => {
     const res = await api.lawSearch.getCategories()
     statusOptions.value = res?.statusOptions || []
   } catch (e) {
-    ElMessage.error('Failed to load status options')
+    ElMessage.error('加载状态选项失败')
     statusOptions.value = [
       { value: 1, label: '现行有效' },
       { value: 2, label: '已废止' },
@@ -358,7 +358,7 @@ const loadCategories = async () => {
       { value: 5, label: '部分失效' }
     ]
   } catch (e) {
-    ElMessage.error('Failed to load categories')
+    ElMessage.error('加载分类失败')
   }
 }
 </script>
@@ -696,5 +696,27 @@ const loadCategories = async () => {
   }
   .el-dialog__body { padding: 24px; }
   .el-dialog__footer { padding: 16px 24px; border-top: 1px solid var(--color-border-glass); }
+}
+
+/* Responsive - Mobile (< 768px) */
+@media (max-width: 768px) {
+  :deep(.el-col-6) { display: none; }
+  :deep(.el-col-18) { max-width: 100%; flex: 0 0 100%; }
+
+  .filter-row {
+    flex-direction: column;
+    gap: 8px;
+    :deep(.el-select) { width: 100%; }
+  }
+
+  .result-list {
+    .law-item {
+      padding: 16px;
+    }
+    .law-actions {
+      flex-wrap: wrap;
+      .el-button { flex: 1; min-width: 80px; }
+    }
+  }
 }
 </style>

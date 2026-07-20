@@ -205,7 +205,7 @@ export default {
     list: (params) => withRetry(() => apiClient.get('/knowledge-base/list', { params })),
     create: (data) => withRetry(() => apiClient.post('/knowledge-base/create', data)),
     delete: (id) => withRetry(() => apiClient.delete(`/knowledge-base/${id}`)),
-    upload: (data) => withRetry(() => apiClient.post('/knowledge-base/upload', data)),
+    upload: (formData) => withRetry(() => apiClient.post('/knowledge-base/upload/file', formData)),
     detail: (id) => withRetry(() => apiClient.get(`/knowledge-base/${id}`)),
     chunks: (id) => withRetry(() => apiClient.get(`/knowledge-base/${id}/chunks`))
   },
