@@ -10,6 +10,10 @@ class WebSocketService {
   }
 
   connect(url = '/ws') {
+    this.reconnectAttempts = 0
+    if (this.maxReconnectAttempts === 0) {
+      this.maxReconnectAttempts = 5
+    }
     return new Promise((resolve, reject) => {
       try {
         const fullUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}${url}`
@@ -126,7 +130,7 @@ class WebSocketService {
 
   disconnect() {
     this.stopHeartbeat()
-    this.maxReconnectAttempts = 0
+    this.reconnectAttempts = this.maxReconnectAttempts
 
     if (this.socket) {
       this.socket.close(1000, 'Client disconnect')
