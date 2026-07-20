@@ -440,7 +440,7 @@ public class CaseService {
                 try {
                     int year = Integer.parseInt(item.getJudgeDate().substring(0, 4));
                     yearCount.merge(year, 1, Integer::sum);
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException e) { log.debug("Failed to parse year from judgeDate: {}", item.getJudgeDate()); }
             }
         }
 

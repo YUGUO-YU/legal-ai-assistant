@@ -1,10 +1,14 @@
 package com.legalai.utils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Map;
 
 public class RateLimiter {
+    private static final Logger log = LoggerFactory.getLogger(RateLimiter.class);
     private final Map<String, SlidingWindow> windows = new ConcurrentHashMap<>();
     private final int maxRequests;
     private final long windowMs;
@@ -29,7 +33,7 @@ public class RateLimiter {
             try {
                 Thread.sleep(windowMs);
                 windows.remove(key);
-            } catch (InterruptedException ignored) {}
+            } catch (InterruptedException e) { Thread.currentThread().interrupt(); log.warn("Rate limiter sleep interrupted"); }
         }).start();
     }
 

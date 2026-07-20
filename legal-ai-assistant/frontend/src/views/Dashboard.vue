@@ -25,7 +25,7 @@
     />
 
     <el-row :gutter="24" class="stats-row" v-loading="statsLoading">
-      <el-col :span="6" v-for="(stat, index) in statsData" :key="index">
+      <el-col :span="6" v-for="(stat, index) in statsData" :key="stat.label">
         <el-card class="stat-card card-hover" :class="stat.class" @click="goTo(stat.path)">
           <div class="stat-content">
             <div class="stat-icon" :style="{ background: stat.gradient }">

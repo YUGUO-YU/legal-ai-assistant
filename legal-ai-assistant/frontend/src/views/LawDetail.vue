@@ -134,27 +134,27 @@
               <div class="analysis-text">{{ analysisResult.coreProvisions }}</div>
             </el-tab-pane>
             <el-tab-pane label="重点法条释义" v-if="analysisResult.keyArticles && analysisResult.keyArticles.length">
-              <div v-for="(article, index) in analysisResult.keyArticles" :key="index" class="article-interpretation">
+              <div v-for="(article, index) in analysisResult.keyArticles" :key="article.articleNo" class="article-interpretation">
                 <h4>{{ article.articleNo }} {{ article.title }}</h4>
                 <p>{{ article.interpretation }}</p>
               </div>
             </el-tab-pane>
             <el-tab-pane label="适用场景" v-if="analysisResult.practicalScenarios && analysisResult.practicalScenarios.length">
               <ul class="scenario-list">
-                <li v-for="(scenario, index) in analysisResult.practicalScenarios" :key="index">{{ scenario }}</li>
+                <li v-for="(scenario, index) in analysisResult.practicalScenarios" :key="scenario">{{ scenario }}</li>
               </ul>
             </el-tab-pane>
             <el-tab-pane label="关联法规" v-if="analysisResult.relatedLaws && analysisResult.relatedLaws.length">
               <ul class="scenario-list">
-                <li v-for="(law, index) in analysisResult.relatedLaws" :key="index">{{ law }}</li>
+                <li v-for="(law, index) in analysisResult.relatedLaws" :key="law">{{ law }}</li>
               </ul>
             </el-tab-pane>
             <el-tab-pane label="风险点" v-if="analysisResult.riskPoints && analysisResult.riskPoints.length">
-              <el-alert v-for="(risk, index) in analysisResult.riskPoints" :key="index" :title="risk" type="warning" show-icon style="margin-bottom: 8px;" />
+              <el-alert v-for="(risk, index) in analysisResult.riskPoints" :key="risk" :title="risk" type="warning" show-icon style="margin-bottom: 8px;" />
             </el-tab-pane>
             <el-tab-pane label="合规建议" v-if="analysisResult.complianceSuggestions && analysisResult.complianceSuggestions.length">
               <ul class="scenario-list">
-                <li v-for="(suggestion, index) in analysisResult.complianceSuggestions" :key="index">{{ suggestion }}</li>
+                <li v-for="(suggestion, index) in analysisResult.complianceSuggestions" :key="suggestion">{{ suggestion }}</li>
               </ul>
             </el-tab-pane>
           </el-tabs>

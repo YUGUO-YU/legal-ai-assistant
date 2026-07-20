@@ -139,8 +139,9 @@
               <el-button size="small" @click="browseArticles(law)">
                 <el-icon><Document /></el-icon> 浏览条款
               </el-button>
-              <el-button size="small" @click="collectLaw(law)">
-                <el-icon><Star /></el-icon> 收藏
+              <el-button size="small" @click="collectLaw(law)" :type="favoriteIds.has(law.lawUuid) ? 'warning' : 'default'">
+                <el-icon><Star /></el-icon>
+                {{ favoriteIds.has(law.lawUuid) ? '已收藏' : '收藏' }}
               </el-button>
             </div>
           </div>
@@ -193,47 +194,9 @@ const articlesDialogVisible = ref(false)
 const articlesLoading = ref(false)
 const articles = ref([])
 const selectedLaw = ref(null)
+const favoriteIds = ref(new Set())
 
-const treeData = ref([
-  {
-    id: 'law',
-    label: '法律',
-    count: 256,
-    children: [
-      { id: 'civil', label: '民法', count: 45 },
-      { id: 'criminal', label: '刑法', count: 38 },
-      { id: 'admin', label: '行政法', count: 52 },
-      { id: 'commercial', label: '商法', count: 28 }
-    ]
-  },
-  {
-    id: 'admin_regulation',
-    label: '行政法规',
-    count: 189,
-    children: [
-      { id: 'state_council', label: '国务院规章', count: 156 },
-      { id: 'ministry', label: '部委规章', count: 33 }
-    ]
-  },
-  {
-    id: 'local_regulation',
-    label: '地方性法规',
-    count: 1024,
-    children: [
-      { id: 'provincial', label: '省级法规', count: 568 },
-      { id: 'city', label: '市级法规', count: 456 }
-    ]
-  },
-  {
-    id: 'judicial',
-    label: '司法解释',
-    count: 89,
-    children: [
-      { id: 'supreme_court', label: '最高人民法院', count: 67 },
-      { id: 'procuratorate', label: '最高人民检察院', count: 22 }
-    ]
-  }
-])
+const treeData = ref([])
 
 const treeProps = {
   label: 'label',
@@ -344,17 +307,36 @@ const browseArticles = async (law) => {
 }
 
 const collectLaw = async (law) => {
-  try {
-    await api.lawFavorite.add(law.lawUuid, law.title)
-    ElMessage.success('已添加到收藏')
-  } catch (e) {
-    ElMessage.error('收藏失败')
-    ElMessage.error(e?.message || e?.response?.data?.message || '收藏失败')
+  if (favoriteIds.value.has(law.lawUuid)) {
+    try {
+      await api.lawFavorite.remove(law.lawUuid)
+      favoriteIds.value.delete(law.lawUuid)
+      ElMessage.success('已取消收藏')
+    } catch (e) {
+      ElMessage.error('取消收藏失败')
+    }
+  } else {
+    try {
+      await api.lawFavorite.add(law.lawUuid, law.title)
+      favoriteIds.value.add(law.lawUuid)
+      ElMessage.success('已添加到收藏')
+    } catch (e) {
+      ElMessage.error('收藏失败')
+    }
   }
 }
 
+const loadFavorites = async () => {
+  try {
+    const res = await api.lawFavorite.list()
+    if (res && res.length > 0) {
+      res.forEach(item => favoriteIds.value.add(item.lawUuid))
+    }
+  } catch (_) {}
+}
+
 onMounted(async () => {
-  await loadCategories()
+  await Promise.all([loadCategories(), loadFavorites()])
   handleSearch()
 })
 

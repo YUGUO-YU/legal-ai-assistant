@@ -425,7 +425,7 @@ public class JudgmentImportService {
                 SimpleDateFormat sdf = new SimpleDateFormat(fmt);
                 java.util.Date d = sdf.parse(s);
                 return new java.sql.Date(d.getTime());
-            } catch (ParseException ignored) {}
+            } catch (ParseException e) { log.debug("Failed to parse date '{}' with format '{}': {}", s, fmt, e.getMessage()); }
         }
         return null;
     }

@@ -1,6 +1,6 @@
 <template>
   <el-row :gutter="24" class="stats-row" v-loading="loading">
-    <el-col :xs="12" :sm="6" :md="4" :lg="3" v-for="(stat, index) in statsData" :key="index">
+    <el-col :xs="12" :sm="6" :md="4" :lg="3" v-for="(stat, index) in statsData" :key="stat.label">
       <el-card class="kpi-card" :body-style="{ padding: '14px' }" :class="stat.class" @click="goTo(stat.path)">
         <div class="kpi-content">
           <div class="kpi-icon" :style="{ background: stat.gradient }">

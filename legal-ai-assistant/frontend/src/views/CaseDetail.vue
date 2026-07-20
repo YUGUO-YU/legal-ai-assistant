@@ -98,7 +98,7 @@
           <div class="legal-basis-list">
             <el-tag
               v-for="(law, index) in caseData.legalBasis"
-              :key="index"
+              :key="law"
               effect="plain"
               class="law-tag"
             >

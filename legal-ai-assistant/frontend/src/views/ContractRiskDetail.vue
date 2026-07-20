@@ -83,7 +83,7 @@
             <div v-if="filteredRisks.length" class="risk-list">
               <div
                 v-for="(item, index) in filteredRisks"
-                :key="index"
+                :key="item.title"
                 class="risk-block"
                 :class="['level-' + item.level.toLowerCase(), { active: activeIndex === index }]"
                 @click="activeIndex = index"

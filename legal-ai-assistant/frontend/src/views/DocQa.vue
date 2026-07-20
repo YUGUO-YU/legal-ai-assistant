@@ -127,8 +127,8 @@
         <!-- Messages List -->
         <div v-else class="messages-list">
           <div
-            v-for="(msg, index) in messages"
-            :key="index"
+            v-for="msg in messages"
+            :key="msg.id"
             :class="['message-row', msg.role]"
           >
             <div class="msg-avatar">
@@ -152,13 +152,13 @@
                   </div>
                   <div class="citations-grid">
                     <div
-                      v-for="(c, ci) in msg.citations"
-                      :key="ci"
+                      v-for="c in msg.citations"
+                      :key="c.label || c.title || c.content?.substring(0, 30)"
                       class="citation-card"
                       @click="scrollToCitation(c)"
                     >
                       <div class="citation-top">
-                        <span class="citation-label">{{ c.label || c.title || `来源 ${ci + 1}` }}</span>
+                        <span class="citation-label">{{ c.label || c.title || `来源 ${msg.citations.indexOf(c) + 1}` }}</span>
                         <el-tag size="small" type="success" effect="plain" class="score-tag">
                           {{ Math.round((c.score > 1 ? c.score : c.score * 100)) }}% 相关
                         </el-tag>
@@ -470,7 +470,7 @@ const handleAsk = async () => {
 
 const clearHistory = async () => {
   if (sessionId.value) {
-    try { await api.docQa.clearSession(sessionId.value) } catch (_) {}
+    try { await api.docQa.clearSession(sessionId.value) } catch (e) { console.warn('Clear session failed:', e) }
   }
   messages.value = []
   sessionId.value = null
