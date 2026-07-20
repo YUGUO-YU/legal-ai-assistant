@@ -46,7 +46,7 @@ export function useNotificationWs() {
             message: data.message || ''
           })
         } catch (e) {
-          ElMessage.warning('[WS] Failed to parse message')
+          ElMessage.warning('[WS] 消息解析失败')
         }
       }
 
@@ -57,11 +57,11 @@ export function useNotificationWs() {
       }
 
       ws.onerror = (err) => {
-        ElMessage.warning('[WS] Error')
+        ElMessage.warning('[WS] 连接错误')
         wsStatus.value = 'error'
       }
     } catch (e) {
-      ElMessage.warning('[WS] Connection failed')
+      ElMessage.warning('[WS] 连接失败')
       scheduleReconnect()
     }
   }
