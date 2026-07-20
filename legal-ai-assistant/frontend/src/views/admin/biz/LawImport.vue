@@ -177,8 +177,8 @@
             <el-button text @click="showPdfPreview = false; pdfPreviewUrl = null">关闭预览</el-button>
           </div>
         </template>
-        <div class="pdf-preview-container">
-          <vue-pdf-embed :url="pdfPreviewUrl" />
+        <div class="pdf-preview-container" v-loading="!pdfLoaded">
+          <vue-pdf-embed v-if="pdfLoaded" :url="pdfPreviewUrl" />
         </div>
       </el-card>
     </el-card>
@@ -254,10 +254,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled, Loading, InfoFilled, ArrowRight } from '@element-plus/icons-vue'
-import VuePdfEmbed from 'vue-pdf-embed'
+const VuePdfEmbed = defineAsyncComponent(() => import('vue-pdf-embed'))
 import api from '@/api'
 
 const uploadRef = ref(null)
@@ -276,6 +276,7 @@ const uploading = ref(false)
 const selectedFileType = ref('pdf')
 const pdfPreviewUrl = ref(null)
 const showPdfPreview = ref(false)
+const pdfLoaded = ref(false)
 const expandedArticles = ref(new Set())
 const showAllArticles = ref(false)
 const importMode = ref('preview')
@@ -321,6 +322,8 @@ const handleFileChange = (file) => {
     if (isPdf) {
       pdfPreviewUrl.value = URL.createObjectURL(file.raw)
       showPdfPreview.value = true
+      pdfLoaded.value = false
+      setTimeout(() => { pdfLoaded.value = true }, 100)
     } else {
       showPdfPreview.value = false
       pdfPreviewUrl.value = null
