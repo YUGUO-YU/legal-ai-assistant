@@ -115,7 +115,26 @@ public class LawImportService {
 
     private static final String SELECT_ARTICLE_COUNT = "SELECT COUNT(*) FROM law_article";
 
-    private final java.util.concurrent.ConcurrentHashMap<String, LawImportPreview> previewCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long PREVIEW_CACHE_TTL_MS = 30 * 60 * 1000L;
+    private static final int PREVIEW_CACHE_MAX_ENTRIES = 100;
+    private final java.util.concurrent.ConcurrentHashMap<String, CachedPreview> previewCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static class CachedPreview {
+        final LawImportPreview preview;
+        final long timestamp;
+        CachedPreview(LawImportPreview preview) {
+            this.preview = preview;
+            this.timestamp = System.currentTimeMillis();
+        }
+    }
+
+    private void evictStalePreviews() {
+        long now = System.currentTimeMillis();
+        previewCache.entrySet().removeIf(e ->
+            now - e.getValue().timestamp > PREVIEW_CACHE_TTL_MS ||
+            previewCache.size() > PREVIEW_CACHE_MAX_ENTRIES
+        );
+    }
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -385,7 +404,8 @@ public class LawImportService {
     public void previewImportAsync(long historyId, String taskUuid, MultipartFile file) {
         try {
             LawImportPreview preview = previewImport(file);
-            previewCache.put(taskUuid, preview);
+            evictStalePreviews();
+            previewCache.put(taskUuid, new CachedPreview(preview));
             updateHistoryStatus(historyId, "previewed", null);
         } catch (Exception e) {
             log.error("Async preview import failed: {}", e.getMessage(), e);
@@ -394,7 +414,9 @@ public class LawImportService {
     }
 
     public LawImportPreview getPreviewResult(String taskUuid) {
-        return previewCache.get(taskUuid);
+        evictStalePreviews();
+        CachedPreview cached = previewCache.get(taskUuid);
+        return cached != null ? cached.preview : null;
     }
 
     public LawImportPreview previewImport(MultipartFile file) {
