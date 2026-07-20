@@ -470,7 +470,7 @@ const handleAsk = async () => {
 
 const clearHistory = async () => {
   if (sessionId.value) {
-    try { await api.docQa.clearSession(sessionId.value) } catch (e) { console.warn('Clear session failed:', e) }
+    try { await api.docQa.clearSession(sessionId.value) } catch (e) { /* silent fail - local state already cleared */ }
   }
   messages.value = []
   sessionId.value = null

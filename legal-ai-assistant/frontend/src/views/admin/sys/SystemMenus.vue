@@ -56,7 +56,6 @@ const menus = ref([
 const saving = ref(false)
 
 const handleOrderChange = ({ oldIndex, newIndex, element }) => {
-  console.log('Menu moved:', element.name, 'from', oldIndex, 'to', newIndex)
 }
 
 const saveOrder = async () => {
@@ -71,7 +70,7 @@ const saveOrder = async () => {
 }
 
 const editMenu = (menu) => {
-  console.log('Edit menu:', menu)
+  ElMessage.info('菜单编辑功能开发中')
 }
 </script>
 
