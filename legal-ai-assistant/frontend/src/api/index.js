@@ -205,7 +205,7 @@ export default {
     list: (params) => withRetry(() => apiClient.get('/knowledge-base/list', { params })),
     create: (data) => withRetry(() => apiClient.post('/knowledge-base/create', data)),
     delete: (id) => withRetry(() => apiClient.delete(`/knowledge-base/${id}`)),
-    upload: (formData) => withRetry(() => apiClient.post('/knowledge-base/upload/file', formData)),
+    upload: (formData) => apiClient.post('/knowledge-base/upload/file', formData),
     detail: (id) => withRetry(() => apiClient.get(`/knowledge-base/${id}`)),
     chunks: (id) => withRetry(() => apiClient.get(`/knowledge-base/${id}/chunks`))
   },
@@ -246,17 +246,17 @@ export default {
     importAll: (data) => withRetry(() => apiClient.post('/admin/data/import-all', data))
   },
   judgmentImport: {
-    preview: (formData) => withRetry(() => apiClient.post('/admin/data-import/judgments/preview', formData, {
+    preview: (formData) => apiClient.post('/admin/data-import/judgments/preview', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
-    })),
+    }),
     confirm: (data) => withRetry(() => apiClient.post('/admin/data-import/judgments/confirm', data))
   },
   lawImport: {
     webSearch: (data) => withRetry(() => apiClient.post('/admin/law-import/web-search', data)),
     upload: (data) => withRetry(() => apiClient.post('/admin/law-import/upload', data)),
-    uploadFile: (formData) => withRetry(() => apiClient.post('/admin/law-import/upload-file', formData, {
+    uploadFile: (formData) => apiClient.post('/admin/law-import/upload-file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
-    })),
+    }),
     preset: (presetKey, operator) => withRetry(() => apiClient.post(`/admin/law-import/preset/${presetKey}`, null, { params: { operator } })),
     presets: () => withRetry(() => apiClient.get('/admin/law-import/presets')),
     history: (page = 1, pageSize = 20) => withRetry(() => apiClient.get('/admin/law-import/history', { params: { page, pageSize } })),
@@ -274,17 +274,17 @@ export default {
   deleteCategory: (id) => withRetry(() => apiClient.delete(`/admin/law/categories/${id}`)),
   getDocumentCategories: (lawId) => withRetry(() => apiClient.get(`/admin/law/document-categories/${lawId}`)),
   setDocumentCategories: (lawId, categoryIds) => withRetry(() => apiClient.post(`/admin/law/document-categories/${lawId}`, { categoryIds })),
-  importPreview: (formData) => withRetry(() => apiClient.post('/admin/law-import/preview', formData, {
+  importPreview: (formData) => apiClient.post('/admin/law-import/preview', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
-  })),
+  }),
   importPreviewResult: (taskUuid) => apiClient.get(`/admin/law-import/preview/${taskUuid}`).then(r => r.data).catch(e => {
     if (e?.response?.status === 404) return null
     throw e
   }),
   importConfirm: (data) => withRetry(() => apiClient.post('/admin/law-import/confirm', data)),
-  importDirect: (formData) => withRetry(() => apiClient.post('/admin/law-import/direct', formData, {
+  importDirect: (formData) => apiClient.post('/admin/law-import/direct', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
-  })),
+  }),
   lawImportHistory: () => withRetry(() => apiClient.get('/admin/law-import/history')),
   lawDocument: {
     create: (data) => withRetry(() => apiClient.post('/admin/law-document/create', data)),
