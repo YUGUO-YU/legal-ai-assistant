@@ -37,27 +37,27 @@ class LegalResearchServiceTest {
     @BeforeEach
     void setUp() {
         validRequest = new LegalResearchRequest();
-        validRequest.setTopic("合同违约的法律后果");
+        validRequest.setQuestion("合同违约的法律后果");
         validRequest.setDepth("standard");
     }
 
     @Test
     void shouldRejectEmptyTopic() {
-        validRequest.setTopic("");
+        validRequest.setQuestion("");
         assertThrows(IllegalArgumentException.class,
-            () -> legalResearchService.createTask(validRequest));
+            () -> legalResearchService.createResearchTask(validRequest));
     }
 
     @Test
     void shouldRejectNullTopic() {
-        validRequest.setTopic(null);
+        validRequest.setQuestion(null);
         assertThrows(IllegalArgumentException.class,
-            () -> legalResearchService.createTask(validRequest));
+            () -> legalResearchService.createResearchTask(validRequest));
     }
 
     @Test
     void shouldCreateTaskWithValidRequest() {
-        String taskId = legalResearchService.createTask(validRequest);
+        String taskId = legalResearchService.createResearchTask(validRequest);
         assertNotNull(taskId);
         assertFalse(taskId.isEmpty());
     }
@@ -67,8 +67,8 @@ class LegalResearchServiceTest {
         String fakeReport = "## 研究报告\n### 概述\n违约的法律后果包括损害赔偿和继续履行。";
         when(aiService.chat(any())).thenReturn(fakeReport);
 
-        String taskId = legalResearchService.createTask(validRequest);
-        LegalResearchResponse report = legalResearchService.getReport(taskId);
+        String taskId = legalResearchService.createResearchTask(validRequest);
+        LegalResearchResponse report = legalResearchService.getResearchReport(taskId);
 
         assertNotNull(report);
     }
@@ -78,6 +78,6 @@ class LegalResearchServiceTest {
         doThrow(new RuntimeException("AI服务不可用"))
             .when(aiService).chat(any());
 
-        legalResearchService.createTask(validRequest);
+        legalResearchService.createResearchTask(validRequest);
     }
 }
