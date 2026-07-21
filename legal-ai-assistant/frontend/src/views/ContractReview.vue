@@ -459,7 +459,7 @@ const radarOption = computed(() => {
       backgroundColor: 'rgba(255,255,255,0.95)',
       borderColor: '#e5e7eb',
       textStyle: {
-        color: '#1f2937'
+        color: '#374151'
       }
     },
     radar: {
@@ -765,7 +765,7 @@ useKeyboardShortcuts([
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, var(--color-skeleton-base) 25%, var(--color-skeleton-highlight) 50%, var(--color-skeleton-base) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -824,7 +824,7 @@ useKeyboardShortcuts([
 .result-card {
   border: 1px solid rgba(102, 126, 234, 0.15);
   border-radius: 20px;
-  background: rgba(19, 17, 28, 0.7);
+  background: var(--color-bg-dark-card);
   backdrop-filter: blur(20px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   height: 100%;
@@ -868,7 +868,7 @@ useKeyboardShortcuts([
     font-size: 14px;
     line-height: 1.8;
     resize: none;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-bg-input);
     border-color: rgba(102, 126, 234, 0.15);
     color: var(--color-text-primary);
 
@@ -892,7 +892,7 @@ useKeyboardShortcuts([
 
       &:hover {
         border-color: rgba(102, 126, 234, 0.6);
-        background: rgba(102, 126, 234, 0.1);
+        background: var(--color-bg-input-hover);
 
         &::after {
           content: '';
@@ -952,7 +952,8 @@ useKeyboardShortcuts([
   display: flex;
   gap: 24px;
   padding: 20px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+  background: var(--color-bg-input);
+  border: 1px solid rgba(102, 126, 234, 0.12);
   border-radius: 16px;
 
   .option-item {
@@ -970,7 +971,7 @@ useKeyboardShortcuts([
       color: var(--color-text-secondary);
 
       .el-icon {
-        color: #667eea;
+        color: var(--color-primary);
       }
     }
 
@@ -1034,13 +1035,13 @@ useKeyboardShortcuts([
 
 @keyframes dashFlow {
   0% {
-    border-color: #667eea;
+    border-color: var(--color-primary);
   }
   50% {
     border-color: rgba(102, 126, 234, 0.3);
   }
   100% {
-    border-color: #667eea;
+    border-color: var(--color-primary);
   }
 }
 
@@ -1051,7 +1052,7 @@ useKeyboardShortcuts([
     gap: 32px;
     margin-bottom: 32px;
     padding-bottom: 24px;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border-glass);
 
     .score-circle {
       :deep(.el-progress__text) {
@@ -1089,18 +1090,18 @@ useKeyboardShortcuts([
         margin-bottom: 8px;
 
         &.risk-high {
-          background: rgba(239, 68, 68, 0.1);
-          color: #ef4444;
+          background: var(--color-danger-surface-dark);
+          color: var(--color-danger);
         }
 
         &.risk-medium {
-          background: rgba(245, 158, 11, 0.1);
-          color: #f59e0b;
+          background: var(--color-warning-surface-dark);
+          color: var(--color-warning);
         }
 
         &.risk-low {
-          background: rgba(16, 185, 129, 0.1);
-          color: #10b981;
+          background: var(--color-success-surface-dark);
+          color: var(--color-success);
         }
       }
 
@@ -1123,7 +1124,7 @@ useKeyboardShortcuts([
       color: var(--color-text-primary);
 
       .el-icon {
-        color: #667eea;
+        color: var(--color-primary);
       }
     }
 
@@ -1193,7 +1194,7 @@ useKeyboardShortcuts([
       padding: 12px 16px;
       border-radius: 10px;
       border-left: 3px solid;
-      background: #f9fafb;
+      background: var(--color-bg-surface);
 
       .dim-name {
         font-size: 13px;
@@ -1207,24 +1208,24 @@ useKeyboardShortcuts([
       }
 
       &.risk-high {
-        background: rgba(245, 108, 108, 0.1);
-        border-left-color: #f56c6c;
+        background: var(--color-danger-surface-dark);
+        border-left-color: var(--color-danger-border-dark);
 
-        .dim-score { color: #f56c6c; }
+        .dim-score { color: var(--color-danger); }
       }
 
       &.risk-medium {
-        background: rgba(230, 162, 60, 0.1);
-        border-left-color: #e6a23c;
+        background: var(--color-warning-surface-dark);
+        border-left-color: var(--color-warning-border-dark);
 
-        .dim-score { color: #e6a23c; }
+        .dim-score { color: var(--color-warning); }
       }
 
       &.risk-low {
-        background: rgba(103, 194, 58, 0.1);
-        border-left-color: #67c23a;
+        background: var(--color-success-surface-dark);
+        border-left-color: var(--color-success-border-dark);
 
-        .dim-score { color: #67c23a; }
+        .dim-score { color: var(--color-success); }
       }
     }
   }
@@ -1250,7 +1251,7 @@ useKeyboardShortcuts([
 
     .el-icon {
       font-size: 48px;
-      color: #d1d5db;
+      color: var(--color-text-placeholder);
     }
   }
 
@@ -1275,7 +1276,7 @@ useKeyboardShortcuts([
 
   :deep(.el-card__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border-glass);
   }
 
   :deep(.el-card__body) {
@@ -1288,15 +1289,15 @@ useKeyboardShortcuts([
     gap: 6px;
 
     &.high {
-      color: #ef4444;
+      color: var(--color-danger);
     }
 
     &.medium {
-      color: #f59e0b;
+      color: var(--color-warning);
     }
 
     &.low {
-      color: #10b981;
+      color: var(--color-success);
     }
   }
 }
@@ -1313,29 +1314,29 @@ useKeyboardShortcuts([
   border-left: 4px solid;
 
   &.high {
-    background: rgba(239, 68, 68, 0.05);
-    border-color: #ef4444;
+    background: var(--color-danger-surface-dark);
+    border-color: var(--color-danger);
 
     .risk-header {
-      color: #ef4444;
+      color: var(--color-danger);
     }
   }
 
   &.medium {
-    background: rgba(245, 158, 11, 0.05);
-    border-color: #f59e0b;
+    background: var(--color-warning-surface-dark);
+    border-color: var(--color-warning);
 
     .risk-header {
-      color: #f59e0b;
+      color: var(--color-warning);
     }
   }
 
   &.low {
-    background: rgba(16, 185, 129, 0.05);
-    border-color: #10b981;
+    background: var(--color-success-surface-dark);
+    border-color: var(--color-success);
 
     .risk-header {
-      color: #10b981;
+      color: var(--color-success);
     }
   }
 
@@ -1364,14 +1365,14 @@ useKeyboardShortcuts([
     align-items: flex-start;
     gap: 10px;
     padding: 14px;
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.5);
     border-radius: 10px;
     font-size: 13px;
     color: var(--color-text-secondary);
     line-height: 1.6;
 
     .el-icon {
-      color: #667eea;
+      color: var(--color-primary);
       flex-shrink: 0;
       margin-top: 2px;
     }
@@ -1384,9 +1385,9 @@ useKeyboardShortcuts([
   justify-content: center;
   gap: 10px;
   padding: 40px;
-  color: #10b981;
+  color: var(--color-success);
   font-size: 15px;
-  background: rgba(16, 185, 129, 0.05);
+  background: var(--color-success-surface-dark);
   border-radius: 12px;
 }
 
@@ -1404,7 +1405,7 @@ useKeyboardShortcuts([
 
     .el-icon {
       font-size: 20px;
-      color: #667eea;
+      color: var(--color-primary);
     }
 
     h4 {

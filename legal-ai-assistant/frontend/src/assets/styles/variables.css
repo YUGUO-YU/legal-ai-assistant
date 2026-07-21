@@ -18,7 +18,7 @@
   /* Gradients */
   --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --gradient-text: linear-gradient(135deg, #667eea 0%, #a78bfa 50%, #764ba2 100%);
-  --gradient-card: linear-gradient(135deg, rgba(102,126,234,0.06) 0%, rgba(118,75,162,0.06) 100%);
+  --gradient-card: linear-gradient(135deg, rgba(102,126,234,0.08) 0%, rgba(118,75,162,0.06) 100%);
   --gradient-glow: linear-gradient(135deg, rgba(102,126,234,0.2) 0%, rgba(118,75,162,0.2) 100%);
 
   /* Page Background - 纯净浅灰白 */
@@ -75,6 +75,26 @@
   --radius-lg: 14px;
   --radius-xl: 18px;
   --radius-full: 9999px;
+
+  /* Light surface for dim-card */
+  --color-bg-surface: #f9fafb;
+
+  /* Skeleton shimmer for light mode */
+  --color-skeleton-base: #f0f0f0;
+  --color-skeleton-highlight: #e0e0e0;
+
+  /* Semantic: dark card for glass/paper components */
+  --color-bg-dark-card: rgba(19, 17, 28, 0.7);
+  --color-bg-input: rgba(255, 255, 255, 0.05);
+  --color-bg-input-hover: rgba(255, 255, 255, 0.08);
+
+  /* Risk level for dark surfaces */
+  --color-danger-surface-dark: rgba(239, 68, 68, 0.08);
+  --color-warning-surface-dark: rgba(245, 158, 11, 0.08);
+  --color-success-surface-dark: rgba(16, 185, 129, 0.08);
+  --color-danger-border-dark: #f56c6c;
+  --color-warning-border-dark: #e6a23c;
+  --color-success-border-dark: #67c23a;
 
   /* Spacing */
   --space-1: 4px;
@@ -135,4 +155,24 @@
   --el-color-success: #34d399;
   --el-color-warning: #fbbf24;
   --el-color-danger: #f87171;
+
+  /* Semantic: dark card for glass/paper components */
+  --color-bg-dark-card: rgba(19, 17, 28, 0.85);
+  --color-bg-input: rgba(255, 255, 255, 0.06);
+  --color-bg-input-hover: rgba(255, 255, 255, 0.1);
+
+  /* Risk level for dark surfaces */
+  --color-danger-surface-dark: rgba(248, 113, 113, 0.12);
+  --color-warning-surface-dark: rgba(251, 191, 36, 0.12);
+  --color-success-surface-dark: rgba(52, 211, 153, 0.12);
+  --color-danger-border-dark: #f87171;
+  --color-warning-border-dark: #fbbf24;
+  --color-success-border-dark: #34d399;
+
+  /* Light surface for dim-card */
+  --color-bg-surface: rgba(255, 255, 255, 0.06);
+
+  /* Skeleton shimmer for dark mode */
+  --color-skeleton-base: rgba(255, 255, 255, 0.06);
+  --color-skeleton-highlight: rgba(255, 255, 255, 0.1);
 }
