@@ -1,6 +1,9 @@
-import pytest
-from law_parser.ai.structure_extractor import StructureExtractor, StructureResult
-from law_parser.ai.models import ArticleParse, CategorySuggestion, ClassificationResult
+import pytest, json
+from unittest.mock import patch, MagicMock
+from law_parser.ai.structure_extractor import StructureExtractor
+from law_parser.ai.content_reviewer import ContentReviewer
+from law_parser.ai.classifier import Classifier
+from law_parser.ai.models import StructureResult, ArticleParse, CategorySuggestion, ClassificationResult
 
 def test_structure_result_model():
     result = StructureResult(
@@ -31,3 +34,87 @@ def test_classification_result_model():
         CategorySuggestion(type_name="民法商法", confidence=0.95)
     ])
     assert len(result.suggested_categories) == 1
+
+def test_structure_extractor_extract():
+    mock_client = MagicMock()
+    mock_client.chat.return_value = json.dumps({
+        "law_title": "中华人民共和国劳动法",
+        "short_title": "劳动法",
+        "issuing_authority": "全国人大",
+        "issue_date": "2018-12-29",
+        "effective_date": "2019-01-01",
+        "document_no": "主席令第二十四号",
+        "chapter_tree": [],
+        "articles": [
+            {"article_no": "第一条", "title": "立法目的", "content": "为了...", "sort_order": 1}
+        ]
+    })
+    extractor = StructureExtractor(mock_client)
+    result = extractor.extract("测试内容")
+    assert result.law_title == "中华人民共和国劳动法"
+    assert len(result.articles) == 1
+    assert result.articles[0].article_no == "第一条"
+
+def test_content_reviewer_returns_warnings():
+    mock_client = MagicMock()
+    mock_client.chat.return_value = json.dumps({
+        "warnings": ["第三条疑似重复"],
+        "corrected_articles": []
+    })
+    reviewer = ContentReviewer(mock_client)
+    result = StructureResult(law_title="劳动法", articles=[
+        ArticleParse(article_no="第三条", title="", content="内容...", sort_order=3)
+    ])
+    reviewed = reviewer.review(result)
+    assert len(reviewed.articles[0].review_warnings) == 1
+
+def test_classifier_keyword_match():
+    mock_client = MagicMock()
+    mock_client.chat.return_value = json.dumps({
+        "suggested_categories": [
+            {"type_name": "劳动法", "category_name": "劳动争议", "confidence": 0.98}
+        ]
+    })
+    classifier = Classifier(mock_client)
+    result = StructureResult(law_title="中华人民共和国劳动合同法", articles=[
+        ArticleParse(article_no="第一条", content="为了...", sort_order=1)
+    ])
+    classes = classifier.classify(result)
+    assert len(classes.suggested_categories) >= 1
+    assert classes.suggested_categories[0].type_name == "劳动法"
+
+def test_classifier_ai_fallback():
+    mock_client = MagicMock()
+    mock_client.chat.return_value = json.dumps({
+        "suggested_categories": [
+            {"type_name": "行政法", "category_name": "", "confidence": 0.8}
+        ]
+    })
+    classifier = Classifier(mock_client)
+    result = StructureResult(law_title="无关键词法律", articles=[
+        ArticleParse(article_no="第一条", content="内容", sort_order=1)
+    ])
+    classes = classifier.classify(result)
+    assert len(classes.suggested_categories) >= 1
+
+def test_structure_extractor_large_doc_chunking():
+    mock_client = MagicMock()
+    responses = [
+        json.dumps({"law_title": "劳动法", "articles": [{"article_no": "第一条", "content": "内容1", "sort_order": 1}]}),
+        json.dumps({"law_title": "劳动法", "articles": [{"article_no": "第二条", "content": "内容2", "sort_order": 2}]}),
+    ]
+    mock_client.chat.side_effect = responses
+    extractor = StructureExtractor(mock_client)
+    large_text = ("x" * 5000 + "\n") * 3
+    result = extractor.extract(large_text)
+    assert len(result.articles) == 2
+
+def test_content_reviewer_invalid_json():
+    mock_client = MagicMock()
+    mock_client.chat.return_value = "这不是JSON"
+    reviewer = ContentReviewer(mock_client)
+    result = StructureResult(law_title="劳动法", articles=[
+        ArticleParse(article_no="第一条", content="内容", sort_order=1)
+    ])
+    reviewed = reviewer.review(result)
+    assert len(reviewed.articles[0].review_warnings) == 0
