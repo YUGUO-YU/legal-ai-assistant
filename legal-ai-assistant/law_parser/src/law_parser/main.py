@@ -1,7 +1,8 @@
-import sys, argparse, os, json
+import sys, argparse, os, json, logging
 from pathlib import Path
 from dotenv import load_dotenv
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 load_dotenv()
 
 
