@@ -182,10 +182,4 @@ public class BusinessController {
     public ApiResponse<Map<String, Object>> mod09Strategies() {
         return ApiResponse.success(adminDataService.list("kb_chunk_strategy", null, 1, 100, null));
     }
-
-    @Operation(summary = "MOD-10 QA会话")
-    @GetMapping("/mod10/qa-sessions")
-    public ApiResponse<Map<String, Object>> mod10QaSessions() {
-        return ApiResponse.success(adminDataService.list("qa_session", "MOD-10", 1, 20, null));
-    }
 }
