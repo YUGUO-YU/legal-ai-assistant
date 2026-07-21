@@ -38,7 +38,6 @@ public class DocQaAdminController {
     @GetMapping("/{sessionId}")
     public ApiResponse<Map<String, Object>> getSessionDetail(@PathVariable Long sessionId) {
         try {
-            Map<String, Object> adminUser = adminHelper.getCurrentAdminUser(null);
             Map<String, Object> result = adminDataService.mod10SessionDetail(sessionId);
             return ApiResponse.success(result);
         } catch (Exception e) {

@@ -563,7 +563,7 @@ public class AdminDataService {
     private String safeCsv(Object v) {
         if (v == null) return "";
         String s = String.valueOf(v);
-        if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
+        if (s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r")) {
             return "\"" + s.replace("\"", "\"\"") + "\"";
         }
         return s;
