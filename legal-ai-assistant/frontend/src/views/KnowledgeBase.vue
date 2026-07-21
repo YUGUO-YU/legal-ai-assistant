@@ -319,7 +319,7 @@ const handleCreateKb = async () => {
 
 const getKbColor = (type) => {
   return type === 'public'
-    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    ? 'var(--gradient-primary)'
     : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
 }
 
@@ -411,7 +411,7 @@ const goToDetail = (kb) => {
       margin: 0 0 8px 0;
       font-size: 26px;
       font-weight: 600;
-      background: linear-gradient(135deg, #667eea, #764ba2);
+      background: var(--gradient-text);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -446,7 +446,7 @@ const goToDetail = (kb) => {
     gap: 12px;
 
     :deep(.el-button--primary) {
-      background: linear-gradient(135deg, #667eea, #764ba2);
+      background: var(--gradient-primary);
       border: none;
       border-radius: 12px;
       padding: 12px 24px;
@@ -560,7 +560,7 @@ const goToDetail = (kb) => {
         display: block;
         font-size: 22px;
         font-weight: 700;
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        background: var(--gradient-text);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -586,7 +586,7 @@ const goToDetail = (kb) => {
       gap: 6px;
 
       .el-icon {
-        color: #667eea;
+        color: var(--color-primary);
       }
     }
   }
@@ -604,8 +604,8 @@ const goToDetail = (kb) => {
 .kb-actions {
   display: flex;
   padding: 14px 20px;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  border-top: 1px solid #f3f4f6;
+  background: var(--color-bg-surface);
+  border-top: 1px solid var(--color-border-glass);
   gap: 10px;
 
   :deep(.el-button) {
@@ -615,7 +615,7 @@ const goToDetail = (kb) => {
   }
 
   :deep(.el-button--primary) {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: var(--gradient-primary);
     border: none;
   }
 }
