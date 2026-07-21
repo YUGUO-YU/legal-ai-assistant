@@ -424,6 +424,10 @@ public class LawImportService {
     }
 
     public LawImportPreview previewImport(MultipartFile file) {
+        return previewImportWithParser(file);
+    }
+
+    private LawImportPreview previewImportLegacy(MultipartFile file) {
         String content = extractTextFromFile(file);
         String lawTitle = extractTitle(content);
         String shortTitle = extractShortTitle(content);
@@ -469,6 +473,130 @@ public class LawImportService {
         return buildPreview(lawTitle, shortTitle, metaJson, categoryJson, chapterJson, articles);
     }
 
+    public LawImportPreview previewImportWithParser(MultipartFile file) {
+        if (!lawParserClient.isAvailable()) {
+            log.info("Python law parser not available, falling back to Java AI parser");
+            return previewImportLegacy(file);
+        }
+
+        java.io.File tempFile = null;
+        try {
+            String extension = getFileExtension(
+                file.getOriginalFilename() != null ? file.getOriginalFilename() : "upload.pdf");
+            tempFile = java.io.File.createTempFile("law_import_", "." + extension);
+            file.transferTo(tempFile);
+
+            Map<String, Object> parsed = lawParserClient.parse(tempFile.getAbsolutePath());
+
+            String lawTitle = textOr(parsed, "law_title",
+                file.getOriginalFilename() != null
+                    ? file.getOriginalFilename().replaceAll("\\.[^.]+$", "") : "未知标题");
+            String shortTitle = textOr(parsed, "short_title", "");
+
+            List<LawImportPreview.ArticleParse> articles = new ArrayList<>();
+            Object articlesObj = parsed.get("articles");
+            if (articlesObj instanceof List<?> articlesList) {
+                int sortOrder = 0;
+                for (Object a : articlesList) {
+                    if (a instanceof Map<?, ?> aMap) {
+                        Map<String, Object> am = castMap(aMap);
+                        sortOrder++;
+                        LawImportPreview.ArticleParse ap = new LawImportPreview.ArticleParse();
+                        ap.setArticleNo(textOr(am, "article_no", ""));
+                        ap.setTitle(textOr(am, "title", null));
+                        ap.setContent(textOr(am, "content", ""));
+                        ap.setChapterPath(textOr(am, "chapter_path", ""));
+                        ap.setSortOrder(sortOrder);
+                        ap.setContentHash(textOr(am, "content_hash", null));
+                        articles.add(ap);
+                    }
+                }
+            }
+
+            List<LawImportPreview.CategorySuggestion> categories = new ArrayList<>();
+            Object catObj = parsed.get("suggested_categories");
+            if (catObj instanceof List<?> catList) {
+                for (Object c : catList) {
+                    if (c instanceof Map<?, ?> cMap) {
+                        Map<String, Object> cm = castMap(cMap);
+                        LawImportPreview.CategorySuggestion cs = new LawImportPreview.CategorySuggestion();
+                        cs.setCategoryTypeId(1L);
+                        cs.setTypeName(textOr(cm, "type_name", ""));
+                        cs.setCategoryName(textOr(cm, "category_name", ""));
+                        Object conf = cm.get("confidence");
+                        cs.setConfidence(conf instanceof Number ? ((Number) conf).doubleValue() : 0.8);
+                        categories.add(cs);
+                    }
+                }
+            }
+            if (categories.isEmpty()) {
+                LawImportPreview.CategorySuggestion defaultCat = new LawImportPreview.CategorySuggestion();
+                defaultCat.setCategoryTypeId(1L);
+                defaultCat.setTypeName("其他");
+                defaultCat.setCategoryName("其他");
+                defaultCat.setConfidence(0.5);
+                categories.add(defaultCat);
+            }
+
+            List<LawImportPreview.ChapterNode> chapterTree = new ArrayList<>();
+            Object chaptersObj = parsed.get("chapter_tree");
+            if (chaptersObj instanceof List<?> chaptersList) {
+                for (Object c : chaptersList) {
+                    if (c instanceof Map<?, ?> cMap) {
+                        chapterTree.add(buildChapterNode(castMap(cMap)));
+                    }
+                }
+            }
+
+            LawImportPreview preview = new LawImportPreview();
+            preview.setLawTitle(lawTitle);
+            preview.setShortTitle(shortTitle);
+            preview.setIssuingAuthority(textOr(parsed, "issuing_authority", null));
+            preview.setIssueDate(textOr(parsed, "issue_date", null));
+            preview.setEffectiveDate(textOr(parsed, "effective_date", null));
+            preview.setDocumentNo(textOr(parsed, "document_no", null));
+            preview.setArticles(articles);
+            preview.setSuggestedCategories(categories);
+            preview.setChapterTree(chapterTree);
+            return preview;
+        } catch (Exception e) {
+            log.warn("Python law parser failed, falling back to Java AI: {}", e.getMessage());
+            return previewImportLegacy(file);
+        } finally {
+            if (tempFile != null && !tempFile.delete()) {
+                tempFile.deleteOnExit();
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> castMap(Map<?, ?> m) {
+        return (Map<String, Object>) (Map<?, ?>) m;
+    }
+
+    private LawImportPreview.ChapterNode buildChapterNode(Map<String, Object> m) {
+        LawImportPreview.ChapterNode node = new LawImportPreview.ChapterNode();
+        node.setTitle(textOr(m, "title", ""));
+        Object level = m.get("level");
+        node.setLevel(level instanceof Number ? ((Number) level).intValue() : 1);
+        List<LawImportPreview.ChapterNode> children = new ArrayList<>();
+        Object childrenObj = m.get("children");
+        if (childrenObj instanceof List<?> childrenList) {
+            for (Object c : childrenList) {
+                if (c instanceof Map<?, ?> cMap) {
+                    children.add(buildChapterNode(castMap(cMap)));
+                }
+            }
+        }
+        node.setChildren(children);
+        return node;
+    }
+
+    private static String textOr(Map<String, Object> m, String key, String defaultValue) {
+        Object v = m.get(key);
+        return v != null && !((v instanceof String) && ((String) v).isEmpty()) ? String.valueOf(v) : defaultValue;
+    }
+
     public LawImportJob confirmImport(LawImportPreview preview, String operator) {
         String taskUuid = "IMPORT-" + System.currentTimeMillis();
         long historyId = createHistory(taskUuid, preview.getLawTitle(), "upload", operator);
@@ -494,7 +622,14 @@ public class LawImportService {
             doc.setLawUuid(UUID.randomUUID().toString());
             doc.setTitle(preview.getLawTitle());
             doc.setShortTitle(preview.getShortTitle());
-            doc.setCategoryL1(preview.getSuggestedCategories() == null || preview.getSuggestedCategories().isEmpty() ? "其他" : preview.getSuggestedCategories().get(0).getCategoryName());
+            String catL1 = "其他";
+            if (preview.getSuggestedCategories() != null && !preview.getSuggestedCategories().isEmpty()) {
+                String suggested = preview.getSuggestedCategories().get(0).getTypeName();
+                if (suggested != null && !suggested.isBlank()) {
+                    catL1 = suggested;
+                }
+            }
+            doc.setCategoryL1(catL1);
             doc.setIssuingAuthority(preview.getIssuingAuthority() != null ? preview.getIssuingAuthority() : "");
             doc.setIssueDate(parseDateOrNull(preview.getIssueDate()));
             doc.setEffectiveDate(parseDateOrNull(preview.getEffectiveDate()));

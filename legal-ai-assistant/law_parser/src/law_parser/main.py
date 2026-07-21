@@ -4,6 +4,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _to_serializable(obj):
+    """Recursively convert Pydantic models / dataclasses to JSON-serializable dicts."""
+    if hasattr(obj, "model_dump"):
+        return {k: _to_serializable(v) for k, v in obj.model_dump().items()}
+    if hasattr(obj, "__dict__"):
+        return {k: _to_serializable(v) for k, v in obj.__dict__.items()}
+    if isinstance(obj, list):
+        return [_to_serializable(x) for x in obj]
+    if isinstance(obj, tuple):
+        return tuple(_to_serializable(x) for x in obj)
+    return obj
+
+
 def main():
     parser = argparse.ArgumentParser(prog="law-parser")
     sub = parser.add_subparsers(dest="cmd")
@@ -38,12 +52,12 @@ def main():
             def handle(self, method: str, params: dict):
                 if method == "parse":
                     parsed = parse_file(params["file_path"])
-                    return extractor.extract(parsed["text"]).__dict__
+                    return _to_serializable(extractor.extract(parsed["text"]))
                 elif method == "review":
                     from law_parser.ai.models import StructureResult
                     result = StructureResult(**params["structure_result"])
                     reviewed = reviewer.review(result)
-                    return classifier.classify(reviewed).__dict__
+                    return _to_serializable(classifier.classify(reviewed))
                 elif method == "import":
                     from law_parser.ai.models import StructureResult, ClassificationResult
                     result = StructureResult(**params["law_data"]["structure"])
@@ -53,6 +67,8 @@ def main():
                     return {"law_id": law_id}
                 elif method == "shutdown":
                     sys.exit(0)
+                elif method == "health":
+                    return {"status": "ok"}
                 else:
                     raise ValueError(f"Unknown method: {method}")
 
@@ -65,7 +81,7 @@ def main():
         client = MiniMaxClient()
         parsed = parse_file(args.file_path)
         result = StructureExtractor(client).extract(parsed["text"])
-        print(json.dumps(result.__dict__, ensure_ascii=False, indent=2))
+        print(json.dumps(_to_serializable(result), ensure_ascii=False, indent=2))
     elif args.cmd == "import":
         from law_parser.parser import parse_file
         from law_parser.ai.structure_extractor import StructureExtractor

@@ -464,10 +464,20 @@ const pollPreviewResult = async (taskUuid) => {
 
 const handleConfirm = async () => {
   try {
+    const suggestedCategories = (selectedCategoryIds.value || []).map(id => {
+      const cat = categoryList.value.find(c => c.id === id)
+      return {
+        categoryTypeId: cat?.categoryTypeId || 1,
+        typeName: cat?.typeName || '',
+        categoryId: id,
+        categoryName: cat?.categoryName || '',
+        confidence: 1.0
+      }
+    })
     const res = await api.importConfirm({
       ...previewForm.value,
-      categoryIds: selectedCategoryIds.value,
-      chapters: previewData.value?.chapters || [],
+      suggestedCategories,
+      chapterTree: previewData.value?.chapterTree || [],
       articles: previewData.value?.articles || []
     })
     const jobId = res?.jobId

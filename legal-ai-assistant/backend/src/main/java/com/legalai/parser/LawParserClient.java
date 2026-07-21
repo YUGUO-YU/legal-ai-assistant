@@ -16,6 +16,7 @@ import java.util.concurrent.*;
 @Component
 public class LawParserClient {
     private static final Logger log = LoggerFactory.getLogger(LawParserClient.class);
+    private static final long RPC_TIMEOUT_SECONDS = 120;
 
     @Value("${law-parser.python-path:python3}")
     private String pythonPath;
@@ -30,23 +31,32 @@ public class LawParserClient {
     private final ConcurrentHashMap<Long, CompletableFuture<Map<String, Object>>> pending = new ConcurrentHashMap<>();
     private long nextId = 1;
     private ExecutorService senderExecutor = Executors.newSingleThreadExecutor();
+    private volatile boolean started = false;
 
     @PostConstruct
     public void start() {
         try {
-            String pythonExe = System.getProperty("law.parser.python", "python3");
             String script = System.getProperty("law.parser.script",
-                "/workspace/legal-ai-assistant/law_parser/src/main.py");
-            ProcessBuilder pb = new ProcessBuilder(pythonExe, "-m", "law_parser.src.main", "serve");
+                "/workspace/legal-ai-assistant/law_parser/src");
+
+            ProcessBuilder pb = new ProcessBuilder();
+            pb.command(pythonPath, "-m", "law_parser.main", "serve");
+            pb.environment().put("PYTHONPATH", script);
             pb.redirectErrorStream(false);
+
             process = pb.start();
             reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
 
             senderExecutor.submit(this::readResponses);
 
-            send("{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"ping\",\"params\":{}}");
-            log.info("Law parser Python subprocess started");
+            Map<String, Object> resp = callNoEx("health", Map.of());
+            if (resp != null) {
+                started = true;
+                log.info("Law parser Python subprocess started and healthy");
+            } else {
+                log.warn("Law parser Python subprocess did not respond to health check");
+            }
         } catch (IOException e) {
             log.warn("Failed to start law parser subprocess: {}. Falling back to Java parsing.", e.getMessage());
         }
@@ -55,10 +65,16 @@ public class LawParserClient {
     @PreDestroy
     public void stop() {
         try {
-            send("{\"jsonrpc\":\"2.0\",\"id\":-1,\"method\":\"shutdown\",\"params\":{}}");
-            if (process != null) process.waitFor(3, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            log.warn("Error stopping law parser: {}", e.getMessage());
+            if (process != null && process.isAlive()) {
+                try {
+                    send("{\"jsonrpc\":\"2.0\",\"id\":-1,\"method\":\"shutdown\",\"params\":{}}");
+                    process.waitFor(3, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    log.warn("Error stopping law parser: {}", e.getMessage());
+                }
+            }
+        } finally {
+            senderExecutor.shutdownNow();
         }
     }
 
@@ -71,7 +87,8 @@ public class LawParserClient {
                 CompletableFuture<Map<String, Object>> future = pending.remove(id);
                 if (future != null) {
                     if (node.has("error")) {
-                        future.completeExceptionally(new RuntimeException(node.get("error").get("message").asText()));
+                        future.completeExceptionally(
+                            new RuntimeException(node.get("error").get("message").asText()));
                     } else {
                         future.complete(objectMapper.convertValue(node.get("result"), Map.class));
                     }
@@ -95,7 +112,16 @@ public class LawParserClient {
     }
 
     public boolean isAvailable() {
-        return process != null && process.isAlive();
+        return started && process != null && process.isAlive();
+    }
+
+    private Map<String, Object> callNoEx(String method, Map<String, Object> params) {
+        try {
+            return call(method, params);
+        } catch (Exception e) {
+            log.warn("Law parser call failed (non-fatal): {}: {}", method, e.getMessage());
+            return null;
+        }
     }
 
     private synchronized void send(String json) throws IOException {
@@ -120,8 +146,9 @@ public class LawParserClient {
             send(request);
             CompletableFuture<Map<String, Object>> future = new CompletableFuture<>();
             pending.put(id, future);
-            return future.get(60, TimeUnit.SECONDS);
+            return future.get(RPC_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (Exception e) {
+            pending.remove(id);
             throw new RuntimeException("Law parser call failed: " + method, e);
         }
     }
