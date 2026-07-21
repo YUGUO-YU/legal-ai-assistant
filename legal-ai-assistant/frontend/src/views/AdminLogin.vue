@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-login-container">
+  <div class="admin-login-container" data-theme="dark">
     <div class="bg-particles">
       <div class="particle p1"></div>
       <div class="particle p2"></div>
@@ -212,7 +212,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  background: linear-gradient(135deg, var(--color-bg-page-dark) 0%, var(--color-bg-sidebar) 50%, var(--color-bg-page-dark) 100%);
   position: relative;
   overflow: hidden;
 }
@@ -228,7 +228,7 @@ onMounted(() => {
   .particle {
     position: absolute;
     border-radius: 2px;
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(102, 126, 234, 0.15);
     animation: drift linear infinite;
 
     &.p1 { width: 4px; height: 4px; top: 20%; left: 15%; animation-duration: 18s; animation-delay: 0s; }
@@ -249,11 +249,11 @@ onMounted(() => {
 .login-card {
   width: 420px;
   padding: 48px 40px 36px;
-  background: rgba(30, 41, 59, 0.85);
+  background: var(--color-bg-card);
   backdrop-filter: blur(24px);
   border-radius: 20px;
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.08);
+  border: 1px solid var(--color-border-glass);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(102, 126, 234, 0.08);
   position: relative;
   z-index: 10;
 }
@@ -265,26 +265,26 @@ onMounted(() => {
   .shield-icon {
     width: 72px;
     height: 72px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: var(--gradient-primary);
     border-radius: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 20px;
     color: #fff;
-    box-shadow: 0 12px 30px rgba(99, 102, 241, 0.35);
+    box-shadow: 0 12px 30px rgba(102, 126, 234, 0.35);
   }
 
   h1 {
     margin: 0 0 8px 0;
     font-size: 24px;
     font-weight: 600;
-    color: #e2e8f0;
+    color: var(--color-text-primary);
   }
 
   p {
     margin: 0;
-    color: #64748b;
+    color: var(--color-text-tertiary);
     font-size: 13px;
     letter-spacing: 1px;
   }
@@ -296,26 +296,26 @@ onMounted(() => {
   }
 
   :deep(.el-input__wrapper) {
-    background: rgba(15, 23, 42, 0.6);
+    background: var(--color-bg-input-dark);
     border-radius: 10px;
-    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.2);
     padding: 4px 16px;
 
     &:hover, &.is-focus {
-      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
     }
   }
 
   :deep(.el-input__inner) {
-    color: #e2e8f0;
+    color: var(--color-text-primary);
 
     &::placeholder {
-      color: #475569;
+      color: var(--color-text-placeholder);
     }
   }
 
   :deep(.el-input__prefix) {
-    color: #6366f1;
+    color: var(--color-primary);
   }
 
   .submit-btn {
@@ -325,15 +325,15 @@ onMounted(() => {
     font-size: 15px;
     font-weight: 600;
     letter-spacing: 2px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: var(--gradient-primary);
     border: none;
-    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
     transition: all 0.3s;
     margin-top: 8px;
 
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(99, 102, 241, 0.5);
+      box-shadow: 0 8px 30px rgba(102, 126, 234, 0.5);
     }
   }
 }
@@ -343,14 +343,14 @@ onMounted(() => {
   margin-top: 20px;
 
   :deep(.el-link) {
-    color: #64748b;
+    color: var(--color-text-tertiary);
     font-size: 13px;
     display: inline-flex;
     align-items: center;
     gap: 4px;
 
     &:hover {
-      color: #818cf8;
+      color: var(--color-primary);
     }
   }
 }
@@ -358,13 +358,13 @@ onMounted(() => {
 .hint-box {
   margin-top: 16px;
   padding: 12px 16px;
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.12);
+  background: rgba(102, 126, 234, 0.08);
+  border: 1px solid rgba(102, 126, 234, 0.12);
   border-radius: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #818cf8;
+  color: var(--color-primary);
   font-size: 12px;
   justify-content: center;
 }
@@ -372,13 +372,13 @@ onMounted(() => {
 .lockout-hint {
   margin-bottom: 16px;
   padding: 10px 16px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: var(--color-danger-surface-dark);
+  border: 1px solid var(--color-danger-border-dark);
   border-radius: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #fca5a5;
+  color: var(--color-danger);
   font-size: 13px;
   justify-content: center;
   animation: shake 0.4s ease-in-out;
@@ -387,13 +387,13 @@ onMounted(() => {
 .last-login-hint {
   margin-top: 12px;
   padding: 8px 16px;
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.12);
+  background: var(--color-success-surface-dark);
+  border: 1px solid var(--color-success-border-dark);
   border-radius: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #6ee7b7;
+  color: var(--color-success);
   font-size: 12px;
   justify-content: center;
 }
@@ -404,7 +404,7 @@ onMounted(() => {
   justify-content: flex-end;
 
   :deep(.el-checkbox__label) {
-    color: #64748b;
+    color: var(--color-text-tertiary);
     font-size: 13px;
   }
 }
