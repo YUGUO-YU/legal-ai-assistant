@@ -399,9 +399,9 @@ onUnmounted(() => {
 
   // 激活态
   .el-menu-item.is-active {
-    background: linear-gradient(90deg, rgba(102, 126, 234, 0.2) 0%, rgba(102, 126, 234, 0.08) 100%) !important;
+    background: var(--gradient-glow) !important;
     border-left: 3px solid transparent;
-    border-image: linear-gradient(180deg, #667eea, #764ba2) 1;
+    border-image: var(--gradient-primary) 1;
     color: var(--color-primary-light) !important;
     font-weight: 600;
 
