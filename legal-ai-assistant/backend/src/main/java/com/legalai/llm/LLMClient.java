@@ -133,11 +133,18 @@ public class LLMClient {
         return apiKey;
     }
 
+    private String maskApiKey(String key) {
+        if (key == null || key.length() <= 8) {
+            return "****";
+        }
+        return key.substring(0, 4) + "****" + key.substring(key.length() - 4);
+    }
+
     public Map<String, Object> getResolvedConfig() {
         Map<String, Object> cfg = new LinkedHashMap<>();
         cfg.put("model", resolveModel());
         cfg.put("baseUrl", resolveBaseUrl());
-        cfg.put("apiKey", resolveApiKey());
+        cfg.put("apiKey", maskApiKey(resolveApiKey()));
         cfg.put("embeddingModel", embeddingModel);
         cfg.put("timeout", timeout);
         var dbCfg = getActiveModelConfig();
@@ -576,8 +583,8 @@ public class LLMClient {
         RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
-            .url(baseUrl + "/embeddings")
-            .addHeader("Authorization", "Bearer " + apiKey)
+            .url(resolveBaseUrl() + "/embeddings")
+            .addHeader("Authorization", "Bearer " + resolveApiKey())
             .addHeader("Content-Type", "application/json")
             .post(body)
             .build();
@@ -697,7 +704,7 @@ public class LLMClient {
         for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             if (attempt > 0) {
                 log.info("MiniMax API 重试第 {} 次", attempt);
-                try { Thread.sleep(500L * attempt); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                try { Thread.sleep((long) Math.pow(2, attempt) * 500L); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
             }
 
             Request request = new Request.Builder()

@@ -605,7 +605,7 @@ public class CaseService {
                 "FROM tb_case c JOIN tb_case_element e ON c.id = e.case_id " +
                 "WHERE e.element_type = ? AND e.element_value LIKE ? " +
                 "ORDER BY c.judge_date DESC LIMIT ? OFFSET ?",
-                elementType, "%" + elementValue + "%", pageSize, offset);
+                elementType, "%" + elementValue.replaceAll("([%_\\\\])", "\\\\$1") + "%", pageSize, offset);
         } catch (Exception e) {
             log.warn("按要素检索案例失败: elementType={}, error={}", elementType, e.getMessage());
             return Collections.emptyList();

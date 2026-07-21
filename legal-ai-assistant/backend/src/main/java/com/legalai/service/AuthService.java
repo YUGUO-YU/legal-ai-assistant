@@ -289,6 +289,11 @@ public class AuthService {
             throw new RuntimeException("新密码长度需在6-32个字符之间");
         }
 
+        String strengthError = validatePasswordStrength(newPassword);
+        if (strengthError != null) {
+            throw new RuntimeException(strengthError);
+        }
+
         String hashedPassword = DigestUtils.sha256Hex(newPassword.getBytes(StandardCharsets.UTF_8));
         jdbc.update("UPDATE frontend_user SET password = ? WHERE id = ?", hashedPassword, userIdStr);
         log.info("密码修改成功: userId={}", userIdStr);

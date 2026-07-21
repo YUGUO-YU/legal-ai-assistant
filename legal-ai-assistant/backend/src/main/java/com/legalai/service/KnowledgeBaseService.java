@@ -46,7 +46,7 @@ public class KnowledgeBaseService {
         List<Object> args = new ArrayList<>();
         if (keyword != null && !keyword.isBlank()) {
             where.append("AND (name LIKE ? OR description LIKE ?) ");
-            String like = "%" + keyword + "%";
+            String like = "%" + keyword.replaceAll("([%_\\\\])", "\\\\$1") + "%";
             args.add(like);
             args.add(like);
         }

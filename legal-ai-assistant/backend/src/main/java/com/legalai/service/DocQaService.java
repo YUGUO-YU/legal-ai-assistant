@@ -285,16 +285,28 @@ public class DocQaService {
         try {
             List<Map<String, Object>> sessions = chatMessageMapper.findSessionsByUserId(userId);
 
-            for (Map<String, Object> session : sessions) {
-                List<ChatMessage> messages = chatMessageMapper.findBySessionUuid((String) session.get("sessionId"));
-                if (!messages.isEmpty()) {
-                    ChatMessage firstMsg = messages.get(0);
-                    String title = firstMsg.getContent();
-                    if (title.length() > 30) {
-                        title = title.substring(0, 30) + "...";
+            if (!sessions.isEmpty()) {
+                List<String> sessionIds = sessions.stream()
+                    .map(s -> (String) s.get("sessionId"))
+                    .collect(java.util.stream.Collectors.toList());
+
+                List<Map<String, Object>> firstMessages = chatMessageMapper.findFirstMessagesBySessionUuids(sessionIds);
+                java.util.Map<String, Map<String, Object>> firstMsgMap = firstMessages.stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                        m -> (String) m.get("sessionId"),
+                        m -> m
+                    ));
+
+                for (Map<String, Object> session : sessions) {
+                    Map<String, Object> firstMsg = firstMsgMap.get(session.get("sessionId"));
+                    if (firstMsg != null) {
+                        String title = (String) firstMsg.get("content");
+                        if (title != null && title.length() > 30) {
+                            title = title.substring(0, 30) + "...";
+                        }
+                        session.put("title", title);
+                        session.put("date", formatDate((java.time.LocalDateTime) session.get("lastMessage")));
                     }
-                    session.put("title", title);
-                    session.put("date", formatDate((java.time.LocalDateTime) session.get("lastMessage")));
                 }
             }
 

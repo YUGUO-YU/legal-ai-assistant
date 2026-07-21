@@ -474,6 +474,7 @@ CREATE TABLE IF NOT EXISTS kb_chat_message (
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_session (session_uuid),
     INDEX idx_user (user_id),
+    INDEX idx_user_session (user_id, session_uuid),
     INDEX idx_order (`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '聊天消息表';
 

@@ -153,7 +153,12 @@ public class LegalSearchService {
             fusedResults = milvusResults;
         } else {
             log.warn("所有检索引擎均不可用，使用AI生成检索结果");
-            fusedResults = aiGenerateSearchResults(request, topK);
+            try {
+                fusedResults = aiGenerateSearchResults(request, topK);
+            } catch (Exception e) {
+                log.error("AI生成检索结果也失败，返回空结果: {}", e.getMessage());
+                fusedResults = Collections.emptyList();
+            }
         }
 
         normalizeScores(fusedResults);
