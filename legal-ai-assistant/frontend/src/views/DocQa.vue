@@ -97,14 +97,14 @@
             <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
               <circle cx="60" cy="60" r="56" fill="url(#g1)" opacity="0.12"/>
               <rect x="30" y="38" width="60" height="44" rx="14" fill="url(#g1)" opacity="0.2"/>
-              <rect x="40" y="52" width="28" height="4" rx="2" fill="#667eea" opacity="0.6"/>
-              <rect x="40" y="62" width="18" height="4" rx="2" fill="#667eea" opacity="0.4"/>
+              <rect x="40" y="52" width="28" height="4" rx="2" fill="var(--color-primary)" opacity="0.6"/>
+              <rect x="40" y="62" width="18" height="4" rx="2" fill="var(--color-primary)" opacity="0.4"/>
               <circle cx="82" cy="76" r="10" fill="#10b981"/>
               <path d="M77 76l4 4 7-7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <defs>
                 <linearGradient id="g1" x1="0" y1="0" x2="120" y2="120">
-                  <stop stop-color="#667eea"/>
-                  <stop offset="1" stop-color="#764ba2"/>
+                  <stop stop-color="var(--color-primary)"/>
+                  <stop offset="1" stop-color="var(--color-primary-end)"/>
                 </linearGradient>
               </defs>
             </svg>
@@ -849,7 +849,7 @@ const goSessionDetail = (s) => { router.push(`/qa-session/${s.sessionUuid || s.i
 
     &:hover {
       border-color: var(--color-primary);
-      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+      box-shadow: 0 2px 8px var(--color-primary-surface-hover);
       transform: translateY(-1px);
     }
 
@@ -914,7 +914,7 @@ const goSessionDetail = (s) => { router.push(`/qa-session/${s.sessionUuid || s.i
 
   &:focus-within {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.08);
+    box-shadow: 0 0 0 3px var(--color-primary-border);
   }
 
   .chat-input-el {
@@ -930,7 +930,7 @@ const goSessionDetail = (s) => { router.push(`/qa-session/${s.sessionUuid || s.i
     display: flex; align-items: center; gap: 5px;
     flex-shrink: 0;
     transition: all var(--transition-base);
-    &:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+    &:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 12px var(--color-primary-glow); }
     &:disabled { opacity: 0.45; cursor: not-allowed; }
   }
 }
@@ -957,7 +957,7 @@ const goSessionDetail = (s) => { router.push(`/qa-session/${s.sessionUuid || s.i
   transition: all var(--transition-base);
 
   &:hover { border-color: var(--color-primary); background: var(--color-bg-glass-hover); }
-  &.selected { border-color: var(--color-primary); background: rgba(102,126,234,0.05); }
+    &.selected { border-color: var(--color-primary); background: var(--color-primary-surface); }
 
   .kb-item-icon { width: 34px; height: 34px; background: var(--gradient-card); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--color-primary); }
   .kb-item-info { flex: 1; .kb-item-name { display: block; font-size: 14px; font-weight: 500; color: var(--color-text-primary); } .kb-item-desc { display: block; font-size: 11px; color: var(--color-text-muted); margin-top: 2px; } }
@@ -969,7 +969,7 @@ const goSessionDetail = (s) => { router.push(`/qa-session/${s.sessionUuid || s.i
   background: #1e1b4b; border-radius: var(--radius-md); padding: 12px 14px; margin: 8px 0; overflow-x: auto;
   code { color: #e2e8f0; font-size: 13px; font-family: 'JetBrains Mono', monospace; line-height: 1.6; }
 }
-:deep(.inline-code) { background: rgba(102,126,234,0.1); color: var(--color-primary); padding: 1px 5px; border-radius: 4px; font-size: 13px; font-family: monospace; }
+  :deep(.inline-code) { background: var(--color-primary-surface-hover); color: var(--color-primary); padding: 1px 5px; border-radius: 4px; font-size: 13px; font-family: monospace; }
 
 /* Responsive - Mobile (< 768px) */
 @media (max-width: 768px) {
