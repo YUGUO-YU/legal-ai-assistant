@@ -7,6 +7,7 @@ import com.legalai.service.DocQaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -30,14 +31,14 @@ public class DocQaController {
 
     @PostMapping("/ask")
     @Operation(summary = "文档问答", description = "基于知识库中的文档进行智能问答，支持多轮对话")
-    public ApiResponse<DocQaResponse> ask(@RequestBody DocQaRequest request) {
+    public ApiResponse<DocQaResponse> ask(@Valid @RequestBody DocQaRequest request) {
         DocQaResponse response = docQaService.answerQuestion(request);
         return ApiResponse.success(response);
     }
 
     @PostMapping(value = "/ask/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "文档问答(流式)", description = "基于知识库中的文档进行智能问答，流式返回")
-    public Flux<String> askStream(@RequestBody DocQaRequest request) {
+    public Flux<String> askStream(@Valid @RequestBody DocQaRequest request) {
         return docQaService.answerQuestionStream(request);
     }
 

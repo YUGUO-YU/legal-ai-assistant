@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -1014,6 +1015,7 @@ public class AdminDataService {
     // Prompt 工作流：发布 / 灰度 / 回滚
     // ============================================================
 
+    @Transactional
     public Map<String, Object> publishPrompt(Long promptId) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
@@ -1598,8 +1600,7 @@ public class AdminDataService {
 
     public boolean setActiveModel(Long id) {
         try {
-            jdbc.update("UPDATE llm_model_config SET is_primary = 0");
-            jdbc.update("UPDATE llm_model_config SET is_primary = 1 WHERE id = ?", id);
+            jdbc.update("UPDATE llm_model_config SET is_primary = CASE WHEN id = ? THEN 1 ELSE 0 END", id);
             log.info("已将模型 id={} 设为活跃模型", id);
             return true;
         } catch (Exception e) {

@@ -4,8 +4,11 @@ import com.legalai.dto.v2.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -14,6 +17,7 @@ import java.util.*;
 @RequestMapping("/api/v2/laws")
 @CrossOrigin
 @Tag(name = "法规管理 v2", description = "法规管理API v2版本，支持分页、过滤、排序和字段选择")
+@Validated
 public class LawV2Controller {
 
     private static final Set<String> ALLOWED_FIELDS = Set.of("id", "doc_uuid", "title", "short_title", "status", "category_l1", "category_l2", "issuing_authority", "document_no", "effective_date", "created_at", "updated_at");
@@ -24,8 +28,8 @@ public class LawV2Controller {
     @GetMapping
     @Operation(summary = "获取法规列表", description = "支持分页、过滤、排序和字段选择")
     public ApiResponse<Map<String, Object>> listLaws(
-            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页条数") @RequestParam(defaultValue = "20") int pageSize,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "20") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "过滤状态") @RequestParam(required = false) String status,
             @Parameter(description = "过滤分类") @RequestParam(required = false) String category,
             @Parameter(description = "排序字段") @RequestParam(required = false) String sort,

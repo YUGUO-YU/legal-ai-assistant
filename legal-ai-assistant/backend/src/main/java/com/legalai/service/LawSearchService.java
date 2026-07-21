@@ -66,9 +66,10 @@ public class LawSearchService {
             QueryWrapper<LawDocument> queryWrapper = new QueryWrapper<>();
 
             if (request.getKeyword() != null && !request.getKeyword().isEmpty()) {
-                queryWrapper.like("title", request.getKeyword())
+                String safeKeyword = request.getKeyword().replaceAll("([%_\\\\])", "\\\\$1");
+                queryWrapper.like("title", safeKeyword)
                     .or()
-                    .like("short_title", request.getKeyword());
+                    .like("short_title", safeKeyword);
             }
 
             if (request.getCategoryL1() != null && !request.getCategoryL1().isEmpty()) {

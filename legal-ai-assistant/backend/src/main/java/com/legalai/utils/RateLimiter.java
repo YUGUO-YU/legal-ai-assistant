@@ -3,7 +3,7 @@ package com.legalai.utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RateLimiter {
@@ -12,6 +12,15 @@ public class RateLimiter {
     private final int maxRequests;
     private final long windowMs;
     private static final long EVICT_TTL_MS = 3600_000;
+
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(
+            1,
+            r -> {
+                Thread t = new Thread(r, "rate-limiter-scheduler");
+                t.setDaemon(true);
+                return t;
+            }
+    );
 
     public RateLimiter(int maxRequests, long windowMs) {
         this.maxRequests = maxRequests;
@@ -30,12 +39,7 @@ public class RateLimiter {
 
     public void markRateLimited(String key) {
         windows.put(key, new EvictableEntry(new SlidingWindow(0, windowMs)));
-        new Thread(() -> {
-            try {
-                Thread.sleep(windowMs);
-                windows.remove(key);
-            } catch (InterruptedException e) { Thread.currentThread().interrupt(); log.warn("Rate limiter sleep interrupted"); }
-        });
+        scheduler.schedule(() -> windows.remove(key), windowMs, TimeUnit.MILLISECONDS);
     }
 
     private void evictStale() {

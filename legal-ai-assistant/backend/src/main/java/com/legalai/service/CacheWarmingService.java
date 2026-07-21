@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -217,6 +218,7 @@ public class CacheWarmingService {
         };
     }
 
+    @PreDestroy
     public void shutdown() {
         scheduler.shutdown();
         try {

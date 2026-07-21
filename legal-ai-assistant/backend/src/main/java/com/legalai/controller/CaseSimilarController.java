@@ -4,6 +4,7 @@ import com.legalai.dto.*;
 import com.legalai.service.CaseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -22,7 +23,7 @@ public class CaseSimilarController {
 
     @PostMapping("/search")
     @Operation(summary = "类案检索", description = "基于案例事实检索相似案例")
-    public ApiResponse<CaseSimilarSearchResponse> search(@RequestBody CaseSimilarSearchRequest request) {
+    public ApiResponse<CaseSimilarSearchResponse> search(@Valid @RequestBody CaseSimilarSearchRequest request) {
         CaseSimilarSearchResponse response = caseService.searchSimilarCases(request);
         return ApiResponse.success(response);
     }

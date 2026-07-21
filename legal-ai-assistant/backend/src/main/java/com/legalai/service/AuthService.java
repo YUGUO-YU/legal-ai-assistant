@@ -36,7 +36,6 @@ public class AuthService {
     private final Map<String, TokenInfo> tokenStore = new ConcurrentHashMap<>();
     private final Map<String, LoginFailureInfo> loginFailures = new ConcurrentHashMap<>();
     private final JdbcTemplate jdbc;
-    private final Random random = new Random();
 
     private static final int MAX_LOGIN_FAILURES = 5;
     private static final long LOCKOUT_DURATION_MS = 5 * 60 * 1000L;
@@ -398,7 +397,7 @@ public class AuthService {
             throw new RuntimeException("该用户名不存在");
         }
 
-        String code = String.format("%06d", random.nextInt(1000000));
+        String code = String.format("%06d", java.util.concurrent.ThreadLocalRandom.current().nextInt(1000000));
         java.sql.Timestamp expireAt = new java.sql.Timestamp(System.currentTimeMillis() + RESET_CODE_EXPIRE_MS);
 
         jdbc.update("DELETE FROM password_reset_code WHERE username = ? AND used = 0", username);
