@@ -41,6 +41,7 @@
             <el-icon v-if="uploading"><Loading class="is-loading" /></el-icon>
             {{ uploading ? '解析中...' : '上传并预览' }}
           </el-button>
+          <el-progress v-if="uploading" :percentage="uploadProgress" :stroke-width="6" style="margin-top: 8px;" />
           <div class="upload-hint">
             <el-icon><InfoFilled /></el-icon>
             <span>PDF文件将自动提取文本并智能分析章节结构</span>
@@ -55,7 +56,7 @@
                   <el-tag type="info" v-if="articleStats.total > 0">
                     {{ articleStats.total }} 个条款
                   </el-tag>
-                  <el-button v-if="previewData" type="success" size="small" @click="handleConfirm">确认导入</el-button>
+                  <el-button v-if="previewReady" type="success" size="small" @click="handleConfirm">确认导入</el-button>
                 </el-space>
               </div>
             </template>
@@ -273,6 +274,7 @@ const historyPage = ref(1)
 const historyPageSize = ref(20)
 const pollTimers = ref({})
 const uploading = ref(false)
+const uploadProgress = ref(0)
 const selectedFileType = ref('pdf')
 const pdfPreviewUrl = ref(null)
 const showPdfPreview = ref(false)
@@ -284,6 +286,10 @@ const directUploadRef = ref(null)
 const directUploadFile = ref(null)
 const directUploading = ref(false)
 const directImportResult = ref(null)
+
+const previewReady = computed(() => {
+  return previewData.value && previewData.value.articles && previewData.value.articles.length > 0
+})
 
 const articleStats = computed(() => {
   if (!previewData.value?.articles?.length) {
@@ -398,41 +404,73 @@ const loadCategories = async () => {
 const handlePreview = async () => {
   if (!uploadFile.value) return
   uploading.value = true
+  uploadProgress.value = 0
   previewData.value = null
   previewTaskUuid.value = null
   const formData = new FormData()
   formData.append('file', uploadFile.value)
+
   try {
-    const job = await api.importPreview(formData)
-    if (!job?.taskUuid) {
+    const job = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      xhr.open('POST', '/api/admin/law-import/preview')
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          uploadProgress.value = Math.round((e.loaded / e.total) * 80)
+        }
+      }
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)) }
+          catch { reject(new Error('响应解析失败')) }
+        } else {
+          try { const err = JSON.parse(xhr.responseText); reject(new Error(err.message || '上传失败')) }
+          catch { reject(new Error(`上传失败: ${xhr.status}`)) }
+        }
+      }
+      xhr.onerror = () => reject(new Error('网络错误'))
+      xhr.send(formData)
+    })
+    if (!job?.data?.taskUuid) {
       ElMessage.error('预览提交失败：无任务ID')
+      uploading.value = false
       return
     }
-    previewTaskUuid.value = job.taskUuid
-    ElMessage.info('预览任务已提交，请稍候...')
-    pollPreviewResult(job.taskUuid)
+    uploadProgress.value = 90
+    previewTaskUuid.value = job.data.taskUuid
+    ElMessage.info('预览任务已提交，AI正在解析中...')
+    pollPreviewResult(job.data.taskUuid)
   } catch (e) {
     ElMessage.error('预览提交失败: ' + (e.message || '未知错误'))
     uploading.value = false
+    uploadProgress.value = 0
   }
 }
 
 const pollPreviewResult = async (taskUuid) => {
   let attempts = 0
-  const maxAttempts = 150
-  pollTimers.value.preview = setInterval(async () => {
+  let delay = 2000
+  const maxDelay = 10000
+  const maxAttempts = 120
+  let lastError = ''
+
+  const poll = async () => {
     attempts++
     if (attempts > maxAttempts) {
-      clearInterval(pollTimers.value.preview)
+      clearTimeout(pollTimers.value.preview)
       ElMessage.error('预览超时，请重试')
       uploading.value = false
+      uploadProgress.value = 0
       return
     }
     try {
       const res = await api.importPreviewResult(taskUuid)
       if (res && res.lawTitle) {
-        clearInterval(pollTimers.value.preview)
+        clearTimeout(pollTimers.value.preview)
         delete pollTimers.value.preview
+        uploadProgress.value = 100
         previewData.value = res
         previewForm.value = {
           lawTitle: res.lawTitle || res.title || '',
@@ -444,22 +482,30 @@ const pollPreviewResult = async (taskUuid) => {
         }
         expandedArticles.value.clear()
         showAllArticles.value = false
-        ElMessage.success('预览生成成功')
         uploading.value = false
+        ElMessage.success('预览生成成功')
         previewTaskUuid.value = null
+      } else {
+        delay = Math.min(delay + 1000, maxDelay)
+        pollTimers.value.preview = setTimeout(poll, delay)
       }
     } catch (e) {
       if (attempts > 5 && (e?.code === 404 || (e?.message && e.message.includes('不存在')))) {
         return
       }
       if (attempts > 5 && e?.message && !e.message.includes('不存在')) {
-        clearInterval(pollTimers.value.preview)
+        clearTimeout(pollTimers.value.preview)
         ElMessage.error('获取预览结果失败: ' + (e.message || '未知错误'))
         uploading.value = false
+        uploadProgress.value = 0
         previewTaskUuid.value = null
+      } else {
+        delay = Math.min(delay + 1000, maxDelay)
+        pollTimers.value.preview = setTimeout(poll, delay)
       }
     }
-  }, 2000)
+  }
+  pollTimers.value.preview = setTimeout(poll, delay)
 }
 
 const handleConfirm = async () => {

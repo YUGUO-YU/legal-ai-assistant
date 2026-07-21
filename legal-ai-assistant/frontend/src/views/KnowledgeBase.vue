@@ -63,10 +63,11 @@
           </el-upload>
         </el-form-item>
       </el-form>
+      <el-progress v-if="uploading" :percentage="uploadProgress" :stroke-width="6" style="margin-bottom: 12px;" />
       <template #footer>
-        <el-button @click="showUpload = false">取消</el-button>
+        <el-button @click="showUpload = false" :disabled="uploading">取消</el-button>
         <el-button type="primary" @click="handleUpload" :loading="uploading">
-          开始上传
+          {{ uploading ? `上传中 ${uploadProgress}%` : '开始上传' }}
         </el-button>
       </template>
     </el-dialog>
@@ -218,6 +219,7 @@ const showCreateKb = ref(false)
 const showManage = ref(false)
 const managingKb = ref(null)
 const uploading = ref(false)
+const uploadProgress = ref(0)
 const searchKeyword = ref('')
 const fileList = ref([])
 const uploadRef = ref(null)
@@ -272,8 +274,12 @@ const handleUpload = async () => {
   }
 
   uploading.value = true
+  uploadProgress.value = 0
+  const total = fileList.value.length
+  let completed = 0
+
   try {
-    for (const file of fileList.value) {
+    await Promise.all(fileList.value.map(async (file) => {
       const formData = new FormData()
       formData.append('kbId', uploadForm.kbId)
       if (uploadForm.docName) {
@@ -281,7 +287,9 @@ const handleUpload = async () => {
       }
       formData.append('file', file.raw || file)
       await api.knowledgeBase.upload(formData)
-    }
+      completed++
+      uploadProgress.value = Math.round((completed / total) * 100)
+    }))
     ElMessage.success('文档上传成功，正在解析中...')
     await loadKnowledgeBases()
     fileList.value = []
@@ -291,6 +299,7 @@ const handleUpload = async () => {
     ElMessage.error('上传失败，请稍后重试')
   } finally {
     uploading.value = false
+    uploadProgress.value = 0
   }
 }
 
