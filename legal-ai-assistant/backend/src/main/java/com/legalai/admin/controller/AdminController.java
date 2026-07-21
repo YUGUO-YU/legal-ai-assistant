@@ -339,16 +339,6 @@ public class AdminController {
         return ApiResponse.success(adminDataService.deletePromptTemplate(id));
     }
 
-    // ============================================================
-    // 监控概览 + LLM 健康 + Milvus 状态
-    // ============================================================
-
-    @Operation(summary = "监控概览", description = "获取系统监控各项指标概览")
-    @GetMapping("/monitor/overview")
-    public ApiResponse<Map<String, Object>> monitorOverview() {
-        return ApiResponse.success(adminDataService.monitorOverview());
-    }
-
     // (Domain 02: MOD01-MOD10 - migrated to BusinessController)
     // (Domain 03: AI config - migrated to AiConfigController)
     // (Domain 04: Ops - migrated to OpsController)
