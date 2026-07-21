@@ -21,6 +21,8 @@
         <java.version>17</java.version>
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
         <elasticsearch.version>8.11.0</elasticsearch.version>
+        <law.parser.python>python3</law.parser.python>
+        <law.parser.script>${project.basedir}/../law_parser/src/main.py</law.parser.script>
     </properties>
 
     <dependencies>

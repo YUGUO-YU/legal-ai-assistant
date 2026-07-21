@@ -16,6 +16,7 @@ import com.legalai.repository.LawCategoryMapper;
 import com.legalai.repository.LawCategoryTypeMapper;
 import com.legalai.model.LawCategory;
 import com.legalai.model.LawCategoryType;
+import com.legalai.parser.LawParserClient;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
@@ -174,6 +175,9 @@ public class LawImportService {
 
     @Autowired
     private DocumentParserService documentParserService;
+
+    @Autowired
+    private LawParserClient lawParserClient;
 
     /**
      * 直接导入（异步）：一步完成解析与入库，无需预览确认。
