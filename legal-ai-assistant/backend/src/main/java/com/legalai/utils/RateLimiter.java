@@ -5,13 +5,13 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Map;
 
 public class RateLimiter {
     private static final Logger log = LoggerFactory.getLogger(RateLimiter.class);
-    private final Map<String, SlidingWindow> windows = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, EvictableEntry> windows = new ConcurrentHashMap<>();
     private final int maxRequests;
     private final long windowMs;
+    private static final long EVICT_TTL_MS = 3600_000;
 
     public RateLimiter(int maxRequests, long windowMs) {
         this.maxRequests = maxRequests;
@@ -19,8 +19,9 @@ public class RateLimiter {
     }
 
     public boolean tryAcquire(String key) {
-        SlidingWindow window = windows.computeIfAbsent(key, k -> new SlidingWindow(maxRequests, windowMs));
-        return window.tryAcquire();
+        evictStale();
+        EvictableEntry entry = windows.computeIfAbsent(key, k -> new EvictableEntry(new SlidingWindow(maxRequests, windowMs)));
+        return entry.window.tryAcquire();
     }
 
     public void reset(String key) {
@@ -28,13 +29,29 @@ public class RateLimiter {
     }
 
     public void markRateLimited(String key) {
-        windows.put(key, new SlidingWindow(0, windowMs));
+        windows.put(key, new EvictableEntry(new SlidingWindow(0, windowMs)));
         new Thread(() -> {
             try {
                 Thread.sleep(windowMs);
                 windows.remove(key);
             } catch (InterruptedException e) { Thread.currentThread().interrupt(); log.warn("Rate limiter sleep interrupted"); }
-        }).start();
+        });
+    }
+
+    private void evictStale() {
+        long now = System.currentTimeMillis();
+        long cutoff = now - EVICT_TTL_MS;
+        windows.entrySet().removeIf(e -> e.getValue().lastAccessTime < cutoff);
+    }
+
+    private static class EvictableEntry {
+        final SlidingWindow window;
+        volatile long lastAccessTime;
+
+        EvictableEntry(SlidingWindow window) {
+            this.window = window;
+            this.lastAccessTime = System.currentTimeMillis();
+        }
     }
 
     private static class SlidingWindow {

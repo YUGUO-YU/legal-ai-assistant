@@ -18,6 +18,9 @@ public class AdminHelper {
     private AdminDataService adminDataService;
 
     public Map<String, Object> getCurrentAdminUser(HttpServletRequest request) {
+        if (request == null) {
+            return adminDataService.getCurrentAdminInfo(null);
+        }
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return adminDataService.getCurrentAdminInfo(null);
