@@ -61,12 +61,14 @@ public class LLMClient {
 
     private final OkHttpClient client;
     private final ObjectMapper objectMapper;
+    private static final int MAX_RETRIES = 2;
 
     public LLMClient() {
         this.client = new OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(timeout, TimeUnit.SECONDS)
             .writeTimeout(timeout, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
             .build();
         this.objectMapper = new ObjectMapper();
     }
@@ -156,10 +158,11 @@ public class LLMClient {
      * 单轮对话
      */
     public String chat(String prompt) throws IOException {
-        log.info("调用 MiniMax: model={}, prompt长度={}", model, prompt == null ? 0 : prompt.length());
+        String resolvedModel = resolveModel();
+        log.info("调用 MiniMax: model={}, prompt长度={}", resolvedModel, prompt == null ? 0 : prompt.length());
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", model);
+        requestBody.put("model", resolvedModel);
         requestBody.put("messages", List.of(Map.of("role", "user", "content", prompt == null ? "" : prompt)));
         requestBody.put("stream", false);
 
@@ -170,10 +173,11 @@ public class LLMClient {
      * 多轮对话
      */
     public String chatWithMessages(List<Map<String, String>> messages) throws IOException {
+        String resolvedModel = resolveModel();
         log.info("调用 MiniMax(多轮): 消息数量={}", messages == null ? 0 : messages.size());
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", model);
+        requestBody.put("model", resolvedModel);
         requestBody.put("messages", messages);
         requestBody.put("stream", false);
 
@@ -184,14 +188,15 @@ public class LLMClient {
      * 带工具调用的对话
      */
     public String chatWithTools(String prompt, List<Map<String, Object>> tools) throws IOException {
-        log.info("调用 MiniMax(带工具): model={}, prompt长度={}, tools数量={}", model,
+        String resolvedModel = resolveModel();
+        log.info("调用 MiniMax(带工具): model={}, prompt长度={}, tools数量={}", resolvedModel,
             prompt == null ? 0 : prompt.length(),
             tools != null ? tools.size() : 0);
 
         List<Map<String, String>> messages = List.of(Map.of("role", "user", "content", prompt == null ? "" : prompt));
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", model);
+        requestBody.put("model", resolvedModel);
         requestBody.put("messages", messages);
         requestBody.put("stream", false);
         if (tools != null && !tools.isEmpty()) {
@@ -486,10 +491,13 @@ public class LLMClient {
      * 流式对话
      */
     public String chatStream(String prompt, Consumer<String> onChunk, Supplier<Boolean> isCancelled) throws IOException {
-        log.info("调用 MiniMax(流式): model={}, prompt长度={}", model, prompt == null ? 0 : prompt.length());
+        String resolvedModel = resolveModel();
+        String resolvedBaseUrl = resolveBaseUrl();
+        String resolvedApiKey = resolveApiKey();
+        log.info("调用 MiniMax(流式): model={}, prompt长度={}", resolvedModel, prompt == null ? 0 : prompt.length());
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", model);
+        requestBody.put("model", resolvedModel);
         requestBody.put("messages", List.of(Map.of("role", "user", "content", prompt == null ? "" : prompt)));
         requestBody.put("stream", true);
 
@@ -497,8 +505,8 @@ public class LLMClient {
         RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
-            .url(baseUrl + "/chat/completions")
-            .addHeader("Authorization", "Bearer " + apiKey)
+            .url(resolvedBaseUrl + "chat/completions")
+            .addHeader("Authorization", "Bearer " + resolvedApiKey)
             .addHeader("Content-Type", "application/json")
             .post(body)
             .build();
@@ -685,29 +693,47 @@ public class LLMClient {
         String json = objectMapper.writeValueAsString(requestBody);
         RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
 
-        Request request = new Request.Builder()
-            .url(resolvedBaseUrl + "chat/completions")
-            .addHeader("Authorization", "Bearer " + resolvedApiKey)
-            .addHeader("Content-Type", "application/json")
-            .post(body)
-            .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                String errorBody = response.body() != null ? response.body().string() : "no body";
-                log.error("MiniMax API调用失败: code={}, message={}, body={}", response.code(), response.message(), errorBody);
-                throw new IOException("API调用失败: " + response.code() + " " + errorBody);
+        IOException lastEx = null;
+        for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            if (attempt > 0) {
+                log.info("MiniMax API 重试第 {} 次", attempt);
+                try { Thread.sleep(500L * attempt); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
             }
 
-            String responseBody = response.body().string();
-            log.info("MiniMax API响应长度: {}", responseBody.length());
-            return parseResponse(responseBody);
-        } catch (IOException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("MiniMax API异常: {}", e.getMessage(), e);
-            throw new IOException("API调用异常: " + e.getMessage(), e);
+            Request request = new Request.Builder()
+                .url(resolvedBaseUrl + "chat/completions")
+                .addHeader("Authorization", "Bearer " + resolvedApiKey)
+                .addHeader("Content-Type", "application/json")
+                .post(body)
+                .build();
+
+            try (Response response = client.newCall(request).execute()) {
+                int code = response.code();
+                if (code >= 500 && code < 600 && attempt < MAX_RETRIES) {
+                    String errorBody = response.body() != null ? response.body().string() : "no body";
+                    log.warn("MiniMax API 服务端错误: code={}, body前200={}, 重试", code, errorBody.substring(0, Math.min(200, errorBody.length())));
+                    continue;
+                }
+                if (!response.isSuccessful()) {
+                    String errorBody = response.body() != null ? response.body().string() : "no body";
+                    log.error("MiniMax API调用失败: code={}, message={}, body={}", code, response.message(), errorBody);
+                    throw new IOException("API调用失败: " + code + " " + errorBody);
+                }
+
+                String responseBody = response.body().string();
+                log.info("MiniMax API响应长度: {}", responseBody.length());
+                return parseResponse(responseBody);
+            } catch (IOException e) {
+                lastEx = e;
+                if (attempt < MAX_RETRIES) {
+                    log.warn("MiniMax API IO异常: {}, 重试", e.getMessage());
+                }
+            } catch (Exception e) {
+                log.error("MiniMax API异常: {}", e.getMessage(), e);
+                throw new IOException("API调用异常: " + e.getMessage(), e);
+            }
         }
+        throw lastEx != null ? lastEx : new IOException("API调用未知异常");
     }
 
     private float[] parseEmbeddingResponse(String responseBody) {
