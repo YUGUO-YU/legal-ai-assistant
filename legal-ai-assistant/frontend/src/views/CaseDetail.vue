@@ -182,6 +182,7 @@ import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 import CaseAnalysisDialog from '../components/CaseAnalysisDialog.vue'
+import { getResultType, getResultName, getCourtLevel } from '@/utils/mappings'
 
 const route = useRoute()
 const router = useRouter()
@@ -217,21 +218,6 @@ const loadCaseDetail = async () => {
 
 const goBack = () => {
   router.back()
-}
-
-const getResultType = (result) => {
-  const types = { 1: 'success', 2: 'warning', 3: 'danger', 4: 'info', 5: 'success' }
-  return types[result] || 'info'
-}
-
-const getResultName = (result) => {
-  const names = { 1: '全部支持', 2: '部分支持', 3: '驳回', 4: '撤诉', 5: '调解' }
-  return names[result] || '未知'
-}
-
-const getCourtLevel = (level) => {
-  const levels = { 1: '最高人民法院', 2: '高级人民法院', 3: '中级人民法院', 4: '基层人民法院' }
-  return levels[level] || '未知'
 }
 
 const getFeatureName = (key) => {

@@ -250,6 +250,7 @@ import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 import VirtualScroll from '@/components/common/VirtualScroll.vue'
+import { getResultType, getResultName } from '@/utils/mappings'
 
 const router = useRouter()
 const loading = ref(false)
@@ -307,16 +308,6 @@ const resetFilters = () => {
   filters.judgeYearMax = null
   page.value = 1
   handleSearch()
-}
-
-const getResultType = (result) => {
-  const types = { 1: 'success', 2: 'warning', 3: 'danger', 4: 'info', 5: 'success' }
-  return types[result] || 'info'
-}
-
-const getResultName = (result) => {
-  const names = { 1: '全部支持', 2: '部分支持', 3: '驳回', 4: '撤诉', 5: '调解' }
-  return names[result] || '未知'
 }
 
 const viewDetail = (item) => {

@@ -4,6 +4,7 @@ import com.legalai.dto.ApiResponse;
 import com.legalai.dto.LegalResearchRequest;
 import com.legalai.dto.LegalResearchResponse;
 import com.legalai.service.LegalResearchService;
+import com.legalai.util.JsonUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -75,22 +76,13 @@ public class LegalResearchController {
                 String data;
                 if ("report".equals(event.get("type"))) {
                     String content = (String) event.get("content");
-                    data = "{\"type\":\"report\",\"content\":" + escapeJson(content) + "}";
+                    data = "{\"type\":\"report\",\"content\":" + JsonUtils.escapeJson(content) + "}";
                 } else if ("error".equals(event.get("type"))) {
-                    data = "{\"type\":\"error\",\"message\":\"" + escapeJson((String) event.get("message")) + "\"}";
+                    data = "{\"type\":\"error\",\"message\":\"" + JsonUtils.escapeJson((String) event.get("message")) + "\"}";
                 } else {
-                    data = "{\"type\":\"" + event.get("type") + "\",\"phase\":\"" + event.get("phase") + "\",\"progress\":" + event.get("progress") + ",\"message\":\"" + escapeJson((String) event.get("message")) + "\"}";
+                    data = "{\"type\":\"" + event.get("type") + "\",\"phase\":\"" + event.get("phase") + "\",\"progress\":" + event.get("progress") + ",\"message\":\"" + JsonUtils.escapeJson((String) event.get("message")) + "\"}";
                 }
                 return ServerSentEvent.<String>builder().data(data).build();
             });
-    }
-
-    private String escapeJson(String text) {
-        if (text == null) return "";
-        return text.replace("\\", "\\\\")
-                   .replace("\"", "\\\"")
-                   .replace("\n", "\\n")
-                   .replace("\r", "\\r")
-                   .replace("\t", "\\t");
     }
 }

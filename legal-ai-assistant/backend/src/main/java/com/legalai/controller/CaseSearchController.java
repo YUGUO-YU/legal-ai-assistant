@@ -2,6 +2,7 @@ package com.legalai.controller;
 
 import com.legalai.dto.*;
 import com.legalai.service.CacheService;
+import com.legalai.util.JsonUtils;
 import com.legalai.service.CaseAnalysisService;
 import com.legalai.service.CaseSearchService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -83,18 +84,9 @@ public class CaseSearchController {
                     String data = objectMapper.writeValueAsString(event);
                     return ServerSentEvent.<String>builder().data(data).build();
                 } catch (Exception e) {
-                    String errJson = "{\"type\":\"error\",\"message\":\"" + escapeJson(e.getMessage()) + "\"}";
+                    String errJson = "{\"type\":\"error\",\"message\":\"" + JsonUtils.escapeJson(e.getMessage()) + "\"}";
                     return ServerSentEvent.<String>builder().data(errJson).build();
                 }
             });
-    }
-
-    private String escapeJson(String text) {
-        if (text == null) return "";
-        return text.replace("\\", "\\\\")
-                   .replace("\"", "\\\"")
-                   .replace("\n", "\\n")
-                   .replace("\r", "\\r")
-                   .replace("\t", "\\t");
     }
 }
