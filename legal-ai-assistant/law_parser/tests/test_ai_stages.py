@@ -83,6 +83,45 @@ def test_classifier_keyword_match():
     assert len(classes.suggested_categories) >= 1
     assert classes.suggested_categories[0].type_name == "劳动法"
 
+def test_classifier_multiple_keywords():
+    mock_client = MagicMock()
+    mock_client.chat.return_value = json.dumps({"suggested_categories": []})
+    classifier = Classifier(mock_client)
+    result = StructureResult(law_title="中华人民共和国企业所得税法和个人所得税法", articles=[])
+    classes = classifier.classify(result)
+    assert len(classes.suggested_categories) >= 1
+    categories = [c.type_name for c in classes.suggested_categories]
+    assert "经济法" in categories
+
+def test_classifier_keyword_case_sensitive():
+    mock_client = MagicMock()
+    mock_client.chat.return_value = json.dumps({"suggested_categories": []})
+    classifier = Classifier(mock_client)
+    result = StructureResult(law_title="中华人民共和国劳动合同法", articles=[])
+    classes = classifier.classify(result)
+    assert len(classes.suggested_categories) >= 1
+    assert classes.suggested_categories[0].type_name == "劳动法"
+
+def test_classifier_empty_title():
+    mock_client = MagicMock()
+    mock_client.chat.return_value = json.dumps({"suggested_categories": []})
+    classifier = Classifier(mock_client)
+    result = StructureResult(law_title="", articles=[
+        ArticleParse(article_no="第一条", content="内容", sort_order=1)
+    ])
+    classes = classifier.classify(result)
+    assert len(classes.suggested_categories) >= 1
+    assert classes.suggested_categories[0].type_name == "其他"
+
+def test_classifier_no_articles():
+    mock_client = MagicMock()
+    mock_client.chat.return_value = json.dumps({"suggested_categories": []})
+    classifier = Classifier(mock_client)
+    result = StructureResult(law_title="中华人民共和国公司法", articles=[])
+    classes = classifier.classify(result)
+    assert len(classes.suggested_categories) >= 1
+    assert classes.suggested_categories[0].type_name == "民法商法"
+
 def test_classifier_ai_fallback():
     mock_client = MagicMock()
     mock_client.chat.return_value = json.dumps({
