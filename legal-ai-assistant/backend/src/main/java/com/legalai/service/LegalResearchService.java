@@ -1,5 +1,6 @@
 package com.legalai.service;
 
+import com.legalai.config.PromptProperties;
 import com.legalai.dto.LegalResearchRequest;
 import com.legalai.dto.LegalResearchResponse;
 import org.slf4j.Logger;
@@ -22,22 +23,6 @@ public class LegalResearchService {
 
     private static final Logger log = LoggerFactory.getLogger(LegalResearchService.class);
 
-    private static final String SYSTEM_PROMPT =
-        "你是一位拥有15年以上法律研究经验的中国法律专家，擅长进行深入的法律问题研究。\n\n" +
-        "核心任务：根据用户提出的法律问题，进行多维度研究，输出结构化分析报告。\n\n" +
-        "报告结构（六段式）：\n" +
-        "一、问题界定\n" +
-        "二、法律依据\n" +
-        "三、学术观点\n" +
-        "四、实务指引\n" +
-        "五、风险提示\n" +
-        "六、结论建议\n\n" +
-        "约束条件：\n" +
-        "1. 每项法律结论必须标注来源\n" +
-        "2. 语言专业严谨，使用规范法律术语\n" +
-        "3. 识别法规时效性，提示可能已修订\n" +
-        "4. 风险评估需明确等级和防控建议\n";
-
     @Autowired
     private AIService aiService;
 
@@ -46,6 +31,13 @@ public class LegalResearchService {
 
     @Autowired
     private SourceVerificationService sourceVerificationService;
+
+    @Autowired
+    private PromptProperties promptProperties;
+
+    private String getSystemPrompt() {
+        return promptProperties.getLegalResearch();
+    }
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -225,7 +217,7 @@ public class LegalResearchService {
 
     private String buildPrompt(String question, List<String> laws, List<String> cases) {
         StringBuilder sb = new StringBuilder();
-        sb.append(SYSTEM_PROMPT).append("\n\n");
+        sb.append(getSystemPrompt()).append("\n\n");
         sb.append("【用户研究问题】\n").append(question).append("\n\n");
         sb.append("【参考法规】\n");
         for (String law : laws.isEmpty() ? REFERENCE_LAWS : laws) {
@@ -273,7 +265,7 @@ public class LegalResearchService {
 
     private String generateAIReportContent(String question, List<String> laws, List<String> cases) {
         StringBuilder promptBuilder = new StringBuilder();
-        promptBuilder.append(SYSTEM_PROMPT).append("\n\n");
+        promptBuilder.append(getSystemPrompt()).append("\n\n");
 
         promptBuilder.append("【用户研究问题】\n");
         promptBuilder.append(question).append("\n\n");

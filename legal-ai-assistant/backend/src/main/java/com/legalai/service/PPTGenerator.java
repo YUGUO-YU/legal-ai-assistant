@@ -2,6 +2,7 @@ package com.legalai.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.legalai.config.PromptProperties;
 import com.legalai.dto.PptGenerateRequest;
 import com.legalai.dto.SlideDTO;
 import org.slf4j.Logger;
@@ -28,16 +29,12 @@ public class PPTGenerator {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private static final String SYSTEM_PROMPT = """
-        你是一位专业的法律演示文稿设计师，擅长将法律检索结果转化为结构化的PPT幻灯片内容。
+    @Autowired
+    private PromptProperties promptProperties;
 
-        要求：
-        1. 每张幻灯片必须有明确的标题和3-5个要点
-        2. 要点简洁有力，适合演讲展示
-        3. 法律术语准确，引用规范
-        4. 逻辑清晰：概述 -> 法规分析 -> 案例分析 -> 结论建议
-        5. 封面和结语幻灯片必须包含
-        """;
+    private String getSystemPrompt() {
+        return promptProperties.getPptGeneration();
+    }
 
     private static final int MAX_AI_SLIDES = 8;
 
@@ -71,7 +68,7 @@ public class PPTGenerator {
         String prompt = buildAIPrompt(title, searchResults);
         try {
             String response = aiService.chatWithMessages(List.of(
-                Map.of("role", "system", "content", SYSTEM_PROMPT),
+                Map.of("role", "system", "content", getSystemPrompt()),
                 Map.of("role", "user", "content", prompt)
             ));
             return parseAISlides(response);

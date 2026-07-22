@@ -1,5 +1,6 @@
 package com.legalai.service;
 
+import com.legalai.config.PromptProperties;
 import com.legalai.dto.CaseAnalysisResponse;
 import com.legalai.dto.CaseSearchResponse;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,23 +20,20 @@ import java.util.concurrent.atomic.AtomicReference;
 public class CaseAnalysisService {
     private static final Logger log = LoggerFactory.getLogger(CaseAnalysisService.class);
 
-    private static final String SYSTEM_PROMPT =
-        "你是一位资深中国法律专家，擅长深度分析司法判例。请基于用户提供的案例信息，" +
-        "输出结构化的 AI 案情分析，帮助律师快速理解案件核心要素和裁判逻辑。\n\n" +
-        "分析要求：\n" +
-        "1. 必须严格基于提供的案件信息，不要凭空捏造事实\n" +
-        "2. 使用专业法律术语，语言严谨\n" +
-        "3. 引用法律条文需具体到条号\n" +
-        "4. 风险提示需明确等级（LOW/MEDIUM/HIGH）\n" +
-        "5. 输出为 JSON 格式，结构清晰\n";
-
     @Autowired
     private CaseSearchService caseSearchService;
 
     @Autowired
     private AIService aiService;
 
+    @Autowired
+    private PromptProperties promptProperties;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private String getSystemPrompt() {
+        return promptProperties.getCaseAnalysis();
+    }
 
     public CaseAnalysisResponse getAnalysis(String caseUuid) {
         long start = System.currentTimeMillis();
@@ -95,7 +93,7 @@ public class CaseAnalysisService {
 
     private String buildAnalysisPrompt(CaseSearchResponse.CaseSearchItem caseItem) {
         StringBuilder sb = new StringBuilder();
-        sb.append(SYSTEM_PROMPT).append("\n\n");
+        sb.append(getSystemPrompt()).append("\n\n");
         sb.append("【案件信息】\n");
         sb.append("案号：").append(nullSafe(caseItem.getCaseNo())).append("\n");
         sb.append("案件名称：").append(nullSafe(caseItem.getTitle())).append("\n");

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.legalai.config.ElasticsearchConfig;
 import com.legalai.config.MilvusConfig;
+import com.legalai.config.PromptProperties;
 import com.legalai.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,24 +29,38 @@ public class LegalSearchService {
     private final SourceVerificationService sourceVerificationService;
     private final CacheService cacheService;
     private final JdbcTemplate jdbc;
+    private final PromptProperties promptProperties;
 
-    private static final String SYSTEM_PROMPT =
-        "你是一个专业的法律助手，专注于中国法律法规的检索与解读。你拥有法学背景，能够准确理解法律条文含义并给出专业解释。\n\n" +
-        "核心任务：根据用户输入的法律问题，从检索到的法规条文中提取相关信息，给出准确、专业的回答。\n\n" +
-        "约束条件（HARD RULES）：\n" +
-        "1. 溯源必须：每个法律结论必须标注来源，格式为：[法规名称] 第X条 | 来源URL\n" +
-        "2. 禁止胡编：只陈述检索结果中明确存在的内容，不得编造、推测法条内容\n" +
-        "3. 不确定声明：如检索结果不足以回答，明确说明\"未检索到相关法规\"\n" +
-        "4. 语言严谨：使用规范法律用语，避免口语化表达\n" +
-        "5. 时效性：注意标注法条的时效性，提示可能已修订\n\n" +
-        "输出格式：\n" +
-        "## 回答\n" +
-        "[正文内容]\n" +
-        "## 参考依据\n" +
-        "1. [法规名称] 第X条 | 来源URL\n" +
-        "## 追问建议\n" +
-        "- 问题1\n" +
-        "- 问题2";
+    private String systemPrompt;
+
+    @Autowired
+    public LegalSearchService(
+            ElasticsearchService elasticsearchService,
+            MilvusService milvusService,
+            AIService aiService,
+            ElasticsearchConfig esConfig,
+            MilvusConfig milvusConfig,
+            SourceVerificationService sourceVerificationService,
+            CacheService cacheService,
+            JdbcTemplate jdbc,
+            PromptProperties promptProperties) {
+        this.elasticsearchService = elasticsearchService;
+        this.milvusService = milvusService;
+        this.aiService = aiService;
+        this.esConfig = esConfig;
+        this.milvusConfig = milvusConfig;
+        this.sourceVerificationService = sourceVerificationService;
+        this.cacheService = cacheService;
+        this.jdbc = jdbc;
+        this.promptProperties = promptProperties;
+    }
+
+    private String getSystemPrompt() {
+        if (systemPrompt == null) {
+            systemPrompt = promptProperties.getLegalSearch();
+        }
+        return systemPrompt;
+    }
 
     private static final Map<String, List<String>> SYNONYMS = Map.of(
         "欺诈", List.of("欺骗", "诈骗", "骗取"),
@@ -58,26 +73,6 @@ public class LegalSearchService {
     );
 
     private static final int RRF_K = 60;
-
-    @Autowired
-    public LegalSearchService(
-            ElasticsearchService elasticsearchService,
-            MilvusService milvusService,
-            AIService aiService,
-            ElasticsearchConfig esConfig,
-            MilvusConfig milvusConfig,
-            SourceVerificationService sourceVerificationService,
-            CacheService cacheService,
-            JdbcTemplate jdbc) {
-        this.elasticsearchService = elasticsearchService;
-        this.milvusService = milvusService;
-        this.aiService = aiService;
-        this.esConfig = esConfig;
-        this.milvusConfig = milvusConfig;
-        this.sourceVerificationService = sourceVerificationService;
-        this.cacheService = cacheService;
-        this.jdbc = jdbc;
-    }
 
     public LegalSearchResponse search(LegalSearchRequest request) {
         log.info("法律检索请求: query={}, page={}, pageSize={}",
