@@ -1,7 +1,10 @@
-import os, httpx
+import os, httpx, time
 from typing import Iterator
 
 class MiniMaxClient:
+    MAX_RETRIES = 2
+    RETRY_DELAY = 1.0
+
     def __init__(self,
                  api_key: str = None,
                  base_url: str = None,
@@ -21,16 +24,24 @@ class MiniMaxClient:
         )
 
     def chat(self, prompt: str, **kwargs) -> str:
-        """同步 chat 接口"""
+        """同步 chat 接口 with retry"""
         payload = {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             **kwargs
         }
-        resp = self.client.post("/chat/completions", json=payload)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
+        last_exception = None
+        for attempt in range(self.MAX_RETRIES + 1):
+            try:
+                resp = self.client.post("/chat/completions", json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                return data["choices"][0]["message"]["content"]
+            except (httpx.HTTPStatusError, httpx.RequestError) as e:
+                last_exception = e
+                if attempt < self.MAX_RETRIES:
+                    time.sleep(self.RETRY_DELAY * (attempt + 1))
+        raise last_exception
 
     def chat_stream(self, prompt: str, **kwargs) -> Iterator[str]:
         """流式 chat 接口"""
