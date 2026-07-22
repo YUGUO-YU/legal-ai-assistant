@@ -103,6 +103,10 @@ public class LawParserClient {
         return call("parse", Map.of("file_path", filePath));
     }
 
+    public Map<String, Object> parseText(String text) {
+        return call("parse", Map.of("text", text));
+    }
+
     public Map<String, Object> review(Map<String, Object> structureResult) {
         return call("review", Map.of("structure_result", structureResult));
     }

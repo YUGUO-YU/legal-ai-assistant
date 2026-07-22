@@ -473,6 +473,51 @@ public class LawImportService {
         return buildPreview(lawTitle, shortTitle, metaJson, categoryJson, chapterJson, articles);
     }
 
+    private LawImportPreview previewImportLegacyText(String text, String filename) {
+        String lawTitle = extractTitle(text);
+        String shortTitle = extractShortTitle(text);
+
+        String metaPrompt = "分析以下法律文档（全文约" + text.length() + "字符），提取以下信息并以JSON格式返回：\n" +
+            "{\"documentNo\":\"发文字号(如:国务院令第XXX号)\",\"issuingAuthority\":\"发布机关\"," +
+            "\"issueDate\":\"发布日期(YYYY-MM-DD格式)\",\"effectiveDate\":\"生效日期(YYYY-MM-DD格式)}\n" +
+            "只返回JSON，不要其他文字。\n" +
+            text.substring(0, Math.min(8000, text.length()));
+        String metaJson;
+        try {
+            metaJson = llmClient.chat(metaPrompt);
+        } catch (IOException e) {
+            throw new RuntimeException("AI分析元数据失败: " + e.getMessage(), e);
+        }
+
+        String categoryPrompt = "判断以下法律文档（全文约" + text.length() + "字符）的分类，以JSON数组格式返回：\n" +
+            "[{\"categoryTypeId\":1,\"categoryId\":对应分类ID,\"categoryName\":\"分类名称\",\"confidence\":0.95},...]\n" +
+            "categoryTypeId对应：1=效力层级,2=法律部门,3=行业领域,4=自定义分类\n" +
+            "只返回JSON数组。\n" +
+            text.substring(0, Math.min(8000, text.length()));
+        String categoryJson;
+        try {
+            categoryJson = llmClient.chat(categoryPrompt);
+        } catch (IOException e) {
+            throw new RuntimeException("AI分析分类失败: " + e.getMessage(), e);
+        }
+
+        String chapterPrompt = "分析以下法律文档（全文约" + text.length() + "字符）的章节结构，以JSON数组格式返回：\n" +
+            "[{\"title\":\"章节标题\",\"level\":1或2或3,\"children\":[...]}]" +
+            "level: 1=篇/编, 2=章, 3=节\n" +
+            "只返回JSON数组。\n" +
+            text.substring(0, Math.min(10000, text.length()));
+        String chapterJson;
+        try {
+            chapterJson = llmClient.chat(chapterPrompt);
+        } catch (IOException e) {
+            throw new RuntimeException("AI分析章节结构失败: " + e.getMessage(), e);
+        }
+
+        List<LawImportPreview.ArticleParse> articles = extractArticles(text);
+
+        return buildPreview(lawTitle, shortTitle, metaJson, categoryJson, chapterJson, articles);
+    }
+
     public LawImportPreview previewImportWithParser(MultipartFile file) {
         if (!lawParserClient.isAvailable()) {
             log.info("Python law parser not available, falling back to Java AI parser");
@@ -567,6 +612,95 @@ public class LawImportService {
                 tempFile.deleteOnExit();
             }
         }
+    }
+
+    public LawImportPreview previewImportWithParserText(String text, String filename) {
+        if (!lawParserClient.isAvailable()) {
+            log.info("Python law parser not available, falling back to Java AI parser");
+            return previewImportLegacyText(text, filename);
+        }
+
+        try {
+            Map<String, Object> parsed = lawParserClient.parseText(text);
+            return parsePreviewResultFromMap(parsed, filename);
+        } catch (Exception e) {
+            log.error("Failed to parse text with Python parser: {}", e.getMessage());
+            return previewImportLegacyText(text, filename);
+        }
+    }
+
+    private LawImportPreview parsePreviewResultFromMap(Map<String, Object> parsed, String filename) {
+        String lawTitle = textOr(parsed, "law_title",
+            filename != null
+                ? filename.replaceAll("\\.[^.]+$", "") : "未知标题");
+        String shortTitle = textOr(parsed, "short_title", "");
+
+        List<LawImportPreview.ArticleParse> articles = new ArrayList<>();
+        Object articlesObj = parsed.get("articles");
+        if (articlesObj instanceof List<?> articlesList) {
+            int sortOrder = 0;
+            for (Object a : articlesList) {
+                if (a instanceof Map<?, ?> aMap) {
+                    Map<String, Object> am = castMap(aMap);
+                    sortOrder++;
+                    LawImportPreview.ArticleParse ap = new LawImportPreview.ArticleParse();
+                    ap.setArticleNo(textOr(am, "article_no", ""));
+                    ap.setTitle(textOr(am, "title", null));
+                    ap.setContent(textOr(am, "content", ""));
+                    ap.setChapterPath(textOr(am, "chapter_path", ""));
+                    ap.setSortOrder(sortOrder);
+                    ap.setContentHash(textOr(am, "content_hash", null));
+                    articles.add(ap);
+                }
+            }
+        }
+
+        List<LawImportPreview.CategorySuggestion> categories = new ArrayList<>();
+        Object catObj = parsed.get("suggested_categories");
+        if (catObj instanceof List<?> catList) {
+            for (Object c : catList) {
+                if (c instanceof Map<?, ?> cMap) {
+                    Map<String, Object> cm = castMap(cMap);
+                    LawImportPreview.CategorySuggestion cs = new LawImportPreview.CategorySuggestion();
+                    cs.setCategoryTypeId(1L);
+                    cs.setTypeName(textOr(cm, "type_name", ""));
+                    cs.setCategoryName(textOr(cm, "category_name", ""));
+                    Object conf = cm.get("confidence");
+                    cs.setConfidence(conf instanceof Number ? ((Number) conf).doubleValue() : 0.8);
+                    categories.add(cs);
+                }
+            }
+        }
+        if (categories.isEmpty()) {
+            LawImportPreview.CategorySuggestion defaultCat = new LawImportPreview.CategorySuggestion();
+            defaultCat.setCategoryTypeId(1L);
+            defaultCat.setTypeName("其他");
+            defaultCat.setCategoryName("其他");
+            defaultCat.setConfidence(0.5);
+            categories.add(defaultCat);
+        }
+
+        List<LawImportPreview.ChapterNode> chapterTree = new ArrayList<>();
+        Object chaptersObj = parsed.get("chapter_tree");
+        if (chaptersObj instanceof List<?> chaptersList) {
+            for (Object c : chaptersList) {
+                if (c instanceof Map<?, ?> cMap) {
+                    chapterTree.add(buildChapterNode(castMap(cMap)));
+                }
+            }
+        }
+
+        LawImportPreview preview = new LawImportPreview();
+        preview.setLawTitle(lawTitle);
+        preview.setShortTitle(shortTitle);
+        preview.setIssuingAuthority(textOr(parsed, "issuing_authority", null));
+        preview.setIssueDate(textOr(parsed, "issue_date", null));
+        preview.setEffectiveDate(textOr(parsed, "effective_date", null));
+        preview.setDocumentNo(textOr(parsed, "document_no", null));
+        preview.setArticles(articles);
+        preview.setSuggestedCategories(categories);
+        preview.setChapterTree(chapterTree);
+        return preview;
     }
 
     @SuppressWarnings("unchecked")
