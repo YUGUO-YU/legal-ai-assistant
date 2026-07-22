@@ -479,7 +479,7 @@ public class LawImportService {
 
         String metaPrompt = "分析以下法律文档（全文约" + text.length() + "字符），提取以下信息并以JSON格式返回：\n" +
             "{\"documentNo\":\"发文字号(如:国务院令第XXX号)\",\"issuingAuthority\":\"发布机关\"," +
-            "\"issueDate\":\"发布日期(YYYY-MM-DD格式)\",\"effectiveDate\":\"生效日期(YYYY-MM-DD格式)}\n" +
+            "\"issueDate\":\"发布日期(YYYY-MM-DD格式)\",\"effectiveDate\":\"生效日期(YYYY-MM-DD格式)\"}\n" +
             "只返回JSON，不要其他文字。\n" +
             text.substring(0, Math.min(8000, text.length()));
         String metaJson;
