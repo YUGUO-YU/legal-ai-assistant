@@ -1,5 +1,6 @@
 package com.legalai.service;
 
+import com.legalai.config.PromptProperties;
 import com.legalai.dto.LegalResearchRequest;
 import com.legalai.dto.LegalResearchResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,13 +9,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class LegalResearchServiceTest {
 
     @Mock
@@ -28,6 +36,15 @@ class LegalResearchServiceTest {
 
     @Mock
     private MilvusService milvusService;
+
+    @Mock
+    private SourceVerificationService sourceVerificationService;
+
+    @Mock
+    private PromptProperties promptProperties;
+
+    @Mock
+    private JdbcTemplate jdbc;
 
     @InjectMocks
     private LegalResearchService legalResearchService;
@@ -68,6 +85,17 @@ class LegalResearchServiceTest {
         when(aiService.chat(any())).thenReturn(fakeReport);
 
         String taskId = legalResearchService.createResearchTask(validRequest);
+
+        java.util.List<java.util.Map<String, Object>> rows = java.util.List.of(
+            new java.util.HashMap<String, Object>() {{
+                put("topic", validRequest.getQuestion());
+                put("report", fakeReport);
+                put("sources", "[]");
+                put("created_at", "2024-01-01 00:00:00");
+            }}
+        );
+        doAnswer(invocation -> rows).when(jdbc).queryForList(anyString(), any(Object[].class));
+
         LegalResearchResponse report = legalResearchService.getResearchReport(taskId);
 
         assertNotNull(report);
