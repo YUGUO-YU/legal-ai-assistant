@@ -52,8 +52,13 @@ def main():
         class LawParserHandler:
             def handle(self, method: str, params: dict):
                 if method == "parse":
-                    parsed = parse_file(params["file_path"])
-                    return _to_serializable(extractor.extract(parsed["text"]))
+                    if "file_path" in params:
+                        parsed = parse_file(params["file_path"])
+                        return _to_serializable(extractor.extract(parsed["text"]))
+                    elif "text" in params:
+                        return _to_serializable(extractor.extract(params["text"]))
+                    else:
+                        raise ValueError("Missing required parameter: file_path or text")
                 elif method == "review":
                     from law_parser.ai.models import StructureResult
                     result = StructureResult(**params["structure_result"])

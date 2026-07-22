@@ -5,6 +5,8 @@ from law_parser.protocol.server import JsonRpcServer
 class DummyHandler:
     def handle(self, method, params):
         if method == "parse":
+            if "text" in params:
+                return {"text": f"parsed text: {params['text'][:20]}"}
             return {"text": f"parsed {params.get('file_path', '')}"}
         elif method == "health":
             return {"status": "ok"}
@@ -35,3 +37,18 @@ def test_jsonrpc_server_handler_response():
     parsed = JsonRpcRequest.parse(json.dumps(req))
     assert parsed.method == "health"
     assert parsed.id == 1
+
+def test_jsonrpc_request_parse_with_text():
+    raw = '{"jsonrpc":"2.0","id":2,"method":"parse","params":{"text":"中华人民共和国劳动合同法"}}'
+    req = JsonRpcRequest.parse(raw)
+    assert req.method == "parse"
+    assert req.params["text"] == "中华人民共和国劳动合同法"
+    assert req.id == 2
+
+def test_jsonrpc_server_parse_text():
+    handler = DummyHandler()
+    server = JsonRpcServer(handler)
+    req = {"jsonrpc": "2.0", "id": 3, "method": "parse", "params": {"text": "劳动合同法内容"}}
+    parsed = JsonRpcRequest.parse(json.dumps(req))
+    result = handler.handle(parsed.method, parsed.params)
+    assert "parsed text" in result["text"]
