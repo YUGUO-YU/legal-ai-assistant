@@ -187,7 +187,7 @@ class Classifier:
                         ))
                         matched_types.add(t)
             except (json.JSONDecodeError, KeyError) as e:
-                logger.warning("AI classification failed: %s", e)
+                logger.warning("AI classification failed for law '%s': %s", title, e)
 
         if not categories:
             categories.append(CategorySuggestion(type_name="其他", category_name="", confidence=0.5))

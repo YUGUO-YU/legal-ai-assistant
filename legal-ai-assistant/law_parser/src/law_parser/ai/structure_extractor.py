@@ -1,6 +1,8 @@
-import json, hashlib
+import json, hashlib, logging
 from .models import StructureResult, ArticleParse, ChapterNode
 from .client import MiniMaxClient
+
+logger = logging.getLogger(__name__)
 
 STRUCTURE_PROMPT = """你是一个专业的中国法律法规解析助手。请分析以下法律文档，提取结构信息。
 
@@ -105,8 +107,8 @@ class StructureExtractor:
                     chapter_tree = [ChapterNode(**c) for c in data.get("chapter_tree", [])]
                 for a in data.get("articles", []):
                     all_articles.append(a)
-            except json.JSONDecodeError:
-                pass
+            except json.JSONDecodeError as e:
+                logger.warning("Chunk %d/%d: failed to parse AI response as JSON: %s", i + 1, len(chunks), e)
 
         deduped = {}
         for a in all_articles:

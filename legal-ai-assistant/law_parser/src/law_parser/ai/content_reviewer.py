@@ -37,7 +37,8 @@ class ContentReviewer:
         try:
             review_data = json.loads(response, strict=False)
         except json.JSONDecodeError as e:
-            logger.warning("Content review AI returned invalid JSON, skipping review: %s", e)
+            logger.warning("Content review AI returned invalid JSON, skipping review for law '%s': %s",
+                result.law_title, e)
             for a in result.articles:
                 a.review_warnings = []
             return result

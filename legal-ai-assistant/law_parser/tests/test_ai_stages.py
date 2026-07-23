@@ -1,6 +1,6 @@
 import pytest, json
 from unittest.mock import patch, MagicMock
-from law_parser.ai.structure_extractor import StructureExtractor
+from law_parser.ai.structure_extractor import StructureExtractor, _chunk_text, _is_article_start
 from law_parser.ai.content_reviewer import ContentReviewer
 from law_parser.ai.classifier import Classifier
 from law_parser.ai.models import StructureResult, ArticleParse, CategorySuggestion, ClassificationResult
@@ -157,3 +157,23 @@ def test_content_reviewer_invalid_json():
     ])
     reviewed = reviewer.review(result)
     assert len(reviewed.articles[0].review_warnings) == 0
+
+
+def test_is_article_start():
+    assert _is_article_start("第一条 为了保护民事主体") == True
+    assert _is_article_start("第二十条 父母对子女") == True
+    assert _is_article_start("根据本法规定") == False
+    assert _is_article_start("第一章 总则") == False
+    assert _is_article_start("") == False
+
+
+def test_chunk_text_respects_article_boundaries():
+    article1 = ("第一条 为了保护民事主体的合法权益，调整民事关系，适应中国特色社会主义事业发展需要。" + "\n") * 300
+    article2 = ("第二条 民事主体的人身权利、财产权利以及其他合法权益受法律保护，任何组织或者个人不得侵犯。" + "\n") * 300
+    article3 = ("第三条 民事主体在民事活动中的法律地位一律平等。" + "\n") * 300
+    combined = article1 + article2 + article3
+    chunks = _chunk_text(combined, max_size=6000)
+    combined_text = "".join(chunks)
+    assert "第一条" in combined_text
+    assert "第二条" in combined_text
+    assert "第三条" in combined_text
