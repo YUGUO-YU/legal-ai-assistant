@@ -250,7 +250,7 @@ import api from '../api'
 import Loading from '../components/Loading.vue'
 import EmptyState from '../components/EmptyState.vue'
 import VirtualScroll from '@/components/common/VirtualScroll.vue'
-import { getResultType, getResultName } from '@/utils/mappings'
+import { getResultType, getResultName, getCaseType, getTrialProcedure } from '@/utils/mappings'
 
 const router = useRouter()
 const loading = ref(false)
