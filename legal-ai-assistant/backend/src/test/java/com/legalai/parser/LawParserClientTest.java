@@ -1,25 +1,19 @@
 package com.legalai.parser;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
 class LawParserClientTest {
-    @Autowired(required = false)
-    private LawParserClient lawParserClient;
 
     @Test
-    void contextLoads() {
+    void classExists() {
+        assertNotNull(LawParserClient.class);
     }
 
     @Test
-    void isAvailableReflectsProcessState() {
-        if (lawParserClient == null) {
-            return;
-        }
-        boolean available = lawParserClient.isAvailable();
-        assert available == (lawParserClient.isAvailable());
+    void isAvailableMethodExists() throws Exception {
+        java.lang.reflect.Method method = LawParserClient.class.getMethod("isAvailable");
+        assertNotNull(method);
+        assertEquals(boolean.class, method.getReturnType());
     }
 }

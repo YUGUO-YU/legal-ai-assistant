@@ -29,6 +29,17 @@ spring:
 
   elasticsearch:
     uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+    host: ${ELASTICSEARCH_HOST:localhost}
+    port: ${ELASTICSEARCH_PORT:9200}
+    index-name: legal_law_articles
+    enabled: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -57,58 +68,6 @@ ai:
     health-endpoint: /models
     # 健康检查超时（秒）—— 网络抖动时快速判离线
     health-timeout: 5
-
-# Mock Mode (false = 使用MiniMax AI)
-mock:
-  enabled: false
-
-# Milvus Configuration
-milvus:
-  host: ${MILVUS_HOST:localhost}
-  port: ${MILVUS_PORT:19530}
-  collection-name: legal_law_articles
-  dimension: 1536
-  enabled: false
-
-# Elasticsearch Configuration
-elasticsearch:
-  host: ${ELASTICSEARCH_HOST:localhost}
-  port: ${ELASTICSEARCH_PORT:9200}
-  index-name: legal_law_articles
-  enabled: false
-
-# Redis Configuration
-spring.data.redis:
-  host: ${REDIS_HOST:localhost}
-  port: ${REDIS_PORT:6379}
-  password: ${REDIS_PASSWORD:}
-  database: 0
-
-# Enable Redis for usage records
-redis.enabled: true
-
-# App Log Configuration
-app:
-  log:
-    path: /var/log/legal-ai-assistant/app.log
-
-# Rate Limiting Configuration
-rate-limit:
-  api:
-    search:
-      qps: 30
-    draft:
-      qps: 10
-  admin:
-    list:
-      qps: 100
-    write:
-      qps: 20
-    export:
-      qps: 10
-
-# AI Prompts Configuration
-ai:
   prompts:
     legal-search: |
       你是一个专业的法律助手，专注于中国法律法规的检索与解读。你拥有法学背景，能够准确理解法律条文含义并给出专业解释。
@@ -169,3 +128,27 @@ ai:
       3. 法律术语准确，引用规范
       4. 逻辑清晰：概述 -> 法规分析 -> 案例分析 -> 结论建议
       5. 封面和结语幻灯片必须包含
+
+# Enable Redis for usage records
+redis:
+  enabled: true
+
+# App Log Configuration
+app:
+  log:
+    path: /var/log/legal-ai-assistant/app.log
+
+# Rate Limiting Configuration
+rate-limit:
+  api:
+    search:
+      qps: 30
+    draft:
+      qps: 10
+  admin:
+    list:
+      qps: 100
+    write:
+      qps: 20
+    export:
+      qps: 10
